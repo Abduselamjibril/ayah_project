@@ -89,7 +89,8 @@ class _PageviewQuranState extends State<PageviewQuran> {
   final ScrollController _verticalController = ScrollController();
   int _currentSurah = 1;
 
-  PageController get _pageController => widget.controller ?? _internalController!;
+  PageController get _pageController =>
+      widget.controller ?? _internalController!;
 
   bool get _ownsController => widget.controller == null;
 
@@ -97,7 +98,7 @@ class _PageviewQuranState extends State<PageviewQuran> {
   void initState() {
     super.initState();
     _currentSurah = widget.initialSurahNumber;
-    
+
     if (_ownsController && widget.scrollMode == ScrollMode.horizontal) {
       _internalController = PageController(
         initialPage: widget.initialPageNumber - 1,
@@ -153,38 +154,36 @@ class _PageviewQuranState extends State<PageviewQuran> {
   }
 
   Widget _buildVerticalView() {
-    return CustomScrollView(
+    return ListView.builder(
       controller: _verticalController,
-      slivers: [
-        SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              final surahNumber = index + 1;
-              return _SurahSection(
-                surahNumber: surahNumber,
-                fontSize: widget.fontSize,
-                textColor: widget.textColor,
-                verseBackgroundColor: widget.verseBackgroundColor,
-                onLongPress: widget.onLongPress,
-                onLongPressUp: widget.onLongPressUp,
-                onLongPressCancel: widget.onLongPressCancel,
-                onLongPressDown: widget.onLongPressDown,
-                sp: widget.sp,
-                h: widget.h,
-                onSurahVisible: (surah) {
-                  if (_currentSurah != surah) {
-                    setState(() {
-                      _currentSurah = surah;
-                    });
-                    widget.onSurahChanged?.call(surah);
-                  }
-                },
-              );
-            },
-            childCount: 114, // Total surahs in Quran
-          ),
-        ),
-      ],
+      itemCount: totalPagesCount, // 604 pages instead of 114 surahs
+      itemBuilder: (context, index) {
+        final pageNumber = index + 1;
+        return Column(
+          children: [
+            // Page content
+            _PageContent(
+              pageNumber: pageNumber,
+              fontSize: widget.fontSize,
+              textColor: widget.textColor,
+              verseBackgroundColor: widget.verseBackgroundColor,
+              onLongPress: widget.onLongPress,
+              onLongPressUp: widget.onLongPressUp,
+              onLongPressCancel: widget.onLongPressCancel,
+              onLongPressDown: widget.onLongPressDown,
+              sp: widget.sp,
+              h: widget.h,
+            ),
+            // Page separation line (except for the last page)
+            if (index < totalPagesCount - 1)
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 4.0),
+                height: 1.0,
+                color: Colors.grey[400],
+              ),
+          ],
+        );
+      },
     );
   }
 }
@@ -324,201 +323,6 @@ class _PageContent extends StatelessWidget {
                   : MediaQuery.of(context).viewPadding.top > 0
                       ? 2.2
                       : 2.2,
-        ),
-      ),
-    );
-  }
-}
-
-class _SurahSection extends StatefulWidget {
-  final int surahNumber;
-  final double? fontSize;
-  final Color textColor;
-  final Color? Function(int surahNumber, int verseNumber)? verseBackgroundColor;
-  final void Function(int surahNumber, int verseNumber)? onLongPress;
-  final void Function(int surahNumber, int verseNumber)? onLongPressUp;
-  final void Function(int surahNumber, int verseNumber)? onLongPressCancel;
-  final void Function(
-    int surahNumber,
-    int verseNumber,
-    LongPressStartDetails details,
-  )? onLongPressDown;
-  final double sp;
-  final double h;
-  final void Function(int surahNumber)? onSurahVisible;
-
-  const _SurahSection({
-    required this.surahNumber,
-    required this.fontSize,
-    required this.textColor,
-    this.verseBackgroundColor,
-    required this.onLongPress,
-    required this.onLongPressUp,
-    required this.onLongPressCancel,
-    required this.onLongPressDown,
-    required this.sp,
-    required this.h,
-    this.onSurahVisible,
-  });
-
-  @override
-  State<_SurahSection> createState() => _SurahSectionState();
-}
-
-class _SurahSectionState extends State<_SurahSection> {
-  final GlobalKey _key = GlobalKey();
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkIfVisible();
-    });
-  }
-
-  void _checkIfVisible() {
-    final renderObject = _key.currentContext?.findRenderObject();
-    if (renderObject is RenderBox) {
-      final position = renderObject.localToGlobal(Offset.zero);
-      final size = renderObject.size;
-
-      if (position.dy < MediaQuery.of(context).size.height && 
-          position.dy + size.height > 0) {
-        widget.onSurahVisible?.call(widget.surahNumber);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final verseCount = getVerseCount(widget.surahNumber);
-    
-    return Column(
-      key: _key,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Surah header
-        Container(
-          padding: const EdgeInsets.all(16),
-          color: Colors.grey[100],
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Surah ${getSurahName(widget.surahNumber)}',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                'Verses: $verseCount',
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                ),
-              ),
-            ],
-          ),
-        ),
-        // Verses
-        ...List.generate(verseCount, (verseIndex) {
-          final verseNumber = verseIndex + 1;
-          return _VerseTile(
-            surahNumber: widget.surahNumber,
-            verseNumber: verseNumber,
-            fontSize: widget.fontSize,
-            textColor: widget.textColor,
-            verseBackgroundColor: widget.verseBackgroundColor,
-            onLongPress: widget.onLongPress,
-            onLongPressUp: widget.onLongPressUp,
-            onLongPressCancel: widget.onLongPressCancel,
-            onLongPressDown: widget.onLongPressDown,
-            sp: widget.sp,
-            h: widget.h,
-          );
-        }),
-        const SizedBox(height: 24),
-      ],
-    );
-  }
-}
-
-class _VerseTile extends StatelessWidget {
-  final int surahNumber;
-  final int verseNumber;
-  final double? fontSize;
-  final Color textColor;
-  final Color? Function(int surahNumber, int verseNumber)? verseBackgroundColor;
-  final void Function(int surahNumber, int verseNumber)? onLongPress;
-  final void Function(int surahNumber, int verseNumber)? onLongPressUp;
-  final void Function(int surahNumber, int verseNumber)? onLongPressCancel;
-  final void Function(
-    int surahNumber,
-    int verseNumber,
-    LongPressStartDetails details,
-  )? onLongPressDown;
-  final double sp;
-  final double h;
-
-  const _VerseTile({
-    required this.surahNumber,
-    required this.verseNumber,
-    required this.fontSize,
-    required this.textColor,
-    this.verseBackgroundColor,
-    required this.onLongPress,
-    required this.onLongPressUp,
-    required this.onLongPressCancel,
-    required this.onLongPressDown,
-    required this.sp,
-    required this.h,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final verseBgColor = verseBackgroundColor?.call(surahNumber, verseNumber);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: InkWell(
-        onLongPress: () => onLongPress?.call(surahNumber, verseNumber),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey[300]!),
-            borderRadius: BorderRadius.circular(8),
-            color: verseBgColor,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Arabic text using QcfVerse
-              QcfVerse(
-                surahNumber: surahNumber,
-                verseNumber: verseNumber,
-                fontSize: fontSize,
-                textColor: textColor,
-                backgroundColor: verseBgColor ?? Colors.transparent,
-                onLongPress: () => onLongPress?.call(surahNumber, verseNumber),
-                onLongPressUp: () => onLongPressUp?.call(surahNumber, verseNumber),
-                onLongPressCancel: () => onLongPressCancel?.call(surahNumber, verseNumber),
-                onLongPressDown: (details) => onLongPressDown?.call(surahNumber, verseNumber, details),
-                sp: sp,
-                h: h,
-              ),
-              const SizedBox(height: 8),
-              // Verse info
-              Text(
-                'Surah $surahNumber, Verse $verseNumber',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
-                textAlign: TextAlign.right,
-              ),
-            ],
-          ),
         ),
       ),
     );

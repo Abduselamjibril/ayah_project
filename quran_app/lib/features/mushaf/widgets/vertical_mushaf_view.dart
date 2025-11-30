@@ -1,6 +1,5 @@
 // features/mushaf/widgets/vertical_mushaf_view.dart
 import 'package:flutter/material.dart';
-import '../../../core/quran/data/suwar.dart';
 import '../../../core/quran/widgets/quran_pageview.dart';
 import '../controller/mushaf_controller.dart';
 
@@ -17,10 +16,10 @@ class VerticalMushafView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PageviewQuran(
-      initialSurahNumber: controller.currentSurah,
+      initialPageNumber: controller.currentPage,
       scrollMode: ScrollMode.vertical,
-      onSurahChanged: (surah) {
-        controller.setSurah(surah);
+      onPageChanged: (page) {
+        controller.setPage(page);
       },
       textColor: Colors.black,
       pageBackgroundColor: const Color(0xFFF5F5DC),
@@ -30,7 +29,7 @@ class VerticalMushafView extends StatelessWidget {
           return Colors.yellow.withOpacity(0.3);
         }
         // Highlight selected verse
-        if (controller.highlightedSurah == surah && 
+        if (controller.highlightedSurah == surah &&
             controller.highlightedVerse == verse) {
           return Colors.blue.withOpacity(0.2);
         }
@@ -52,7 +51,7 @@ class VerticalMushafView extends StatelessWidget {
 
   void _showVerseOptions(BuildContext context, int surah, int verse) {
     final isBookmarked = controller.isBookmarked(surah, verse);
-    
+
     showModalBottomSheet(
       context: context,
       builder: (context) {
@@ -62,8 +61,10 @@ class VerticalMushafView extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: Icon(isBookmarked ? Icons.bookmark_remove : Icons.bookmark_add),
-                title: Text(isBookmarked ? 'Remove Bookmark' : 'Bookmark Verse'),
+                leading: Icon(
+                    isBookmarked ? Icons.bookmark_remove : Icons.bookmark_add),
+                title:
+                    Text(isBookmarked ? 'Remove Bookmark' : 'Bookmark Verse'),
                 onTap: () {
                   controller.toggleBookmark(surah, verse);
                   Navigator.pop(context);
