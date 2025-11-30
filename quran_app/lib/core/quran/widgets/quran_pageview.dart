@@ -3,9 +3,7 @@ import 'package:flutter/gestures.dart';
 import './../data/page_data.dart';
 import './../data/quran_text.dart';
 import './../data/page_font_size.dart';
-import './../data/suwar.dart';
 import 'header_widget.dart';
-import 'qcf_verse.dart';
 
 enum ScrollMode { horizontal, vertical }
 

@@ -6,7 +6,7 @@ class MushafController extends ChangeNotifier {
   ScrollMode _scrollMode = ScrollMode.horizontal;
   int _currentPage = 1;
   int _currentSurah = 1;
-  Set<String> _bookmarkedVerses = {};
+  final Set<String> _bookmarkedVerses = {};
   int? _highlightedSurah;
   int? _highlightedVerse;
 

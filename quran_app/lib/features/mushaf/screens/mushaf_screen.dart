@@ -90,8 +90,8 @@ class _MushafScreenState extends State<MushafScreen> {
     if (_controller.scrollMode == ScrollMode.vertical) {
       return FloatingActionButton(
         onPressed: _scrollToTop,
-        child: const Icon(Icons.arrow_upward),
         tooltip: 'Scroll to Top',
+        child: const Icon(Icons.arrow_upward),
       );
     }
     return null;
