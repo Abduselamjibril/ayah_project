@@ -1,7 +1,8 @@
-// features/mushaf/widgets/horizontal_mushaf_view.dart
+// lib/features/mushaf/widgets/horizontal_mushaf_view.dart
 import 'package:flutter/material.dart';
 import '../../../core/quran/widgets/quran_pageview.dart';
 import '../controller/mushaf_controller.dart';
+import '../screens/verse_details_screen.dart';
 
 class HorizontalMushafView extends StatelessWidget {
   final MushafController controller;
@@ -19,14 +20,15 @@ class HorizontalMushafView extends StatelessWidget {
             controller.setPage(page);
           },
           textColor: Colors.black,
-          pageBackgroundColor: const Color(0xFFF5F5DC), // Parchment-like background
+          pageBackgroundColor:
+              const Color(0xFFF5F5DC), // Parchment-like background
           verseBackgroundColor: (surah, verse) {
             // Highlight bookmarked verses
             if (controller.isBookmarked(surah, verse)) {
               return Colors.yellow.withOpacity(0.3);
             }
             // Highlight selected verse
-            if (controller.highlightedSurah == surah && 
+            if (controller.highlightedSurah == surah &&
                 controller.highlightedVerse == verse) {
               return Colors.blue.withOpacity(0.2);
             }
@@ -51,7 +53,8 @@ class HorizontalMushafView extends StatelessWidget {
             listenable: controller,
             builder: (context, child) {
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -61,7 +64,8 @@ class HorizontalMushafView extends StatelessWidget {
                       controller.currentPage > 1,
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.7),
                         borderRadius: BorderRadius.circular(20),
@@ -89,7 +93,8 @@ class HorizontalMushafView extends StatelessWidget {
     );
   }
 
-  Widget _buildNavigationButton(IconData icon, VoidCallback onPressed, bool enabled) {
+  Widget _buildNavigationButton(
+      IconData icon, VoidCallback onPressed, bool enabled) {
     return IconButton(
       icon: Icon(icon, color: Colors.white),
       onPressed: enabled ? onPressed : null,
@@ -108,7 +113,7 @@ class HorizontalMushafView extends StatelessWidget {
 
   void _showVerseOptions(BuildContext context, int surah, int verse) {
     final isBookmarked = controller.isBookmarked(surah, verse);
-    
+
     showModalBottomSheet(
       context: context,
       builder: (context) {
@@ -118,8 +123,10 @@ class HorizontalMushafView extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: Icon(isBookmarked ? Icons.bookmark_remove : Icons.bookmark_add),
-                title: Text(isBookmarked ? 'Remove Bookmark' : 'Bookmark Verse'),
+                leading: Icon(
+                    isBookmarked ? Icons.bookmark_remove : Icons.bookmark_add),
+                title:
+                    Text(isBookmarked ? 'Remove Bookmark' : 'Bookmark Verse'),
                 onTap: () {
                   controller.toggleBookmark(surah, verse);
                   Navigator.pop(context);
@@ -139,7 +146,7 @@ class HorizontalMushafView extends StatelessWidget {
                 title: const Text('View Tafsir'),
                 onTap: () {
                   Navigator.pop(context);
-                  _viewTafsir(surah, verse);
+                  _viewTafsir(context, surah, verse);
                 },
               ),
               ListTile(
@@ -175,17 +182,25 @@ class HorizontalMushafView extends StatelessWidget {
   }
 
   void _playAudio(int surah, int verse) {
-    // Implement audio playback
+    // TODO: Implement audio playback
     print('Playing audio for Surah $surah, Verse $verse');
   }
 
-  void _viewTafsir(int surah, int verse) {
-    // Implement tafsir navigation
-    print('Viewing tafsir for Surah $surah, Verse $verse');
+  void _viewTafsir(BuildContext context, int surah, int verse) {
+    // Navigate to verse details screen
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => VerseDetailsScreen(
+          surahNumber: surah,
+          ayahNumber: verse,
+        ),
+      ),
+    );
   }
 
   void _shareVerse(int surah, int verse) {
-    // Implement share functionality
+    // TODO: Implement share functionality
     print('Sharing Surah $surah, Verse $verse');
   }
 }
