@@ -82,26 +82,6 @@ class _MushafScreenState extends State<MushafScreen> {
               controller: _controller,
               scrollController: _scrollController,
             ),
-      floatingActionButton: _buildFloatingActionButton(),
-    );
-  }
-
-  Widget? _buildFloatingActionButton() {
-    if (_controller.scrollMode == ScrollMode.vertical) {
-      return FloatingActionButton(
-        onPressed: _scrollToTop,
-        tooltip: 'Scroll to Top',
-        child: const Icon(Icons.arrow_upward),
-      );
-    }
-    return null;
-  }
-
-  void _scrollToTop() {
-    _scrollController.animateTo(
-      0,
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeInOut,
     );
   }
 
