@@ -40,22 +40,6 @@ class _MushafScreenState extends State<MushafScreen> {
                 ? 'Switch to Continuous Scroll'
                 : 'Switch to Page View',
           ),
-          // Bookmark indicator
-          ListenableBuilder(
-            listenable: _controller,
-            builder: (context, child) {
-              final bookmarkCount = _controller.bookmarkedVerses.length;
-              return Badge(
-                isLabelVisible: bookmarkCount > 0,
-                label: Text(bookmarkCount.toString()),
-                child: IconButton(
-                  icon: const Icon(Icons.bookmark),
-                  onPressed: bookmarkCount > 0 ? _showBookmarks : null,
-                  tooltip: 'Bookmarks ($bookmarkCount)',
-                ),
-              );
-            },
-          ),
           // Settings icon
           IconButton(
             icon: const Icon(Icons.settings),
@@ -73,6 +57,7 @@ class _MushafScreenState extends State<MushafScreen> {
       ),
       drawer: SurahDrawer(
         onSurahSelected: _jumpToSurah,
+        controller: _controller,
       ),
       body: _controller.scrollMode == ScrollMode.horizontal
           ? HorizontalMushafView(controller: _controller)
@@ -98,49 +83,6 @@ class _MushafScreenState extends State<MushafScreen> {
       // This would require additional logic to map surah to page
       _controller.setPage(1); // Placeholder
     }
-  }
-
-  void _showBookmarks() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Bookmarked Verses'),
-        content: _controller.bookmarkedVerses.isEmpty
-            ? const Text('No bookmarked verses')
-            : ListView(
-                shrinkWrap: true,
-                children: _controller.bookmarkedVerses.map((verseKey) {
-                  final parts = verseKey.split(':');
-                  final surah = int.parse(parts[0]);
-                  final verse = int.parse(parts[1]);
-                  return ListTile(
-                    title: Text('Surah $surah, Verse $verse'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _jumpToVerse(surah, verse);
-                    },
-                    trailing: IconButton(
-                      icon: const Icon(Icons.bookmark_remove),
-                      onPressed: () {
-                        _controller.toggleBookmark(surah, verse);
-                      },
-                    ),
-                  );
-                }).toList(),
-              ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _jumpToVerse(int surah, int verse) {
-    _controller.setSurah(surah);
-    // Implementation would depend on your navigation logic
   }
 
   @override

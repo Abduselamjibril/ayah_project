@@ -19,7 +19,7 @@ class HorizontalMushafView extends StatelessWidget {
           onPageChanged: (page) {
             controller.setPage(page);
           },
-          textColor: Theme.of(context).colorScheme.onBackground,
+          textColor: Theme.of(context).colorScheme.onSurface,
           pageBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
           verseBackgroundColor: (surah, verse) {
             // Highlight bookmarked verses

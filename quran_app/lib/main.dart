@@ -12,6 +12,9 @@ Future<void> main() async {
   // Initialize database and seed initial data
   await DatabaseInitializer.initializeDatabase();
 
+  // Initialize theme service and load saved theme
+  await ThemeService().initialize();
+
   // Run the app
   runApp(const MyApp());
 }
