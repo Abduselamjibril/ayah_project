@@ -247,7 +247,7 @@ class _PageContent extends StatelessWidget {
                     fontSize: getScreenType(context) == ScreenType.large
                         ? 13.2 / sp
                         : 24 / sp,
-                    color: Colors.black,
+                    color: textColor,
                   ),
                 ),
               );
@@ -260,7 +260,7 @@ class _PageContent extends StatelessWidget {
                     fontSize: getScreenType(context) == ScreenType.large
                         ? 13.2 / sp
                         : 18 / sp,
-                    color: Colors.black,
+                    color: textColor,
                   ),
                 ),
               );
@@ -291,7 +291,7 @@ class _PageContent extends StatelessWidget {
                 text: getVerseNumberQCF(surah, v),
                 style: TextStyle(
                   fontFamily: pageFont,
-                  color: Colors.brown,
+                  color: textColor.withOpacity(0.7),
                   height: 1.35 / h,
                   backgroundColor: verseBgColor,
                 ),

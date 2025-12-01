@@ -21,8 +21,8 @@ class VerticalMushafView extends StatelessWidget {
       onPageChanged: (page) {
         controller.setPage(page);
       },
-      textColor: Colors.black,
-      pageBackgroundColor: const Color(0xFFF5F5DC),
+      textColor: Theme.of(context).colorScheme.onBackground,
+      pageBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
       verseBackgroundColor: (surah, verse) {
         // Highlight bookmarked verses
         if (controller.isBookmarked(surah, verse)) {

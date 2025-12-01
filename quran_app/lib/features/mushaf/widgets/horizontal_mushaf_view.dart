@@ -19,9 +19,8 @@ class HorizontalMushafView extends StatelessWidget {
           onPageChanged: (page) {
             controller.setPage(page);
           },
-          textColor: Colors.black,
-          pageBackgroundColor:
-              const Color(0xFFF5F5DC), // Parchment-like background
+          textColor: Theme.of(context).colorScheme.onBackground,
+          pageBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
           verseBackgroundColor: (surah, verse) {
             // Highlight bookmarked verses
             if (controller.isBookmarked(surah, verse)) {
@@ -59,6 +58,7 @@ class HorizontalMushafView extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     _buildNavigationButton(
+                      context,
                       Icons.arrow_back,
                       () => _navigateToPage(controller.currentPage - 1),
                       controller.currentPage > 1,
@@ -67,18 +67,22 @@ class HorizontalMushafView extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surface
+                            .withOpacity(0.9),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         'Page ${controller.currentPage} of 604',
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                     _buildNavigationButton(
+                      context,
                       Icons.arrow_forward,
                       () => _navigateToPage(controller.currentPage + 1),
                       controller.currentPage < 604,
@@ -93,13 +97,13 @@ class HorizontalMushafView extends StatelessWidget {
     );
   }
 
-  Widget _buildNavigationButton(
-      IconData icon, VoidCallback onPressed, bool enabled) {
+  Widget _buildNavigationButton(BuildContext context, IconData icon,
+      VoidCallback onPressed, bool enabled) {
     return IconButton(
-      icon: Icon(icon, color: Colors.white),
+      icon: Icon(icon, color: Theme.of(context).colorScheme.onPrimary),
       onPressed: enabled ? onPressed : null,
       style: IconButton.styleFrom(
-        backgroundColor: enabled ? Colors.green[700] : Colors.grey,
+        backgroundColor: enabled ? Theme.of(context).primaryColor : Colors.grey,
         shape: const CircleBorder(),
       ),
     );
