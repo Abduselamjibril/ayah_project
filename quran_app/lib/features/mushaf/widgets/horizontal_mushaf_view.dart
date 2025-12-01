@@ -4,31 +4,68 @@ import '../../../core/quran/widgets/quran_pageview.dart';
 import '../controller/mushaf_controller.dart';
 import '../screens/verse_details_screen.dart';
 
-class HorizontalMushafView extends StatelessWidget {
+class HorizontalMushafView extends StatefulWidget {
   final MushafController controller;
 
   const HorizontalMushafView({super.key, required this.controller});
+
+  @override
+  State<HorizontalMushafView> createState() => _HorizontalMushafViewState();
+}
+
+class _HorizontalMushafViewState extends State<HorizontalMushafView> {
+  late PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController =
+        PageController(initialPage: widget.controller.currentPage - 1);
+    widget.controller.addListener(_onControllerChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onControllerChanged);
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _onControllerChanged() {
+    // When controller page changes, animate to that page
+    if (_pageController.hasClients) {
+      final targetPage = widget.controller.currentPage - 1; // 0-indexed
+      if (_pageController.page?.round() != targetPage) {
+        _pageController.animateToPage(
+          targetPage,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
         PageviewQuran(
-          initialPageNumber: controller.currentPage,
+          controller: _pageController,
+          initialPageNumber: widget.controller.currentPage,
           scrollMode: ScrollMode.horizontal,
           onPageChanged: (page) {
-            controller.setPage(page);
+            widget.controller.setPage(page);
           },
           textColor: Theme.of(context).colorScheme.onSurface,
           pageBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
           verseBackgroundColor: (surah, verse) {
             // Highlight bookmarked verses
-            if (controller.isBookmarked(surah, verse)) {
+            if (widget.controller.isBookmarked(surah, verse)) {
               return Colors.yellow.withOpacity(0.3);
             }
             // Highlight selected verse
-            if (controller.highlightedSurah == surah &&
-                controller.highlightedVerse == verse) {
+            if (widget.controller.highlightedSurah == surah &&
+                widget.controller.highlightedVerse == verse) {
               return Colors.blue.withOpacity(0.2);
             }
             return null;
@@ -37,10 +74,10 @@ class HorizontalMushafView extends StatelessWidget {
             _showVerseOptions(context, surah, verse);
           },
           onLongPressDown: (surah, verse, details) {
-            controller.setHighlightedVerse(surah, verse);
+            widget.controller.setHighlightedVerse(surah, verse);
           },
           onLongPressCancel: (surah, verse) {
-            controller.clearHighlight();
+            widget.controller.clearHighlight();
           },
         ),
         // Page indicator
@@ -49,7 +86,7 @@ class HorizontalMushafView extends StatelessWidget {
           left: 0,
           right: 0,
           child: ListenableBuilder(
-            listenable: controller,
+            listenable: widget.controller,
             builder: (context, child) {
               return Container(
                 padding:
@@ -60,8 +97,8 @@ class HorizontalMushafView extends StatelessWidget {
                     _buildNavigationButton(
                       context,
                       Icons.arrow_back,
-                      () => _navigateToPage(controller.currentPage - 1),
-                      controller.currentPage > 1,
+                      () => _navigateToPage(widget.controller.currentPage - 1),
+                      widget.controller.currentPage > 1,
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -74,7 +111,7 @@ class HorizontalMushafView extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        'Page ${controller.currentPage} of 604',
+                        'Page ${widget.controller.currentPage} of 604',
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface,
                           fontWeight: FontWeight.bold,
@@ -84,8 +121,8 @@ class HorizontalMushafView extends StatelessWidget {
                     _buildNavigationButton(
                       context,
                       Icons.arrow_forward,
-                      () => _navigateToPage(controller.currentPage + 1),
-                      controller.currentPage < 604,
+                      () => _navigateToPage(widget.controller.currentPage + 1),
+                      widget.controller.currentPage < 604,
                     ),
                   ],
                 ),
@@ -111,12 +148,12 @@ class HorizontalMushafView extends StatelessWidget {
 
   void _navigateToPage(int page) {
     if (page >= 1 && page <= 604) {
-      controller.setPage(page);
+      widget.controller.setPage(page);
     }
   }
 
   void _showVerseOptions(BuildContext context, int surah, int verse) {
-    final isBookmarked = controller.isBookmarked(surah, verse);
+    final isBookmarked = widget.controller.isBookmarked(surah, verse);
 
     showModalBottomSheet(
       context: context,
@@ -132,7 +169,7 @@ class HorizontalMushafView extends StatelessWidget {
                 title:
                     Text(isBookmarked ? 'Remove Bookmark' : 'Bookmark Verse'),
                 onTap: () {
-                  controller.toggleBookmark(surah, verse);
+                  widget.controller.toggleBookmark(surah, verse);
                   Navigator.pop(context);
                   _showBookmarkSnackbar(context, isBookmarked);
                 },

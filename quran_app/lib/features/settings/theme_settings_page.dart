@@ -33,7 +33,14 @@ class ThemeSettingsPage extends StatelessWidget {
                 isSelected: themeService.themeMode == ThemeMode.dark,
                 icon: Icons.nightlight_round,
               ),
-              // System theme option can be added here if needed
+              _buildThemeOption(
+                context,
+                title: 'System Theme',
+                subtitle: 'Follow system theme',
+                mode: ThemeMode.system,
+                isSelected: themeService.themeMode == ThemeMode.system,
+                icon: Icons.brightness_auto,
+              ),
             ],
           );
         },

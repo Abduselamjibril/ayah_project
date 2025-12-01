@@ -1,6 +1,7 @@
 // features/mushaf/screens/mushaf_screen.dart
 import 'package:flutter/material.dart';
 import '../../../core/quran/widgets/quran_pageview.dart';
+import '../../../core/quran/data/page_data.dart';
 import '../../settings/settings_screen.dart';
 import '../controller/mushaf_controller.dart';
 import '../widgets/horizontal_mushaf_view.dart';
@@ -17,6 +18,11 @@ class MushafScreen extends StatefulWidget {
 class _MushafScreenState extends State<MushafScreen> {
   final MushafController _controller = MushafController();
   final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,19 +76,12 @@ class _MushafScreenState extends State<MushafScreen> {
 
   void _jumpToSurah(int surah) {
     _controller.setSurah(surah);
-    if (_controller.scrollMode == ScrollMode.vertical) {
-      // In a real implementation, you'd calculate the scroll position
-      // based on the surah index and verse count
-      _scrollController.animateTo(
-        (surah - 1) * 200.0, // Approximate position
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
-    } else {
-      // For horizontal mode, find the page containing the first verse of the surah
-      // This would require additional logic to map surah to page
-      _controller.setPage(1); // Placeholder
-    }
+
+    // Get the page number for the first verse of the selected Surah
+    final pageNumber = getPageNumber(surah, 1);
+
+    // Set the page in the controller
+    _controller.setPage(pageNumber);
   }
 
   @override

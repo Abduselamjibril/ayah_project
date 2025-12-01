@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../controller/mushaf_controller.dart';
+import '../../../core/quran/data/suwar.dart';
 
 class SurahDrawer extends StatefulWidget {
   final Function(int) onSurahSelected;
@@ -92,8 +93,38 @@ class _SurahDrawerState extends State<SurahDrawer>
       itemCount: 114,
       itemBuilder: (context, index) {
         final surahNumber = index + 1;
+        final surahInfo = surah[index]; // Get from suwar.dart
+
         return ListTile(
-          title: Text('Surah $surahNumber'),
+          leading: CircleAvatar(
+            backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
+            child: Text(
+              '$surahNumber',
+              style: TextStyle(
+                color: Theme.of(context).primaryColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          title: Text(
+            '${surahInfo['name']}',
+            style: const TextStyle(fontWeight: FontWeight.w500),
+          ),
+          subtitle: Text(
+            '${surahInfo['english']} • ${surahInfo['aya']} verses',
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
+          ),
+          trailing: Text(
+            surahInfo['arabic'],
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
           onTap: () {
             widget.onSurahSelected(surahNumber);
             Navigator.pop(context); // Close the drawer

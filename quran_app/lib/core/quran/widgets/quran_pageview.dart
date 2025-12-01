@@ -1,3 +1,4 @@
+// quran_pageview.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import './../data/page_data.dart';
@@ -20,6 +21,9 @@ class PageviewQuran extends StatefulWidget {
 
   /// Optional external controller for horizontal mode.
   final PageController? controller;
+
+  /// Optional external controller for vertical mode.
+  final ScrollController? verticalController;
 
   //sp (adding 1.sp to get the ratio of screen size for responsive font design)
   final double sp;
@@ -63,6 +67,7 @@ class PageviewQuran extends StatefulWidget {
     this.initialSurahNumber = 1,
     this.scrollMode = ScrollMode.horizontal,
     this.controller,
+    this.verticalController,
     this.onPageChanged,
     this.onSurahChanged,
     this.fontSize,
@@ -84,13 +89,17 @@ class PageviewQuran extends StatefulWidget {
 
 class _PageviewQuranState extends State<PageviewQuran> {
   PageController? _internalController;
-  final ScrollController _verticalController = ScrollController();
+  ScrollController? _internalVerticalController;
   int _currentSurah = 1;
 
   PageController get _pageController =>
       widget.controller ?? _internalController!;
 
+  ScrollController get _verticalController =>
+      widget.verticalController ?? _internalVerticalController!;
+
   bool get _ownsController => widget.controller == null;
+  bool get _ownsVerticalController => widget.verticalController == null;
 
   @override
   void initState() {
@@ -102,6 +111,10 @@ class _PageviewQuranState extends State<PageviewQuran> {
         initialPage: widget.initialPageNumber - 1,
       );
     }
+
+    if (_ownsVerticalController) {
+      _internalVerticalController = ScrollController();
+    }
   }
 
   @override
@@ -109,7 +122,9 @@ class _PageviewQuranState extends State<PageviewQuran> {
     if (_ownsController) {
       _internalController?.dispose();
     }
-    _verticalController.dispose();
+    if (_ownsVerticalController) {
+      _internalVerticalController?.dispose();
+    }
     super.dispose();
   }
 
@@ -146,6 +161,7 @@ class _PageviewQuranState extends State<PageviewQuran> {
           onLongPressDown: widget.onLongPressDown,
           sp: widget.sp,
           h: widget.h,
+          scrollMode: widget.scrollMode,
         );
       },
     );
@@ -157,10 +173,10 @@ class _PageviewQuranState extends State<PageviewQuran> {
       itemCount: totalPagesCount, // 604 pages instead of 114 surahs
       itemBuilder: (context, index) {
         final pageNumber = index + 1;
-        return Column(
-          children: [
-            // Page content
-            _PageContent(
+        return RepaintBoundary(
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height,
+            child: _PageContent(
               pageNumber: pageNumber,
               fontSize: widget.fontSize,
               textColor: widget.textColor,
@@ -171,15 +187,9 @@ class _PageviewQuranState extends State<PageviewQuran> {
               onLongPressDown: widget.onLongPressDown,
               sp: widget.sp,
               h: widget.h,
+              scrollMode: widget.scrollMode,
             ),
-            // Page separation line (except for the last page)
-            if (index < totalPagesCount - 1)
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 4.0),
-                height: 1.0,
-                color: Colors.grey[400],
-              ),
-          ],
+          ),
         );
       },
     );
@@ -196,6 +206,7 @@ class _PageContent extends StatelessWidget {
   final void Function(int surahNumber, int verseNumber)? onLongPressCancel;
   final double sp;
   final double h;
+  final ScrollMode scrollMode;
   final void Function(
     int surahNumber,
     int verseNumber,
@@ -213,6 +224,7 @@ class _PageContent extends StatelessWidget {
     required this.onLongPressDown,
     required this.sp,
     required this.h,
+    required this.scrollMode,
   });
 
   @override
@@ -225,7 +237,12 @@ class _PageContent extends StatelessWidget {
     if (pageNumber == 2 || pageNumber == 1) {
       verseSpans.add(
         WidgetSpan(
-          child: SizedBox(height: MediaQuery.of(context).size.height * .175),
+          child: SizedBox(
+            height: scrollMode == ScrollMode.horizontal
+                ? MediaQuery.of(context).size.height * .175
+                : MediaQuery.of(context).size.height *
+                    .1, // Smaller for vertical
+          ),
         ),
       );
     }
