@@ -10,6 +10,6 @@ class AppColors {
   // Dark Theme
   static const Color darkBackground = Color(0xFF0A1019);
   static const Color darkSurface = Color(0xFF0F1927);
-  static const Color darkAccent = Color.fromARGB(255, 121, 156, 226);
+  static const Color darkAccent = Color(0xFF5875AF);
   static const Color darkText = Color.fromARGB(222, 255, 255, 255);
 }

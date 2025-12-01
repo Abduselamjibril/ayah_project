@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../controller/mushaf_controller.dart';
 import '../../../core/quran/data/suwar.dart';
 
+import '../../khatmah/widgets/khatmah_tab.dart';
+
 class SurahDrawer extends StatefulWidget {
   final Function(int) onSurahSelected;
   final MushafController controller;
@@ -23,7 +25,7 @@ class _SurahDrawerState extends State<SurahDrawer>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -62,10 +64,13 @@ class _SurahDrawerState extends State<SurahDrawer>
                         .colorScheme
                         .onPrimary
                         .withOpacity(0.6),
+                    isScrollable:
+                        true, // Make scrollable to fit 4 tabs comfortably
                     tabs: const [
                       Tab(text: 'Surah'),
                       Tab(text: 'Bookmarks'),
-                      Tab(text: 'More'),
+                      Tab(text: 'Khatmah'),
+                      Tab(text: 'Note'),
                     ],
                   ),
                 ],
@@ -79,7 +84,8 @@ class _SurahDrawerState extends State<SurahDrawer>
               children: [
                 _buildSurahList(),
                 _buildBookmarksList(),
-                _buildMoreTab(),
+                KhatmahTab(controller: widget.controller),
+                _buildNotesTab(),
               ],
             ),
           ),
@@ -195,14 +201,31 @@ class _SurahDrawerState extends State<SurahDrawer>
     );
   }
 
-  Widget _buildMoreTab() {
+  Widget _buildNotesTab() {
     return Center(
-      child: Text(
-        'More features coming soon...',
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-          fontSize: 16,
-        ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.note_alt_outlined,
+              size: 64,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3)),
+          const SizedBox(height: 16),
+          Text(
+            'Notes Feature',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Coming Soon',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+              fontSize: 14,
+            ),
+          ),
+        ],
       ),
     );
   }
