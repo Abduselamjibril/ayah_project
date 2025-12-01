@@ -150,7 +150,7 @@ class _PageviewQuranState extends State<PageviewQuran> {
           widget.onPageChanged?.call(index + 1), // 1-based
       itemBuilder: (context, index) {
         final pageNumber = index + 1; // 1-based page
-        return _PageContent(
+        return QuranPageContent(
           pageNumber: pageNumber,
           fontSize: widget.fontSize,
           textColor: widget.textColor,
@@ -176,7 +176,7 @@ class _PageviewQuranState extends State<PageviewQuran> {
         return RepaintBoundary(
           child: SizedBox(
             height: MediaQuery.of(context).size.height,
-            child: _PageContent(
+            child: QuranPageContent(
               pageNumber: pageNumber,
               fontSize: widget.fontSize,
               textColor: widget.textColor,
@@ -196,7 +196,7 @@ class _PageviewQuranState extends State<PageviewQuran> {
   }
 }
 
-class _PageContent extends StatelessWidget {
+class QuranPageContent extends StatelessWidget {
   final int pageNumber;
   final double? fontSize;
   final Color textColor;
@@ -213,7 +213,8 @@ class _PageContent extends StatelessWidget {
     LongPressStartDetails details,
   )? onLongPressDown;
 
-  const _PageContent({
+  const QuranPageContent({
+    super.key,
     required this.pageNumber,
     required this.fontSize,
     required this.textColor,

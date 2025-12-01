@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/khatmah.dart';
 import '../services/khatmah_service.dart';
 import '../../mushaf/controller/mushaf_controller.dart';
+import '../screens/khatmah_reading_screen.dart';
 
 class KhatmahTab extends StatefulWidget {
   final MushafController controller;
@@ -226,17 +227,43 @@ class _KhatmahTabState extends State<KhatmahTab> {
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton.icon(
-                    onPressed: () {
-                      // Navigate to the start page for today, or last read page + 1
-                      int target = k.lastReadPage + 1;
-                      if (target < k.startPageForToday)
-                        target = k.startPageForToday;
-                      if (target > 604) target = 604;
+                    onPressed: () async {
+                      // Calculate start and end pages
+                      // Start at the last read page (to resume) or 1 if just starting
+                      // If lastReadPage is 0, start at 1.
+                      // If lastReadPage is 10, start at 10 (resume reading page 10).
+                      // Wait, if lastReadPage means "completed", then start at lastReadPage + 1.
+                      // But user said: "if he close it in page 11 ... open at page 11".
+                      // This implies lastReadPage tracks the CURRENT page.
+                      int startPage = k.lastReadPage > 0 ? k.lastReadPage : 1;
 
-                      widget.controller.setPage(target);
-                      Navigator.pop(context); // Close drawer
+                      // Target for today (accumulated)
+                      int endPage = k.targetPageForToday;
+
+                      // If user is ahead (start > end), give them the next batch
+                      if (startPage > endPage) {
+                        endPage = startPage + k.pagesPerDay;
+                      }
+
+                      // Clamp to 604
+                      if (endPage > 604) endPage = 604;
+                      if (startPage > 604) startPage = 604;
+
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => KhatmahReadingScreen(
+                            startPage: startPage,
+                            endPage: endPage,
+                            initialPage: startPage,
+                          ),
+                        ),
+                      );
+
+                      // Reload progress when returning
+                      _loadKhatmah();
                     },
-                    icon: const Icon(Icons.play_arrow),
+                    icon: const Icon(Icons.menu_book),
                     label: const Text('Read Now'),
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size(double.infinity, 45),
