@@ -1,0 +1,87 @@
+import 'package:flutter/material.dart';
+import '../../core/services/theme_service.dart';
+
+class ThemeSettingsPage extends StatelessWidget {
+  const ThemeSettingsPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final themeService = ThemeService();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('App Appearance'),
+      ),
+      body: AnimatedBuilder(
+        animation: themeService,
+        builder: (context, child) {
+          return ListView(
+            children: [
+              _buildThemeOption(
+                context,
+                title: 'Light Theme',
+                subtitle: 'Parchment style',
+                mode: ThemeMode.light,
+                isSelected: themeService.themeMode == ThemeMode.light,
+                icon: Icons.wb_sunny,
+              ),
+              _buildThemeOption(
+                context,
+                title: 'Dark Theme',
+                subtitle: 'Comfortable for night reading',
+                mode: ThemeMode.dark,
+                isSelected: themeService.themeMode == ThemeMode.dark,
+                icon: Icons.nightlight_round,
+              ),
+              // System theme option can be added here if needed
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildThemeOption(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required ThemeMode mode,
+    required bool isSelected,
+    required IconData icon,
+  }) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: isSelected
+            ? BorderSide(color: Theme.of(context).primaryColor, width: 2)
+            : BorderSide.none,
+      ),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: isSelected
+              ? Theme.of(context).primaryColor.withOpacity(0.1)
+              : Colors.grey.withOpacity(0.1),
+          child: Icon(
+            icon,
+            color: isSelected ? Theme.of(context).primaryColor : Colors.grey,
+          ),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? Theme.of(context).primaryColor : null,
+          ),
+        ),
+        subtitle: Text(subtitle),
+        trailing: isSelected
+            ? Icon(Icons.check_circle, color: Theme.of(context).primaryColor)
+            : null,
+        onTap: () {
+          ThemeService().setThemeMode(mode);
+        },
+      ),
+    );
+  }
+}

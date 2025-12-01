@@ -1,8 +1,10 @@
 // features/mushaf/screens/mushaf_screen.dart
 import 'package:flutter/material.dart';
 import '../../../core/quran/widgets/quran_pageview.dart';
+import '../../settings/settings_screen.dart';
 import '../controller/mushaf_controller.dart';
 import '../widgets/horizontal_mushaf_view.dart';
+import '../widgets/surah_drawer.dart';
 import '../widgets/vertical_mushaf_view.dart';
 
 class MushafScreen extends StatefulWidget {
@@ -21,8 +23,6 @@ class _MushafScreenState extends State<MushafScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Al-Quran'),
-        backgroundColor: Colors.green[700],
-        foregroundColor: Colors.white,
         actions: [
           // Scroll mode toggle
           IconButton(
@@ -30,7 +30,6 @@ class _MushafScreenState extends State<MushafScreen> {
               _controller.scrollMode == ScrollMode.horizontal
                   ? Icons.view_day
                   : Icons.view_stream,
-              color: Colors.white,
             ),
             onPressed: () {
               setState(() {
@@ -57,24 +56,23 @@ class _MushafScreenState extends State<MushafScreen> {
               );
             },
           ),
-          // Jump to surah menu
-          PopupMenuButton<int>(
-            icon: const Icon(Icons.menu_book),
-            tooltip: 'Jump to Surah',
-            onSelected: (surah) {
-              _jumpToSurah(surah);
-            },
-            itemBuilder: (context) {
-              return List.generate(114, (index) {
-                final surahNumber = index + 1;
-                return PopupMenuItem(
-                  value: surahNumber,
-                  child: Text('Surah $surahNumber'),
-                );
-              });
+          // Settings icon
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Settings',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
+                ),
+              );
             },
           ),
         ],
+      ),
+      drawer: SurahDrawer(
+        onSurahSelected: _jumpToSurah,
       ),
       body: _controller.scrollMode == ScrollMode.horizontal
           ? HorizontalMushafView(controller: _controller)

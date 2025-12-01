@@ -12,7 +12,7 @@ class DatabaseInitializer {
 
       // Verify database is initialized
       print('Database initialized successfully');
-      print('Database path: ${await database.path}');
+      print('Database path: ${database.path}');
 
       // Initialize Translation and Tafsir Services
       await _initializeServices();

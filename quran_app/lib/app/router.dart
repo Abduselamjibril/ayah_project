@@ -1,12 +1,15 @@
 // app/router.dart
 import 'package:flutter/material.dart';
 import '../features/mushaf/screens/mushaf_screen.dart';
+import '../features/settings/settings_screen.dart';
 
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case '/mushaf':
         return MaterialPageRoute(builder: (_) => const MushafScreen());
+      case '/settings':
+        return MaterialPageRoute(builder: (_) => const SettingsScreen());
       // Add your other routes here
       // case '/bookmarks':
       //   return MaterialPageRoute(builder: (_) => const BookmarkScreen());

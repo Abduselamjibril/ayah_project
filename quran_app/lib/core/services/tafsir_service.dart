@@ -118,7 +118,7 @@ class TafsirService {
     if (!_isInitialized) await initialize();
 
     try {
-      final downloaded = await QuranLibrary().getTafsirDownloaded(index);
+      final downloaded = QuranLibrary().getTafsirDownloaded(index);
       return downloaded ?? false;
     } catch (e) {
       print('Error checking tafsir download status: $e');
