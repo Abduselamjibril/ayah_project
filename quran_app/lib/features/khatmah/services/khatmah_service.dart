@@ -24,7 +24,7 @@ class KhatmahService {
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
     // iOS init
-    final DarwinInitializationSettings initializationSettingsDarwin =
+    const DarwinInitializationSettings initializationSettingsDarwin =
         DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,

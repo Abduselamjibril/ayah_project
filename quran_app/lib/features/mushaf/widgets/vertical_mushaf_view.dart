@@ -1,7 +1,6 @@
 // features/mushaf/widgets/vertical_mushaf_view.dart
 import 'package:flutter/material.dart';
 import '../../../core/quran/widgets/quran_pageview.dart';
-import '../../../core/quran/data/page_data.dart';
 import '../controller/mushaf_controller.dart';
 import '../screens/verse_details_screen.dart';
 
