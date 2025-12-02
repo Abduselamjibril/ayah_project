@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'theme_settings_page.dart';
 import 'notification_settings_page.dart';
+import '../downloads/downloads_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -38,6 +39,21 @@ class SettingsScreen extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => const NotificationSettingsPage(),
+                ),
+              );
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.download_outlined),
+            title: const Text('Downloads'),
+            subtitle: const Text('Translations and tafsir'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const DownloadsScreen(),
                 ),
               );
             },

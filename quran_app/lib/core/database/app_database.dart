@@ -20,8 +20,9 @@ class AppDatabase {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2, // Incremented version for migration
       onCreate: _createDB,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -47,6 +48,7 @@ class AppDatabase {
         ayah_number INTEGER NOT NULL,
         language TEXT NOT NULL,
         translator TEXT,
+        edition_identifier TEXT,
         text TEXT NOT NULL,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(surah_number, ayah_number, language, translator)
@@ -61,6 +63,7 @@ class AppDatabase {
         ayah_number INTEGER NOT NULL,
         language TEXT NOT NULL,
         scholar TEXT,
+        edition_identifier TEXT,
         text TEXT NOT NULL,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(surah_number, ayah_number, language, scholar)
@@ -90,6 +93,44 @@ class AppDatabase {
     ''');
 
     print('Database tables created successfully');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Migration from version 1 to 2: Add edition_identifier column
+      // Check if column exists before adding to prevent duplicate column errors
+      await _addColumnIfNotExists(
+          db, 'translations', 'edition_identifier', 'TEXT');
+      await _addColumnIfNotExists(db, 'tafsir', 'edition_identifier', 'TEXT');
+      print('Database upgraded to version 2');
+    }
+  }
+
+  /// Helper method to add a column only if it doesn't already exist
+  Future<void> _addColumnIfNotExists(
+    Database db,
+    String tableName,
+    String columnName,
+    String columnType,
+  ) async {
+    try {
+      // Get table info to check if column exists
+      final columns = await db.rawQuery('PRAGMA table_info($tableName)');
+      final columnExists = columns.any((col) => col['name'] == columnName);
+
+      if (!columnExists) {
+        await db.execute(
+          'ALTER TABLE $tableName ADD COLUMN $columnName $columnType',
+        );
+        print('Added column $columnName to table $tableName');
+      } else {
+        print(
+            'Column $columnName already exists in table $tableName, skipping');
+      }
+    } catch (e) {
+      print('Error adding column $columnName to $tableName: $e');
+      rethrow;
+    }
   }
 
   Future<void> close() async {

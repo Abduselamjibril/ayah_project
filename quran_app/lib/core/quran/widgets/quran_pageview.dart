@@ -320,8 +320,39 @@ class QuranPageContent extends StatelessWidget {
       }
     }
 
+    // Calculate responsive horizontal padding
+    //  Small phones want minimal padding for max content
+    // Large screens (tablets) want more padding for readability
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTablet = screenWidth > 600;
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
+    // Responsive padding calculation:
+    // - Phone portrait: 8-12px (minimal, maximize content)
+    // - Phone landscape: 16-20px (more breathing room)
+    // - Tablet portrait: 24-32px (better readability)
+    // - Tablet landscape: 32-48px (lots of space, comfortable reading)
+    double horizontalPadding;
+    if (isTablet) {
+      horizontalPadding = isLandscape ? 40.0 : 28.0;
+    } else {
+      horizontalPadding = isLandscape ? 18.0 : 10.0;
+    }
+
+    // Vertical padding also responsive
+    double verticalPadding;
+    if (isTablet) {
+      verticalPadding = isLandscape ? 16.0 : 12.0;
+    } else {
+      verticalPadding = isLandscape ? 12.0 : 12.0;
+    }
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontalPadding,
+        vertical: verticalPadding,
+      ),
       color: Colors.transparent,
       child: Text.rich(
         TextSpan(children: verseSpans),

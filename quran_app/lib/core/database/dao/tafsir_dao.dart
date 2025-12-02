@@ -142,4 +142,65 @@ class TafsirDao {
       return 0;
     }
   }
+
+  /// Insert multiple tafsirs in a batch (efficient for downloads)
+  Future<void> insertBatch(List<Map<String, dynamic>> tafsirs) async {
+    try {
+      final batch = database.batch();
+      for (final tafsir in tafsirs) {
+        batch.insert(
+          'tafsir',
+          tafsir,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+      await batch.commit(noResult: true);
+    } catch (e) {
+      print('Error batch inserting tafsirs: $e');
+      rethrow;
+    }
+  }
+
+  /// Delete all tafsirs for a specific edition (identifier)
+  Future<int> deleteByEdition(String editionIdentifier) async {
+    try {
+      return await database.delete(
+        'tafsir',
+        where: 'edition_identifier = ?',
+        whereArgs: [editionIdentifier],
+      );
+    } catch (e) {
+      print('Error deleting tafsirs by edition: $e');
+      return 0;
+    }
+  }
+
+  /// Check if a specific edition is downloaded
+  Future<bool> isEditionDownloaded(String editionIdentifier) async {
+    try {
+      final results = await database.query(
+        'tafsir',
+        where: 'edition_identifier = ?',
+        whereArgs: [editionIdentifier],
+        limit: 1,
+      );
+      return results.isNotEmpty;
+    } catch (e) {
+      print('Error checking edition download status: $e');
+      return false;
+    }
+  }
+
+  /// Get list of all downloaded edition identifiers
+  Future<List<String>> getDownloadedEditions() async {
+    try {
+      final results = await database.rawQuery(
+        'SELECT DISTINCT edition_identifier FROM tafsir ORDER BY edition_identifier',
+      );
+      return results.map((row) => row['edition_identifier'] as String).toList();
+    } catch (e) {
+      print('Error getting downloaded editions: $e');
+      return [];
+    }
+  }
 }
