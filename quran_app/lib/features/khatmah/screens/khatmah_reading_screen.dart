@@ -3,12 +3,14 @@ import 'package:quran_app/core/quran/widgets/quran_pageview.dart';
 import '../services/khatmah_service.dart';
 
 class KhatmahReadingScreen extends StatefulWidget {
+  final String khatmahId;
   final int startPage;
   final int endPage;
   final int initialPage;
 
   const KhatmahReadingScreen({
     super.key,
+    required this.khatmahId,
     required this.startPage,
     required this.endPage,
     required this.initialPage,
@@ -44,7 +46,7 @@ class _KhatmahReadingScreenState extends State<KhatmahReadingScreen> {
     setState(() {
       _currentPage = newPage;
     });
-    _khatmahService.updateProgress(newPage);
+    _khatmahService.updateKhatmahProgress(widget.khatmahId, newPage);
   }
 
   @override

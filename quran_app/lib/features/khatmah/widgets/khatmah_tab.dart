@@ -15,58 +15,49 @@ class KhatmahTab extends StatefulWidget {
 
 class _KhatmahTabState extends State<KhatmahTab> {
   final KhatmahService _service = KhatmahService();
-  Khatmah? _currentKhatmah;
+  List<Khatmah> _khatmahs = [];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadKhatmah();
+    _loadKhatmahs();
     _service.init();
-
-    // Listen to controller to update progress when user reads
-    widget.controller.addListener(_onPageChanged);
   }
 
   @override
   void dispose() {
-    widget.controller.removeListener(_onPageChanged);
+    // The listener for page changes is now handled within KhatmahReadingScreen
+    // or triggered on return from it, so no listener here.
     super.dispose();
   }
 
-  void _onPageChanged() {
-    // Update progress when page changes
-    // We might want to debounce this or only update if it's a significant change
-    // For now, just update.
-    if (_currentKhatmah != null) {
-      _service.updateProgress(widget.controller.currentPage);
-      // Reload local state to reflect changes if needed, but updateProgress is async
-      // Maybe just update local state?
-      // _currentKhatmah = _currentKhatmah!.copyWith(lastReadPage: widget.controller.currentPage);
-      // setState(() {});
-      // Actually, let's just reload periodically or when tab is opened?
-      // Updating service is enough for persistence.
-    }
-  }
+  // This method is no longer needed here as progress updates are handled
+  // when returning from KhatmahReadingScreen or within that screen itself.
+  // void _onPageChanged() {
+  //   if (_currentKhatmah != null) {
+  //     _service.updateProgress(widget.controller.currentPage);
+  //   }
+  // }
 
-  Future<void> _loadKhatmah() async {
-    final khatmah = await _service.getCurrentKhatmah();
+  Future<void> _loadKhatmahs() async {
+    final khatmahs = await _service.getAllKhatmahs();
     if (mounted) {
       setState(() {
-        _currentKhatmah = khatmah;
+        _khatmahs = khatmahs;
         _isLoading = false;
       });
     }
   }
 
-  Future<void> _startNewKhatmah(int days) async {
-    await _service.startKhatmah(days);
-    _loadKhatmah();
+  Future<void> _addKhatmah(int days) async {
+    await _service.addKhatmah(days);
+    _loadKhatmahs();
   }
 
-  Future<void> _deleteKhatmah() async {
-    await _service.deleteKhatmah();
-    _loadKhatmah();
+  Future<void> _deleteKhatmah(String id) async {
+    await _service.deleteKhatmah(id);
+    _loadKhatmahs();
   }
 
   @override
@@ -75,11 +66,26 @@ class _KhatmahTabState extends State<KhatmahTab> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_currentKhatmah == null) {
+    if (_khatmahs.isEmpty) {
       return _buildStartScreen();
     }
 
-    return _buildProgressScreen();
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: ListView.builder(
+        padding: const EdgeInsets.all(16.0),
+        itemCount: _khatmahs.length,
+        itemBuilder: (context, index) {
+          return _buildKhatmahCard(_khatmahs[index]);
+        },
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showCustomDaysDialog,
+        label: const Text('New Plan'),
+        icon: const Icon(Icons.add),
+        backgroundColor: Theme.of(context).primaryColor,
+      ),
+    );
   }
 
   Widget _buildStartScreen() {
@@ -122,7 +128,7 @@ class _KhatmahTabState extends State<KhatmahTab> {
 
   Widget _buildOptionButton(String text, int days) {
     return ElevatedButton(
-      onPressed: () => _startNewKhatmah(days),
+      onPressed: () => _addKhatmah(days),
       style: ElevatedButton.styleFrom(
         minimumSize: const Size(double.infinity, 50),
         backgroundColor: Theme.of(context).primaryColor,
@@ -132,181 +138,134 @@ class _KhatmahTabState extends State<KhatmahTab> {
     );
   }
 
-  Widget _buildProgressScreen() {
-    final k = _currentKhatmah!;
+  Widget _buildKhatmahCard(Khatmah k) {
     final progress = k.lastReadPage / 604;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Card(
-            elevation: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  Text(
-                    'Day ${k.currentDay} of ${k.durationDays}',
-                    style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 10,
-                    backgroundColor: Colors.grey[200],
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                        Theme.of(context).primaryColor),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${(progress * 100).toStringAsFixed(1)}% Completed',
-                    style: const TextStyle(color: Colors.grey),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Page ${k.lastReadPage} / 604',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
-              ),
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Day ${k.currentDay} of ${k.durationDays}',
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  onPressed: () => _confirmDelete(k.id),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Today\'s Goal',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          Card(
-            color: Theme.of(context).primaryColor.withOpacity(0.05),
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(
-                  color: Theme.of(context).primaryColor.withOpacity(0.2)),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: progress,
+              minHeight: 10,
+              backgroundColor: Colors.grey[200],
+              valueColor:
+                  AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Target Pages',
-                              style:
-                                  TextStyle(color: Colors.grey, fontSize: 12)),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${k.startPageForToday} - ${k.targetPageForToday}',
-                            style: const TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          const Text('Amount',
-                              style:
-                                  TextStyle(color: Colors.grey, fontSize: 12)),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${k.pagesPerDay} pages',
-                            style: const TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      // Calculate start and end pages
-                      // Start at the last read page (to resume) or 1 if just starting
-                      // If lastReadPage is 0, start at 1.
-                      // If lastReadPage is 10, start at 10 (resume reading page 10).
-                      // Wait, if lastReadPage means "completed", then start at lastReadPage + 1.
-                      // But user said: "if he close it in page 11 ... open at page 11".
-                      // This implies lastReadPage tracks the CURRENT page.
-                      int startPage = k.lastReadPage > 0 ? k.lastReadPage : 1;
-
-                      // Target for today (accumulated)
-                      int endPage = k.targetPageForToday;
-
-                      // If user is ahead (start > end), give them the next batch
-                      if (startPage > endPage) {
-                        endPage = startPage + k.pagesPerDay;
-                      }
-
-                      // Clamp to 604
-                      if (endPage > 604) endPage = 604;
-                      if (startPage > 604) startPage = 604;
-
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => KhatmahReadingScreen(
-                            startPage: startPage,
-                            endPage: endPage,
-                            initialPage: startPage,
-                          ),
-                        ),
-                      );
-
-                      // Reload progress when returning
-                      _loadKhatmah();
-                    },
-                    icon: const Icon(Icons.menu_book),
-                    label: const Text('Read Now'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 45),
-                      backgroundColor: Theme.of(context).primaryColor,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${(progress * 100).toStringAsFixed(1)}% Completed',
+                  style: const TextStyle(color: Colors.grey),
+                ),
+                Text(
+                  'Page ${k.lastReadPage} / 604',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 24),
-          OutlinedButton.icon(
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Delete Khatmah?'),
-                  content:
-                      const Text('This will delete your current progress.'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _deleteKhatmah();
-                      },
-                      child: const Text('Delete',
-                          style: TextStyle(color: Colors.red)),
+            const Divider(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Today\'s Goal',
+                        style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${k.startPageForToday} - ${k.targetPageForToday}',
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
-              );
-            },
-            icon: const Icon(Icons.delete_outline, color: Colors.red),
-            label: const Text('Delete Khatmah',
-                style: TextStyle(color: Colors.red)),
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: Colors.red),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    // Navigation Logic:
+                    // Start Page: 1 (User requested to see previous pages)
+                    // End Page: Target for today (accumulated)
+                    // Initial Page: Last read page (resume) or 1
+
+                    int startPage = 1;
+                    int endPage = k.targetPageForToday;
+                    int initialPage = k.lastReadPage > 0 ? k.lastReadPage : 1;
+
+                    // If user is ahead (lastRead > target), extend endPage
+                    if (initialPage > endPage) {
+                      endPage = initialPage + k.pagesPerDay;
+                    }
+
+                    if (endPage > 604) endPage = 604;
+
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => KhatmahReadingScreen(
+                          khatmahId: k.id,
+                          startPage: startPage,
+                          endPage: endPage,
+                          initialPage: initialPage,
+                        ),
+                      ),
+                    );
+
+                    _loadKhatmahs();
+                  },
+                  icon: const Icon(Icons.menu_book),
+                  label: const Text('Read Now'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDelete(String id) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Khatmah?'),
+        content: const Text('This will delete this plan and its progress.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteKhatmah(id);
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -318,14 +277,19 @@ class _KhatmahTabState extends State<KhatmahTab> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Custom Duration'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Enter number of days',
-            hintText: 'e.g. 20',
-          ),
+        title: const Text('New Khatmah Plan'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Enter duration in days:'),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                hintText: 'e.g. 30',
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -337,10 +301,10 @@ class _KhatmahTabState extends State<KhatmahTab> {
               final days = int.tryParse(controller.text);
               if (days != null && days > 0) {
                 Navigator.pop(context);
-                _startNewKhatmah(days);
+                _addKhatmah(days);
               }
             },
-            child: const Text('Start'),
+            child: const Text('Create'),
           ),
         ],
       ),

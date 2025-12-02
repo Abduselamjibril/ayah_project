@@ -8,7 +8,9 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 class KhatmahService {
-  static const String _khatmahKey = 'current_khatmah';
+  static const String _khatmahsKey = 'khatmahs_list';
+  static const String _khatmahKey =
+      'current_khatmah'; // Legacy key for migration
   static const String _notifEnabledKey = 'khatmah_notif_enabled';
   static const String _notifHourKey = 'khatmah_notif_hour';
   static const String _notifMinuteKey = 'khatmah_notif_minute';
@@ -37,6 +39,9 @@ class KhatmahService {
 
     await _notificationsPlugin.initialize(initializationSettings);
     tz.initializeTimeZones();
+
+    // Migrate legacy single khatmah to list
+    await _migrateLegacyData();
   }
 
   Future<void> requestPermissions() async {
@@ -55,32 +60,48 @@ class KhatmahService {
               AndroidFlutterLocalNotificationsPlugin>();
 
       await androidImplementation?.requestNotificationsPermission();
-      // Exact alarms permission is usually handled by manifest, but good to check
     }
   }
 
-  Future<Khatmah?> getCurrentKhatmah() async {
+  Future<void> _migrateLegacyData() async {
     final prefs = await SharedPreferences.getInstance();
-    final String? jsonString = prefs.getString(_khatmahKey);
-    if (jsonString == null) return null;
-    return Khatmah.fromJson(jsonDecode(jsonString));
+    if (prefs.containsKey(_khatmahKey)) {
+      final String? jsonString = prefs.getString(_khatmahKey);
+      if (jsonString != null) {
+        final legacyKhatmah = Khatmah.fromJson(jsonDecode(jsonString));
+        await saveKhatmah(legacyKhatmah); // Add to list
+        await prefs.remove(_khatmahKey); // Remove legacy
+      }
+    }
   }
 
-  Future<void> startKhatmah(int durationDays) async {
+  Future<List<Khatmah>> getAllKhatmahs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String>? jsonList = prefs.getStringList(_khatmahsKey);
+    if (jsonList == null) return [];
+    return jsonList.map((json) => Khatmah.fromJson(jsonDecode(json))).toList();
+  }
+
+  Future<void> addKhatmah(int durationDays) async {
     final khatmah = Khatmah(
       id: DateTime.now().toIso8601String(),
       startDate: DateTime.now(),
       durationDays: durationDays,
     );
-    await _saveKhatmah(khatmah);
+    await saveKhatmah(khatmah);
 
-    // Enable notifications by default when starting
-    await setNotificationSettings(true, const TimeOfDay(hour: 20, minute: 0));
+    // Enable notifications by default when starting first khatmah
+    final all = await getAllKhatmahs();
+    if (all.length == 1) {
+      await setNotificationSettings(true, const TimeOfDay(hour: 20, minute: 0));
+    }
   }
 
-  Future<void> updateProgress(int page) async {
-    final khatmah = await getCurrentKhatmah();
-    if (khatmah != null) {
+  Future<void> updateKhatmahProgress(String id, int page) async {
+    final khatmahs = await getAllKhatmahs();
+    final index = khatmahs.indexWhere((k) => k.id == id);
+    if (index != -1) {
+      final khatmah = khatmahs[index];
       int newPage = page;
       if (page > khatmah.lastReadPage) {
         newPage = page;
@@ -89,19 +110,36 @@ class KhatmahService {
       }
 
       final updated = khatmah.copyWith(lastReadPage: newPage);
-      await _saveKhatmah(updated);
+      khatmahs[index] = updated;
+      await _saveAllKhatmahs(khatmahs);
     }
   }
 
-  Future<void> deleteKhatmah() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_khatmahKey);
-    await _notificationsPlugin.cancelAll();
+  Future<void> deleteKhatmah(String id) async {
+    final khatmahs = await getAllKhatmahs();
+    khatmahs.removeWhere((k) => k.id == id);
+    await _saveAllKhatmahs(khatmahs);
+
+    if (khatmahs.isEmpty) {
+      await _notificationsPlugin.cancelAll();
+    }
   }
 
-  Future<void> _saveKhatmah(Khatmah khatmah) async {
+  Future<void> saveKhatmah(Khatmah khatmah) async {
+    final khatmahs = await getAllKhatmahs();
+    final index = khatmahs.indexWhere((k) => k.id == khatmah.id);
+    if (index != -1) {
+      khatmahs[index] = khatmah;
+    } else {
+      khatmahs.add(khatmah);
+    }
+    await _saveAllKhatmahs(khatmahs);
+  }
+
+  Future<void> _saveAllKhatmahs(List<Khatmah> khatmahs) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_khatmahKey, jsonEncode(khatmah.toJson()));
+    final jsonList = khatmahs.map((k) => jsonEncode(k.toJson())).toList();
+    await prefs.setStringList(_khatmahsKey, jsonList);
   }
 
   // Settings Methods
