@@ -1,15 +1,19 @@
 // import 'package:flutter/material.dart';
 // import '../data/suwar.dart';
 
-// class HeaderWidget extends StatelessWidget {
-//   final int suraNumber;
-//   const HeaderWidget({super.key, required this.suraNumber});
+// class MushafHeader extends StatelessWidget {
+//   final int surahNumber;
+
+//   const MushafHeader({
+//     super.key,
+//     required this.surahNumber,
+//   });
 
 //   @override
 //   Widget build(BuildContext context) {
-//     final surahName = getSurahName(suraNumber);
-//     final isMeccan = _isMeccanSurah(suraNumber);
-    
+//     final surahInfo = _getSurahInfo(surahNumber);
+//     final isMeccan = _isMeccanSurah(surahNumber);
+
 //     return Container(
 //       margin: const EdgeInsets.symmetric(vertical: 16),
 //       child: Card(
@@ -18,7 +22,6 @@
 //           borderRadius: BorderRadius.circular(12),
 //         ),
 //         child: Container(
-//           width: double.infinity,
 //           padding: const EdgeInsets.all(20),
 //           decoration: BoxDecoration(
 //             gradient: LinearGradient(
@@ -33,82 +36,12 @@
 //           ),
 //           child: Column(
 //             children: [
-//               // Surah number in decorative style
-//               Container(
-//                 width: 60,
-//                 height: 60,
-//                 decoration: BoxDecoration(
-//                   color: Colors.green[700],
-//                   shape: BoxShape.circle,
-//                 ),
-//                 child: Center(
-//                   child: Text(
-//                     suraNumber.toString(),
-//                     style: const TextStyle(
-//                       color: Colors.white,
-//                       fontSize: 20,
-//                       fontWeight: FontWeight.bold,
-//                     ),
-//                   ),
-//                 ),
-//               ),
+//               _buildSurahNumber(context),
 //               const SizedBox(height: 12),
-//               // Surah name in Arabic
-//               Text(
-//                 surahName,
-//                 style: const TextStyle(
-//                   fontSize: 28,
-//                   fontWeight: FontWeight.bold,
-//                   color: Colors.green[900],
-//                 ),
-//                 textDirection: TextDirection.rtl,
-//               ),
+//               _buildSurahName(surahInfo),
 //               const SizedBox(height: 8),
-//               // Revelation info
-//               Row(
-//                 mainAxisAlignment: MainAxisAlignment.center,
-//                 children: [
-//                   Icon(
-//                     Icons.location_on,
-//                     size: 16,
-//                     color: Colors.green[700],
-//                   ),
-//                   const SizedBox(width: 4),
-//                   Text(
-//                     isMeccan ? 'Meccan' : 'Medinan',
-//                     style: TextStyle(
-//                       fontSize: 14,
-//                       color: Colors.green[700],
-//                       fontWeight: FontWeight.w500,
-//                     ),
-//                   ),
-//                   const SizedBox(width: 16),
-//                   Icon(
-//                     Icons.format_list_numbered,
-//                     size: 16,
-//                     color: Colors.green[700],
-//                   ),
-//                   const SizedBox(width: 4),
-//                   Text(
-//                     '${getVerseCount(suraNumber)} Verses',
-//                     style: TextStyle(
-//                       fontSize: 14,
-//                       color: Colors.green[700],
-//                       fontWeight: FontWeight.w500,
-//                     ),
-//                   ),
-//                 ],
-//               ),
-//               const SizedBox(height: 8),
-//               // Bismillah for all surahs except At-Tawbah
-//               if (suraNumber != 9)
-//                 Text(
-//                   '﷽',
-//                   style: TextStyle(
-//                     fontSize: 24,
-//                     color: Colors.green[800],
-//                   ),
-//                 ),
+//               _buildRevelationInfo(isMeccan, surahInfo),
+//               if (surahNumber != 9) _buildBismillah(),
 //             ],
 //           ),
 //         ),
@@ -116,16 +49,129 @@
 //     );
 //   }
 
+//   Map<String, dynamic> _getSurahInfo(int surahNumber) {
+//     try {
+//       return surah[surahNumber - 1];
+//     } catch (e) {
+//       return {
+//         'name': 'Unknown',
+//         'aya': 0,
+//       };
+//     }
+//   }
+
+//   Widget _buildSurahNumber(BuildContext context) {
+//     return Container(
+//       width: 60,
+//       height: 60,
+//       decoration: BoxDecoration(
+//         color: Colors.green[700],
+//         shape: BoxShape.circle,
+//       ),
+//       child: Center(
+//         child: Text(
+//           surahNumber.toString(),
+//           style: const TextStyle(
+//             color: Colors.white,
+//             fontSize: 20,
+//             fontWeight: FontWeight.bold,
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+
+//   Widget _buildSurahName(Map<String, dynamic> surahInfo) {
+//     return Text(
+//       surahInfo['name'] ?? 'Unknown',
+//       style: TextStyle(
+//         fontSize: 28,
+//         fontWeight: FontWeight.bold,
+//         color: Colors.green[900],
+//       ),
+//       textDirection: TextDirection.rtl,
+//     );
+//   }
+
+//   Widget _buildRevelationInfo(bool isMeccan, Map<String, dynamic> surahInfo) {
+//     return Row(
+//       mainAxisAlignment: MainAxisAlignment.center,
+//       children: [
+//         _buildInfoItem(
+//           icon: Icons.location_on,
+//           text: isMeccan ? 'Meccan' : 'Medinan',
+//         ),
+//         const SizedBox(width: 16),
+//         _buildInfoItem(
+//           icon: Icons.format_list_numbered,
+//           text: '${surahInfo['aya'] ?? 0} Verses',
+//         ),
+//       ],
+//     );
+//   }
+
+//   Widget _buildInfoItem({required IconData icon, required String text}) {
+//     return Row(
+//       children: [
+//         Icon(
+//           icon,
+//           size: 16,
+//           color: Colors.green[700],
+//         ),
+//         const SizedBox(width: 4),
+//         Text(
+//           text,
+//           style: TextStyle(
+//             fontSize: 14,
+//             color: Colors.green[700],
+//             fontWeight: FontWeight.w500,
+//           ),
+//         ),
+//       ],
+//     );
+//   }
+
+//   Widget _buildBismillah() {
+//     return Padding(
+//       padding: const EdgeInsets.only(top: 8),
+//       child: Text(
+//         '﷽',
+//         style: TextStyle(
+//           fontSize: 24,
+//           color: Colors.green[800],
+//         ),
+//       ),
+//     );
+//   }
+
 //   bool _isMeccanSurah(int surahNumber) {
-//     // Meccan surahs are generally 1-5, 6-7 have mixed revelations
-//     // This is a simplified check - you might want to use your actual data
-//     return surahNumber != 2 && surahNumber != 3 && surahNumber != 4 && 
-//            surahNumber != 5 && surahNumber != 8 && surahNumber != 9 &&
-//            surahNumber != 33 && surahNumber != 47 && surahNumber != 48 &&
-//            surahNumber != 49 && surahNumber != 57 && surahNumber != 58 &&
-//            surahNumber != 59 && surahNumber != 60 && surahNumber != 61 &&
-//            surahNumber != 62 && surahNumber != 63 && surahNumber != 64 &&
-//            surahNumber != 65 && surahNumber != 66 && surahNumber != 76 &&
-//            surahNumber != 98 && surahNumber != 99 && surahNumber != 110;
+//     // Define Medinan surahs
+//     const medinanSurahs = {
+//       2,
+//       3,
+//       4,
+//       5,
+//       8,
+//       9,
+//       33,
+//       47,
+//       48,
+//       49,
+//       57,
+//       58,
+//       59,
+//       60,
+//       61,
+//       62,
+//       63,
+//       64,
+//       65,
+//       66,
+//       76,
+//       98,
+//       99,
+//       110
+//     };
+//     return !medinanSurahs.contains(surahNumber);
 //   }
 // }

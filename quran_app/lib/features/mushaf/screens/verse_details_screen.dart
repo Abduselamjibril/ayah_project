@@ -1,4 +1,3 @@
-// lib/features/mushaf/screens/verse_details_screen.dart
 import 'package:flutter/material.dart';
 import 'package:quran_app/core/services/translation_service.dart';
 import 'package:quran_app/core/services/tafsir_service.dart';
@@ -26,13 +25,8 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen> {
 
   List<Map<String, dynamic>> _allTranslations = [];
   List<Map<String, dynamic>> _allTafsirs = [];
-
-  List<String> _downloadedTranslations = [];
-  List<String> _downloadedTafsirs = [];
-
   String? _selectedTranslationId;
   String? _selectedTafsirId;
-
   bool _isLoading = true;
 
   @override
@@ -45,54 +39,27 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Load downloaded editions
-      final translations =
-          await _translationService.getDownloadedTranslations();
-      final tafsirs = await _tafsirService.getDownloadedTafsirs();
-
-      print('VerseDetails: Downloaded translations: $translations');
-      print('VerseDetails: Downloaded tafsirs: $tafsirs');
-
-      // Load all translations for this verse
-      final allTrans = await _translationService.getAllTranslations(
-        surahNumber: widget.surahNumber,
-        ayahNumber: widget.ayahNumber,
-      );
-
-      // Load all tafsirs for this verse
-      final allTafs = await _tafsirService.getAllTafsirs(
-        surahNumber: widget.surahNumber,
-        ayahNumber: widget.ayahNumber,
-      );
-
-      print(
-          'VerseDetails: All translations for ${widget.surahNumber}:${widget.ayahNumber}: ${allTrans.length} found');
-      print(
-          'VerseDetails: All tafsirs for ${widget.surahNumber}:${widget.ayahNumber}: ${allTafs.length} found');
-
-      if (allTrans.isNotEmpty) {
-        print('VerseDetails: First translation: ${allTrans.first}');
-      }
-      if (allTafs.isNotEmpty) {
-        print('VerseDetails: First tafsir: ${allTafs.first}');
-      }
+      final [translations, tafsirs] = await Future.wait([
+        _translationService.getAllTranslations(
+          surahNumber: widget.surahNumber,
+          ayahNumber: widget.ayahNumber,
+        ),
+        _tafsirService.getAllTafsirs(
+          surahNumber: widget.surahNumber,
+          ayahNumber: widget.ayahNumber,
+        ),
+      ]);
 
       setState(() {
-        _downloadedTranslations = translations;
-        _downloadedTafsirs = tafsirs;
-        _allTranslations = allTrans;
-        _allTafsirs = allTafs;
+        _allTranslations = translations;
+        _allTafsirs = tafsirs;
 
-        // Auto-select first if available
-        if (_allTranslations.isNotEmpty) {
-          _selectedTranslationId = _allTranslations.first['edition_identifier'];
-          print(
-              'VerseDetails: Auto-selected translation: $_selectedTranslationId');
-        }
-        if (_allTafsirs.isNotEmpty) {
-          _selectedTafsirId = _allTafsirs.first['edition_identifier'];
-          print('VerseDetails: Auto-selected tafsir: $_selectedTafsirId');
-        }
+        // Auto-select first available
+        _selectedTranslationId = translations.isNotEmpty
+            ? translations.first['edition_identifier']
+            : null;
+        _selectedTafsirId =
+            tafsirs.isNotEmpty ? tafsirs.first['edition_identifier'] : null;
 
         _isLoading = false;
       });
@@ -108,16 +75,20 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen> {
         (v) =>
             v['surah_number'] == widget.surahNumber &&
             v['verse_number'] == widget.ayahNumber,
+        orElse: () => {'content': ''},
       );
       return verse['content'] as String? ?? '';
     } catch (e) {
-      return 'Verse not found';
+      return '';
     }
   }
 
   String _getSurahName() {
     try {
-      final surahData = surah.firstWhere((s) => s['id'] == widget.surahNumber);
+      final surahData = surah.firstWhere(
+        (s) => s['id'] == widget.surahNumber,
+        orElse: () => {'name': 'Unknown'},
+      );
       return surahData['name'] as String? ?? 'Unknown';
     } catch (e) {
       return 'Unknown';
@@ -126,32 +97,24 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenTitle =
+        '${_getSurahName()} ${widget.surahNumber}:${widget.ayahNumber}';
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          '${_getSurahName()} ${widget.surahNumber}:${widget.ayahNumber}',
-        ),
-      ),
+      appBar: AppBar(title: Text(screenTitle)),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Arabic Text Card
-                    _buildArabicTextCard(),
-                    const SizedBox(height: 20),
-
-                    // Translation Section
-                    _buildTranslationSection(),
-                    const SizedBox(height: 20),
-
-                    // Tafsir Section
-                    _buildTafsirSection(),
-                  ],
-                ),
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildArabicTextCard(),
+                  const SizedBox(height: 20),
+                  _buildTranslationSection(),
+                  const SizedBox(height: 20),
+                  _buildTafsirSection(),
+                ],
               ),
             ),
     );
@@ -164,23 +127,13 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen> {
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
-            Text(
-              'Arabic Text',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
+            _buildSectionTitle('Arabic Text'),
             const SizedBox(height: 16),
             Text(
               _getArabicText(),
               textAlign: TextAlign.center,
               textDirection: TextDirection.rtl,
-              style: const TextStyle(
-                fontSize: 28,
-                height: 2.0,
-              ),
+              style: const TextStyle(fontSize: 28, height: 2.0),
             ),
           ],
         ),
@@ -196,65 +149,15 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Translation',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                if (_allTranslations.isNotEmpty)
-                  PopupMenuButton<String>(
-                    icon: const Icon(Icons.translate),
-                    onSelected: (editionId) {
-                      setState(() => _selectedTranslationId = editionId);
-                    },
-                    itemBuilder: (context) {
-                      return _allTranslations.map((trans) {
-                        final editionId =
-                            trans['edition_identifier'] as String?;
-                        final translator =
-                            trans['translator'] as String? ?? 'Unknown';
-                        return PopupMenuItem<String>(
-                          value: editionId,
-                          child: Text(translator),
-                        );
-                      }).toList();
-                    },
-                  ),
-              ],
+            _buildSectionHeader(
+              title: 'Translation',
+              items: _allTranslations,
+              selectedId: _selectedTranslationId,
+              onSelected: (id) => setState(() => _selectedTranslationId = id),
             ),
             const SizedBox(height: 12),
             _allTranslations.isEmpty
-                ? Column(
-                    children: [
-                      const Text(
-                        'No translations downloaded',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontStyle: FontStyle.italic,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const DownloadsScreen(),
-                            ),
-                          ).then((_) => _loadData());
-                        },
-                        icon: const Icon(Icons.download),
-                        label: const Text('Download Translations'),
-                      ),
-                    ],
-                  )
+                ? _buildNoDataSection('translations')
                 : _buildTranslationText(),
           ],
         ),
@@ -262,19 +165,104 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen> {
     );
   }
 
+  Widget _buildTafsirSection() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionHeader(
+              title: 'Tafsir (Interpretation)',
+              items: _allTafsirs,
+              selectedId: _selectedTafsirId,
+              onSelected: (id) => setState(() => _selectedTafsirId = id),
+            ),
+            const SizedBox(height: 12),
+            _allTafsirs.isEmpty
+                ? _buildNoDataSection('tafsir')
+                : _buildTafsirText(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader({
+    required String title,
+    required List<Map<String, dynamic>> items,
+    required String? selectedId,
+    required Function(String?) onSelected,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        _buildSectionTitle(title),
+        if (items.isNotEmpty)
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: onSelected,
+            itemBuilder: (context) => items.map((item) {
+              final editionId = item['edition_identifier'] as String?;
+              final name = item['translator'] ?? item['scholar'] ?? 'Unknown';
+              return PopupMenuItem<String>(
+                value: editionId,
+                child: Text(name),
+              );
+            }).toList(),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildNoDataSection(String type) {
+    return Column(
+      children: [
+        Text(
+          'No $type downloaded',
+          style: const TextStyle(
+            fontSize: 16,
+            fontStyle: FontStyle.italic,
+            color: Colors.grey,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ElevatedButton.icon(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const DownloadsScreen()),
+            ).then((_) => _loadData());
+          },
+          icon: const Icon(Icons.download),
+          label: Text('Download $type'),
+        ),
+      ],
+    );
+  }
+
   Widget _buildTranslationText() {
-    if (_selectedTranslationId == null) {
-      return const Text('Please select a translation');
-    }
+    if (_selectedTranslationId == null)
+      return const Text('Select a translation');
 
     final translation = _allTranslations.firstWhere(
       (t) => t['edition_identifier'] == _selectedTranslationId,
       orElse: () => {},
     );
 
-    if (translation.isEmpty) {
-      return const Text('Translation not found');
-    }
+    if (translation.isEmpty) return const Text('Translation not found');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -290,106 +278,24 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen> {
         const SizedBox(height: 8),
         Text(
           translation['text'] as String? ?? 'No text available',
-          style: const TextStyle(
-            fontSize: 16,
-            height: 1.5,
-          ),
+          style: const TextStyle(fontSize: 16, height: 1.5),
         ),
       ],
     );
   }
 
-  Widget _buildTafsirSection() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Tafsir (Interpretation)',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                if (_allTafsirs.isNotEmpty)
-                  PopupMenuButton<String>(
-                    icon: const Icon(Icons.menu_book),
-                    onSelected: (editionId) {
-                      setState(() => _selectedTafsirId = editionId);
-                    },
-                    itemBuilder: (context) {
-                      return _allTafsirs.map((tafsir) {
-                        final editionId =
-                            tafsir['edition_identifier'] as String?;
-                        final scholar =
-                            tafsir['scholar'] as String? ?? 'Unknown';
-                        return PopupMenuItem<String>(
-                          value: editionId,
-                          child: Text(scholar),
-                        );
-                      }).toList();
-                    },
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _allTafsirs.isEmpty
-                ? Column(
-                    children: [
-                      const Text(
-                        'No tafsir downloaded',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontStyle: FontStyle.italic,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const DownloadsScreen(),
-                            ),
-                          ).then((_) => _loadData());
-                        },
-                        icon: const Icon(Icons.download),
-                        label: const Text('Download Tafsir'),
-                      ),
-                    ],
-                  )
-                : _buildTafsirText(),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildTafsirText() {
-    if (_selectedTafsirId == null) {
-      return const Text('Please select a tafsir');
-    }
+    if (_selectedTafsirId == null) return const Text('Select a tafsir');
 
     final tafsir = _allTafsirs.firstWhere(
       (t) => t['edition_identifier'] == _selectedTafsirId,
       orElse: () => {},
     );
 
-    if (tafsir.isEmpty) {
-      return const Text('Tafsir not found');
-    }
+    if (tafsir.isEmpty) return const Text('Tafsir not found');
 
-    final language = tafsir['language'] as String? ?? 'unknown';
-    final isArabic =
-        language.toLowerCase() == 'ar' || language.toLowerCase() == 'arabic';
+    final language = (tafsir['language'] as String? ?? '').toLowerCase();
+    final isArabic = language == 'ar' || language == 'arabic';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -405,10 +311,7 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen> {
         const SizedBox(height: 8),
         Text(
           tafsir['text'] as String? ?? 'No text available',
-          style: const TextStyle(
-            fontSize: 16,
-            height: 1.5,
-          ),
+          style: const TextStyle(fontSize: 16, height: 1.5),
           textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
         ),
       ],

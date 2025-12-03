@@ -1,4 +1,3 @@
-// features/mushaf/controller/mushaf_controller.dart
 import 'package:flutter/material.dart';
 import '../../../core/quran/widgets/quran_pageview.dart';
 
@@ -9,6 +8,8 @@ class MushafController extends ChangeNotifier {
   final Set<String> _bookmarkedVerses = {};
   int? _highlightedSurah;
   int? _highlightedVerse;
+
+  static const int _totalPages = 604;
 
   ScrollMode get scrollMode => _scrollMode;
   int get currentPage => _currentPage;
@@ -25,17 +26,21 @@ class MushafController extends ChangeNotifier {
   }
 
   void setPage(int page) {
-    _currentPage = page;
-    notifyListeners();
+    if (page != _currentPage && page >= 1 && page <= _totalPages) {
+      _currentPage = page;
+      notifyListeners();
+    }
   }
 
   void setSurah(int surah) {
-    _currentSurah = surah;
-    notifyListeners();
+    if (surah != _currentSurah && surah >= 1 && surah <= 114) {
+      _currentSurah = surah;
+      notifyListeners();
+    }
   }
 
   void toggleBookmark(int surah, int verse) {
-    final verseKey = '$surah:$verse';
+    final verseKey = _getVerseKey(surah, verse);
     if (_bookmarkedVerses.contains(verseKey)) {
       _bookmarkedVerses.remove(verseKey);
     } else {
@@ -45,7 +50,7 @@ class MushafController extends ChangeNotifier {
   }
 
   bool isBookmarked(int surah, int verse) {
-    return _bookmarkedVerses.contains('$surah:$verse');
+    return _bookmarkedVerses.contains(_getVerseKey(surah, verse));
   }
 
   void setHighlightedVerse(int? surah, int? verse) {
@@ -59,6 +64,8 @@ class MushafController extends ChangeNotifier {
     _highlightedVerse = null;
     notifyListeners();
   }
+
+  String _getVerseKey(int surah, int verse) => '$surah:$verse';
 
   @override
   void dispose() {

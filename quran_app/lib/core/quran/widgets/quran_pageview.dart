@@ -1,4 +1,3 @@
-// quran_pageview.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import './../data/page_data.dart';
@@ -8,50 +7,20 @@ import 'header_widget.dart';
 
 enum ScrollMode { horizontal, vertical }
 
-/// A Quran mushaf that supports both horizontal (page-by-page) and vertical (continuous) scrolling.
 class PageviewQuran extends StatefulWidget {
-  /// 1-based initial page number (1..604) for horizontal mode
   final int initialPageNumber;
-
-  /// Initial surah number (1..114) for vertical mode
   final int initialSurahNumber;
-
-  /// Scroll mode - horizontal (page view) or vertical (continuous)
   final ScrollMode scrollMode;
-
-  /// Optional external controller for horizontal mode.
   final PageController? controller;
-
-  /// Optional external controller for vertical mode.
   final ScrollController? verticalController;
-
-  //sp (adding 1.sp to get the ratio of screen size for responsive font design)
   final double sp;
-
-  //h (adding 1.h to get the ratio of screen size for responsive font design)
   final double h;
-
-  /// Optional callback when page changes in horizontal mode. Provides 1-based page number.
   final ValueChanged<int>? onPageChanged;
-
-  /// Optional callback when surah changes in vertical mode. Provides 1-based surah number.
   final ValueChanged<int>? onSurahChanged;
-
-  /// Optional override font size passed to each `QcfVerse`.
   final double? fontSize;
-
-  /// Verse text color.
   final Color textColor;
-
-  /// Background color for the whole page container.
   final Color pageBackgroundColor;
-
-  /// Optional callback to get background color for individual verses.
-  /// Returns a Color for the verse, or null for no background color.
-  /// Useful for highlighting selected verses.
   final Color? Function(int surahNumber, int verseNumber)? verseBackgroundColor;
-
-  /// Long-press callbacks that include the pressed verse info.
   final void Function(int surahNumber, int verseNumber)? onLongPress;
   final void Function(int surahNumber, int verseNumber)? onLongPressUp;
   final void Function(int surahNumber, int verseNumber)? onLongPressCancel;
@@ -59,7 +28,7 @@ class PageviewQuran extends StatefulWidget {
     int surahNumber,
     int verseNumber,
     LongPressStartDetails details,
-  )? onLongPressDown;
+  )? onLongPressStart;
 
   const PageviewQuran({
     super.key,
@@ -79,7 +48,7 @@ class PageviewQuran extends StatefulWidget {
     this.onLongPress,
     this.onLongPressUp,
     this.onLongPressCancel,
-    this.onLongPressDown,
+    this.onLongPressStart,
   })  : assert(initialPageNumber >= 1 && initialPageNumber <= totalPagesCount),
         assert(initialSurahNumber >= 1 && initialSurahNumber <= 114);
 
@@ -144,21 +113,19 @@ class _PageviewQuranState extends State<PageviewQuran> {
   Widget _buildHorizontalView() {
     return PageView.builder(
       controller: _pageController,
-      reverse: false, // right-to-left paging order
+      reverse: false,
       itemCount: totalPagesCount,
-      onPageChanged: (index) =>
-          widget.onPageChanged?.call(index + 1), // 1-based
+      onPageChanged: (index) => widget.onPageChanged?.call(index + 1),
       itemBuilder: (context, index) {
-        final pageNumber = index + 1; // 1-based page
         return QuranPageContent(
-          pageNumber: pageNumber,
+          pageNumber: index + 1,
           fontSize: widget.fontSize,
           textColor: widget.textColor,
           verseBackgroundColor: widget.verseBackgroundColor,
           onLongPress: widget.onLongPress,
           onLongPressUp: widget.onLongPressUp,
           onLongPressCancel: widget.onLongPressCancel,
-          onLongPressDown: widget.onLongPressDown,
+          onLongPressStart: widget.onLongPressStart,
           sp: widget.sp,
           h: widget.h,
           scrollMode: widget.scrollMode,
@@ -170,25 +137,23 @@ class _PageviewQuranState extends State<PageviewQuran> {
   Widget _buildVerticalView() {
     return ListView.builder(
       controller: _verticalController,
-      itemCount: totalPagesCount, // 604 pages instead of 114 surahs
+      physics: const ClampingScrollPhysics(),
+      itemCount: totalPagesCount,
       itemBuilder: (context, index) {
-        final pageNumber = index + 1;
-        return RepaintBoundary(
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height,
-            child: QuranPageContent(
-              pageNumber: pageNumber,
-              fontSize: widget.fontSize,
-              textColor: widget.textColor,
-              verseBackgroundColor: widget.verseBackgroundColor,
-              onLongPress: widget.onLongPress,
-              onLongPressUp: widget.onLongPressUp,
-              onLongPressCancel: widget.onLongPressCancel,
-              onLongPressDown: widget.onLongPressDown,
-              sp: widget.sp,
-              h: widget.h,
-              scrollMode: widget.scrollMode,
-            ),
+        return SizedBox(
+          height: MediaQuery.of(context).size.height,
+          child: QuranPageContent(
+            pageNumber: index + 1,
+            fontSize: widget.fontSize,
+            textColor: widget.textColor,
+            verseBackgroundColor: widget.verseBackgroundColor,
+            onLongPress: widget.onLongPress,
+            onLongPressUp: widget.onLongPressUp,
+            onLongPressCancel: widget.onLongPressCancel,
+            onLongPressStart: widget.onLongPressStart,
+            sp: widget.sp,
+            h: widget.h,
+            scrollMode: widget.scrollMode,
           ),
         );
       },
@@ -211,7 +176,7 @@ class QuranPageContent extends StatelessWidget {
     int surahNumber,
     int verseNumber,
     LongPressStartDetails details,
-  )? onLongPressDown;
+  )? onLongPressStart;
 
   const QuranPageContent({
     super.key,
@@ -222,7 +187,7 @@ class QuranPageContent extends StatelessWidget {
     required this.onLongPress,
     required this.onLongPressUp,
     required this.onLongPressCancel,
-    required this.onLongPressDown,
+    required this.onLongPressStart,
     required this.sp,
     required this.h,
     required this.scrollMode,
@@ -231,147 +196,190 @@ class QuranPageContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ranges = getPageData(pageNumber);
-    final pageFont = "QCF_P${pageNumber.toString().padLeft(3, '0')}";
-    final baseFontSize = getFontSize(pageNumber, context) / sp;
+    final padding = _calculatePadding(context);
 
-    final verseSpans = <InlineSpan>[];
-    if (pageNumber == 2 || pageNumber == 1) {
-      verseSpans.add(
-        WidgetSpan(
-          child: SizedBox(
-            height: scrollMode == ScrollMode.horizontal
-                ? MediaQuery.of(context).size.height * .175
-                : MediaQuery.of(context).size.height *
-                    .1, // Smaller for vertical
-          ),
-        ),
-      );
-    }
-    for (final r in ranges) {
-      final surah = int.parse(r['surah'].toString());
-      final start = int.parse(r['start'].toString());
-      final end = int.parse(r['end'].toString());
+    return Container(
+      padding: padding,
+      child: _buildPageText(context, ranges),
+    );
+  }
 
-      for (int v = start; v <= end; v++) {
-        if (v == start && v == 1) {
-          verseSpans.add(WidgetSpan(child: HeaderWidget(suraNumber: surah)));
-          if (pageNumber != 1 && pageNumber != 187) {
-            if (surah != 97) {
-              verseSpans.add(
-                TextSpan(
-                  text: " ﱁ  ﱂﱃﱄ\n",
-                  style: TextStyle(
-                    fontFamily: "QCF_P001",
-                    fontSize: getScreenType(context) == ScreenType.large
-                        ? 13.2 / sp
-                        : 24 / sp,
-                    color: textColor,
-                  ),
-                ),
-              );
-            } else {
-              verseSpans.add(
-                TextSpan(
-                  text: "齃𧻓𥳐龎\n",
-                  style: TextStyle(
-                    fontFamily: "QCF_BSML",
-                    fontSize: getScreenType(context) == ScreenType.large
-                        ? 13.2 / sp
-                        : 18 / sp,
-                    color: textColor,
-                  ),
-                ),
-              );
-            }
-          }
-        }
-        final spanRecognizer = LongPressGestureRecognizer();
-        spanRecognizer.onLongPress = () => onLongPress?.call(surah, v);
-        spanRecognizer.onLongPressStart =
-            (LongPressStartDetails d) => onLongPressDown?.call(surah, v, d);
-        spanRecognizer.onLongPressUp = () => onLongPressUp?.call(surah, v);
-        spanRecognizer.onLongPressEnd =
-            (LongPressEndDetails d) => onLongPressCancel?.call(surah, v);
-
-        final verseBgColor = verseBackgroundColor?.call(surah, v);
-
-        verseSpans.add(
-          TextSpan(
-            text: v == ranges[0]['start']
-                ? "${getVerseQCF(surah, v, verseEndSymbol: false).substring(0, 1)}\u200A${getVerseQCF(surah, v, verseEndSymbol: false).substring(1, getVerseQCF(surah, v, verseEndSymbol: false).length)}"
-                : getVerseQCF(surah, v, verseEndSymbol: false),
-            recognizer: spanRecognizer,
-            style: verseBgColor != null
-                ? TextStyle(backgroundColor: verseBgColor)
-                : null,
-            children: [
-              TextSpan(
-                text: getVerseNumberQCF(surah, v),
-                style: TextStyle(
-                  fontFamily: pageFont,
-                  color: textColor.withOpacity(0.7),
-                  height: 1.35 / h,
-                  backgroundColor: verseBgColor,
-                ),
-              ),
-            ],
-          ),
-        );
-      }
-    }
-
-    // Calculate responsive horizontal padding
-    //  Small phones want minimal padding for max content
-    // Large screens (tablets) want more padding for readability
+  EdgeInsets _calculatePadding(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isTablet = screenWidth > 600;
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
 
-    // Responsive padding calculation:
-    // - Phone portrait: 8-12px (minimal, maximize content)
-    // - Phone landscape: 16-20px (more breathing room)
-    // - Tablet portrait: 24-32px (better readability)
-    // - Tablet landscape: 32-48px (lots of space, comfortable reading)
     double horizontalPadding;
+    double verticalPadding;
+
     if (isTablet) {
       horizontalPadding = isLandscape ? 40.0 : 28.0;
-    } else {
-      horizontalPadding = isLandscape ? 18.0 : 10.0;
-    }
-
-    // Vertical padding also responsive
-    double verticalPadding;
-    if (isTablet) {
       verticalPadding = isLandscape ? 16.0 : 12.0;
     } else {
-      verticalPadding = isLandscape ? 12.0 : 12.0;
+      horizontalPadding = isLandscape ? 18.0 : 10.0;
+      verticalPadding = 12.0;
     }
 
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: horizontalPadding,
-        vertical: verticalPadding,
-      ),
-      color: Colors.transparent,
-      child: Text.rich(
-        TextSpan(children: verseSpans),
-        locale: const Locale("ar"),
-        textAlign: TextAlign.center,
-        textDirection: TextDirection.rtl,
-        style: TextStyle(
-          fontFamily: pageFont,
-          fontSize: baseFontSize,
-          color: textColor,
-          height: (pageNumber == 1 || pageNumber == 2)
-              ? 2.2
-              : MediaQuery.of(context).systemGestureInsets.left > 0 == false
-                  ? 2.2
-                  : MediaQuery.of(context).viewPadding.top > 0
-                      ? 2.2
-                      : 2.2,
-        ),
+    return EdgeInsets.symmetric(
+      horizontal: horizontalPadding,
+      vertical: verticalPadding,
+    );
+  }
+
+  Widget _buildPageText(
+      BuildContext context, List<Map<String, dynamic>> ranges) {
+    final pageFont = "QCF_P${pageNumber.toString().padLeft(3, '0')}";
+    final baseFontSize = getFontSize(pageNumber, context) / sp;
+    final verseSpans = _buildVerseSpans(context, ranges, pageFont);
+
+    return Text.rich(
+      TextSpan(children: verseSpans),
+      locale: const Locale("ar"),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.rtl,
+      style: TextStyle(
+        fontFamily: pageFont,
+        fontSize: fontSize ?? baseFontSize,
+        color: textColor,
+        height: _calculateLineHeight(context),
       ),
     );
+  }
+
+  List<InlineSpan> _buildVerseSpans(
+    BuildContext context,
+    List<Map<String, dynamic>> ranges,
+    String pageFont,
+  ) {
+    final spans = <InlineSpan>[];
+
+    // Add top spacing for first two pages
+    if (pageNumber == 1 || pageNumber == 2) {
+      spans.add(_buildTopSpacing(context));
+    }
+
+    for (final r in ranges) {
+      final surah = int.parse(r['surah'].toString());
+      final start = int.parse(r['start'].toString());
+      final end = int.parse(r['end'].toString());
+
+      for (int verse = start; verse <= end; verse++) {
+        // Add header for first verse of surah
+        if (verse == start && verse == 1) {
+          spans.addAll(_buildSurahHeader(context, surah, pageNumber));
+        }
+
+        spans.add(_buildVerseSpan(
+          context,
+          surah,
+          verse,
+          pageFont,
+          verse == start,
+        ));
+      }
+    }
+
+    return spans;
+  }
+
+  WidgetSpan _buildTopSpacing(BuildContext context) {
+    final height = scrollMode == ScrollMode.horizontal
+        ? MediaQuery.of(context).size.height * .175
+        : MediaQuery.of(context).size.height * .1;
+
+    return WidgetSpan(child: SizedBox(height: height));
+  }
+
+  List<InlineSpan> _buildSurahHeader(
+      BuildContext context, int surah, int pageNumber) {
+    final spans = <InlineSpan>[
+      WidgetSpan(child: HeaderWidget(suraNumber: surah)),
+    ];
+
+    // Add basmalah if needed
+    if (pageNumber != 1 && pageNumber != 187 && surah != 97) {
+      spans.add(_buildBasmalah(context));
+    } else if (surah == 97) {
+      spans.add(_buildSurah97Basmalah(context));
+    }
+
+    return spans;
+  }
+
+  TextSpan _buildBasmalah(BuildContext context) {
+    final isLarge = getScreenType(context) == ScreenType.large;
+    return TextSpan(
+      text: " ﱁ  ﱂﱃﱄ\n",
+      style: TextStyle(
+        fontFamily: "QCF_P001",
+        fontSize: isLarge ? 13.2 / sp : 24 / sp,
+        color: textColor,
+      ),
+    );
+  }
+
+  TextSpan _buildSurah97Basmalah(BuildContext context) {
+    final isLarge = getScreenType(context) == ScreenType.large;
+    return TextSpan(
+      text: "齃𧻓𥳐龎\n",
+      style: TextStyle(
+        fontFamily: "QCF_BSML",
+        fontSize: isLarge ? 13.2 / sp : 18 / sp,
+        color: textColor,
+      ),
+    );
+  }
+
+  TextSpan _buildVerseSpan(
+    BuildContext context,
+    int surah,
+    int verse,
+    String pageFont,
+    bool isFirstVerseOfPage,
+  ) {
+    final verseText = getVerseQCF(surah, verse, verseEndSymbol: false);
+    final verseNumberText = getVerseNumberQCF(surah, verse);
+    final verseBgColor = verseBackgroundColor?.call(surah, verse);
+
+    final processedText = isFirstVerseOfPage && verse != 1
+        ? "${verseText.substring(0, 1)}\u200A${verseText.substring(1)}"
+        : verseText;
+
+    return TextSpan(
+      text: processedText,
+      recognizer: _buildVerseRecognizer(surah, verse),
+      style: verseBgColor != null
+          ? TextStyle(backgroundColor: verseBgColor)
+          : null,
+      children: [
+        TextSpan(
+          text: verseNumberText,
+          style: TextStyle(
+            fontFamily: pageFont,
+            color: textColor.withOpacity(0.7),
+            height: 1.35 / h,
+            backgroundColor: verseBgColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  LongPressGestureRecognizer _buildVerseRecognizer(int surah, int verse) {
+    final recognizer = LongPressGestureRecognizer();
+
+    recognizer.onLongPress = () => onLongPress?.call(surah, verse);
+    recognizer.onLongPressStart =
+        (details) => onLongPressStart?.call(surah, verse, details);
+    recognizer.onLongPressUp = () => onLongPressUp?.call(surah, verse);
+    recognizer.onLongPressCancel = () => onLongPressCancel?.call(surah, verse);
+
+    return recognizer;
+  }
+
+  double _calculateLineHeight(BuildContext context) {
+    // Use consistent line height for better rendering
+    return 2.2;
   }
 }
