@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../core/quran/data/page_data.dart';
+import 'package:qcf_quran/qcf_quran.dart';
 import '../../../core/quran/widgets/quran_pageview.dart'; // Add this import
 import '../../settings/settings_screen.dart';
 import '../controller/mushaf_controller.dart';

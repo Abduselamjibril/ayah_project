@@ -23,6 +23,8 @@ class HeaderWidget extends StatelessWidget {
             Image.asset(
               frameAsset,
               width: getScreenType(context) == ScreenType.large ? 250 : 372,
+              color: isDark ? Colors.white : null,
+              colorBlendMode: isDark ? BlendMode.srcIn : null,
             ),
             RichText(
               textAlign: TextAlign.center,
