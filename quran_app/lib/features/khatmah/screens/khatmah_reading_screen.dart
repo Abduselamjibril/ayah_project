@@ -79,12 +79,12 @@ class _KhatmahReadingScreenState extends State<KhatmahReadingScreen> {
         itemBuilder: (context, index) {
           final pageNumber = widget.startPage + index;
           return QuranPageContent(
+            key: ValueKey('khatmah_page_$pageNumber'),
             pageNumber: pageNumber,
             fontSize: null,
             textColor: Theme.of(context).colorScheme.onSurface,
             sp: 1.0,
             h: 1.0,
-            scrollMode: ScrollMode.horizontal,
             onLongPress: null,
             onLongPressUp: null,
             onLongPressCancel: null,

@@ -1,10 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter/gestures.dart';
-import './../data/quran_text.dart';
-import './../data/page_font_size.dart';
-import './../data/page_data.dart';
+import 'package:qcf_quran/qcf_quran.dart';
 
-class QcfVerse extends StatelessWidget {
+class QcfVerse extends StatefulWidget {
   final int surahNumber;
   final int verseNumber;
   final double? fontSize;
@@ -12,9 +10,13 @@ class QcfVerse extends StatelessWidget {
   final Color backgroundColor;
   final VoidCallback? onLongPress;
   final VoidCallback? onLongPressUp;
+
   final VoidCallback? onLongPressCancel;
-  final Function(LongPressStartDetails)? onLongPressStart;
+  final Function(LongPressDownDetails)? onLongPressDown;
+  //sp (adding 1.sp to get the ratio of screen size for responsive font design)
   final double sp;
+
+  //h (adding 1.h to get the ratio of screen size for responsive font design)
   final double h;
 
   const QcfVerse({
@@ -27,63 +29,57 @@ class QcfVerse extends StatelessWidget {
     this.onLongPress,
     this.onLongPressUp,
     this.onLongPressCancel,
-    this.onLongPressStart,
+    this.onLongPressDown,
     this.sp = 1,
     this.h = 1,
   });
 
   @override
+  State<QcfVerse> createState() => _QcfVerseState();
+}
+
+class _QcfVerseState extends State<QcfVerse> {
+  @override
   Widget build(BuildContext context) {
-    final pageNumber = getPageNumber(surahNumber, verseNumber);
-    final pageFontSize = getFontSize(pageNumber, context);
-    final fontFamily = "QCF_P${pageNumber.toString().padLeft(3, '0')}";
-
-    return _buildRichText(
-      pageNumber: pageNumber,
-      fontFamily: fontFamily,
-      fontSize: fontSize ?? pageFontSize / sp,
-    );
-  }
-
-  Widget _buildRichText({
-    required int pageNumber,
-    required String fontFamily,
-    required double fontSize,
-  }) {
+    var pageNumber = getPageNumber(widget.surahNumber, widget.verseNumber);
+    var pageFontSize = getFontSize(pageNumber, context);
     return RichText(
       textDirection: TextDirection.rtl,
       textAlign: TextAlign.center,
       text: TextSpan(
-        recognizer: _buildGestureRecognizer(),
-        text: getVerseQCF(surahNumber, verseNumber, verseEndSymbol: false),
+        recognizer: LongPressGestureRecognizer()
+          ..onLongPress = widget.onLongPress
+          ..onLongPressDown = widget.onLongPressDown
+          ..onLongPressUp = widget.onLongPressUp
+          ..onLongPressCancel = widget.onLongPressCancel,
+        text: getVerseQCF(
+          widget.surahNumber,
+          widget.verseNumber,
+          verseEndSymbol: false,
+        ),
         locale: const Locale("ar"),
         children: [
           TextSpan(
-            text: getVerseNumberQCF(surahNumber, verseNumber),
+            text: getVerseNumberQCF(widget.surahNumber, widget.verseNumber),
             style: TextStyle(
-              fontFamily: fontFamily,
-              height: 1.35 / h,
+              fontFamily: "QCF_P${pageNumber.toString().padLeft(3, '0')}",
+              package: 'qcf_quran', // 👈 required
+              height: 1.35 / widget.h,
             ),
           ),
         ],
         style: TextStyle(
-          color: textColor,
-          height: 2.0 / h,
+          color: widget.textColor,
+          height: 2.0 / widget.h,
           letterSpacing: 0,
+          package: 'qcf_quran', // 👈 required
+
           wordSpacing: 0,
-          fontFamily: fontFamily,
-          fontSize: fontSize,
-          backgroundColor: backgroundColor,
+          fontFamily: "QCF_P${pageNumber.toString().padLeft(3, '0')}",
+          fontSize: widget.fontSize ?? pageFontSize / widget.sp,
+          backgroundColor: widget.backgroundColor,
         ),
       ),
     );
-  }
-
-  LongPressGestureRecognizer _buildGestureRecognizer() {
-    return LongPressGestureRecognizer()
-      ..onLongPress = onLongPress
-      ..onLongPressStart = onLongPressStart
-      ..onLongPressUp = onLongPressUp
-      ..onLongPressCancel = onLongPressCancel;
   }
 }
