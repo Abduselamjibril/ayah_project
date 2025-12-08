@@ -4300,7 +4300,7 @@ const List quranText = [
   {
     "surah_number": 3,
     "verse_number": 197,
-    "qcfData": "ﱸﱹﱺﱻﱼﱽﱾﱿﲀ" "\n",
+    "qcfData": "ﱸﱹﱺﱻﱼﱽﱾﱿﲀ" + "\n",
     "content":
         "مَتَٰعٞ قَلِيلٞ ثُمَّ مَأۡوَىٰهُمۡ جَهَنَّمُۖ وَبِئۡسَ ٱلۡمِهَادُ",
     "text_normal": "متاع قليل ثم مأواهم جهنم وبئس المهاد"
@@ -4344,7 +4344,7 @@ const List quranText = [
   {
     "surah_number": 4,
     "verse_number": 2,
-    "qcfData": "ﱠﱡﱢﱣﱤﱥ\nﱦﱧﱨﱩﱪﱫﱬﱭﱮﱯﱰﱱﱲﱳ" "\n",
+    "qcfData": "ﱠﱡﱢﱣﱤﱥ\nﱦﱧﱨﱩﱪﱫﱬﱭﱮﱯﱰﱱﱲﱳ" + "\n",
     "content":
         "وَءَاتُواْ ٱلۡيَتَٰمَىٰٓ أَمۡوَٰلَهُمۡۖ وَلَا تَتَبَدَّلُواْ ٱلۡخَبِيثَ بِٱلطَّيِّبِۖ وَلَا تَأۡكُلُوٓاْ أَمۡوَٰلَهُمۡ إِلَىٰٓ أَمۡوَٰلِكُمۡۚ إِنَّهُۥ كَانَ حُوبٗا كَبِيرٗا",
     "text_normal":
@@ -54003,42 +54003,3 @@ const List quranText = [
     "text_normal": "من الجنة والناس"
   }
 ];
-String getVerseQCF(int surah, int verse, {bool verseEndSymbol = true}) {
-  final verseData = quranText.firstWhere(
-    (element) =>
-        element['surah_number'] == surah && element['verse_number'] == verse,
-    orElse: () => {},
-  );
-  if (verseData.isEmpty) return "";
-
-  String qcf = verseData['qcfData'] ?? "";
-  if (!verseEndSymbol) {
-    if (qcf.isNotEmpty) {
-      return qcf.substring(0, qcf.length - 1);
-    }
-  }
-  return qcf;
-}
-
-String getVerseNumberQCF(int surah, int verse) {
-  final verseData = quranText.firstWhere(
-    (element) =>
-        element['surah_number'] == surah && element['verse_number'] == verse,
-    orElse: () => {},
-  );
-  if (verseData.isEmpty) return "";
-  
-  // First try qcfv4data if available (for special cases)
-  if (verseData['qcfv4data'] != null && verseData['qcfv4data'].toString().isNotEmpty) {
-    return verseData['qcfv4data'];
-  }
-  
-  // Otherwise, get the last character from qcfData (this is the verse number marker)
-  String qcf = verseData['qcfData'] ?? "";
-  if (qcf.isNotEmpty) {
-    // The verse number is typically the last character
-    return qcf.substring(qcf.length - 1);
-  }
-  
-  return "";
-}
