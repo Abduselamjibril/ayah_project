@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter/gestures.dart';
-import 'package:qcf_quran/qcf_quran.dart';
+import 'package:quran_app/core/quran/qcf_quran.dart';
 
 class QcfVerse extends StatefulWidget {
   final int surahNumber;
@@ -63,7 +63,6 @@ class _QcfVerseState extends State<QcfVerse> {
             text: getVerseNumberQCF(widget.surahNumber, widget.verseNumber),
             style: TextStyle(
               fontFamily: "QCF_P${pageNumber.toString().padLeft(3, '0')}",
-              package: 'qcf_quran', // 👈 required
               height: 1.35 / widget.h,
             ),
           ),
@@ -72,8 +71,6 @@ class _QcfVerseState extends State<QcfVerse> {
           color: widget.textColor,
           height: 2.0 / widget.h,
           letterSpacing: 0,
-          package: 'qcf_quran', // 👈 required
-
           wordSpacing: 0,
           fontFamily: "QCF_P${pageNumber.toString().padLeft(3, '0')}",
           fontSize: widget.fontSize ?? pageFontSize / widget.sp,

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:qcf_quran/qcf_quran.dart';
+import 'package:quran_app/core/quran/qcf_quran.dart';
 
 class HeaderWidget extends StatelessWidget {
   final int suraNumber;
@@ -23,8 +23,6 @@ class HeaderWidget extends StatelessWidget {
             Image.asset(
               frameAsset,
               width: getScreenType(context) == ScreenType.large ? 250 : 372,
-              color: isDark ? Colors.white : null,
-              colorBlendMode: isDark ? BlendMode.srcIn : null,
             ),
             RichText(
               textAlign: TextAlign.center,

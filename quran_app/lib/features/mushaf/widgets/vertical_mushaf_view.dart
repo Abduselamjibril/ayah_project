@@ -84,26 +84,35 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        PageviewQuran(
-          key: ValueKey('vertical_${widget.controller.currentPage}'),
-          initialPageNumber: widget.controller.currentPage,
-          scrollMode: ScrollMode.vertical,
-          verticalController: widget.scrollController,
-          onPageChanged: (page) {
-            _lastPage = page;
-            widget.controller.setPage(page);
-          },
-          textColor: Theme.of(context).colorScheme.onSurface,
-          pageBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          verseBackgroundColor: _getVerseBackgroundColor,
-          onLongPress: (surah, verse) =>
-              _showVerseOptions(context, surah, verse),
-          onLongPressStart: (surah, verse, details) =>
-              widget.controller.setHighlightedVerse(surah, verse),
-          onLongPressCancel: (surah, verse) =>
-              widget.controller.clearHighlight(),
-          sp: 1.0,
-          h: 1.0,
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 250),
+          switchInCurve: Curves.easeInOut,
+          switchOutCurve: Curves.easeInOut,
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: child,
+          ),
+          child: PageviewQuran(
+            key: ValueKey('vertical_${widget.controller.currentPage}'),
+            initialPageNumber: widget.controller.currentPage,
+            scrollMode: ScrollMode.vertical,
+            verticalController: widget.scrollController,
+            onPageChanged: (page) {
+              _lastPage = page;
+              widget.controller.setPage(page);
+            },
+            textColor: Theme.of(context).colorScheme.onSurface,
+            pageBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            verseBackgroundColor: _getVerseBackgroundColor,
+            onLongPress: (surah, verse) =>
+                _showVerseOptions(context, surah, verse),
+            onLongPressStart: (surah, verse, details) =>
+                widget.controller.setHighlightedVerse(surah, verse),
+            onLongPressCancel: (surah, verse) =>
+                widget.controller.clearHighlight(),
+            sp: 1.0,
+            h: 1.0,
+          ),
         ),
         _buildPageIndicator(),
       ],

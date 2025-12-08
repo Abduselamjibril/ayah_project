@@ -1,6 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:qcf_quran/qcf_quran.dart';
+import 'package:quran_app/core/quran/qcf_quran.dart';
 
 /// Scrolling direction for the mushaf widget.
 enum ScrollMode { horizontal, vertical }
@@ -173,7 +173,7 @@ class _PageviewQuranState extends State<PageviewQuran> {
         child: ListView.builder(
           controller: _verticalController,
           padding: EdgeInsets.zero,
-          physics: const PageScrollPhysics(),
+          physics: const ClampingScrollPhysics(),
           itemCount: totalPagesCount,
           itemBuilder: (context, index) {
             final pageNumber = index + 1;
@@ -305,7 +305,6 @@ class QuranPageContent extends StatelessWidget {
                   text: " ﱁ  ﱂﱃﱄ\n",
                   style: TextStyle(
                     fontFamily: "QCF_P001",
-                    package: 'qcf_quran',
                     fontSize: getScreenType(context) == ScreenType.large
                         ? 13.2 / sp
                         : 24 / sp,
@@ -319,7 +318,6 @@ class QuranPageContent extends StatelessWidget {
                   text: "齃𧻓𥳐龎\n",
                   style: TextStyle(
                     fontFamily: "QCF_BSML",
-                    package: 'qcf_quran',
                     fontSize: getScreenType(context) == ScreenType.large
                         ? 13.2 / sp
                         : 18 / sp,
@@ -354,7 +352,6 @@ class QuranPageContent extends StatelessWidget {
                 text: getVerseNumberQCF(surah, v),
                 style: TextStyle(
                   fontFamily: pageFont,
-                  package: 'qcf_quran',
                   color: textColor,
                   height: 1.35 / h,
                   backgroundColor: verseBgColor,
@@ -376,7 +373,6 @@ class QuranPageContent extends StatelessWidget {
         textDirection: TextDirection.rtl,
         style: TextStyle(
           fontFamily: pageFont,
-          package: 'qcf_quran',
           fontSize: baseFontSize,
           color: textColor,
           height: (pageNumber == 1 || pageNumber == 2)
