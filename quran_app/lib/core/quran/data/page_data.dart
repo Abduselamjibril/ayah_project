@@ -1876,25 +1876,3 @@ const List pageData = [
     {"surah": 114, "start": 1, "end": 6}
   ]
 ];
-
-// Add these constants and functions at the end of the file
-const int totalPagesCount = 604;
-
-List<Map<String, dynamic>> getPageData(int pageNumber) {
-  if (pageNumber < 1 || pageNumber > totalPagesCount) return [];
-  return pageData[pageNumber - 1].cast<Map<String, dynamic>>();
-}
-
-int getPageNumber(int surahNumber, int verseNumber) {
-  for (int i = 0; i < pageData.length; i++) {
-    final page = pageData[i];
-    for (final entry in page) {
-      if (entry['surah'] == surahNumber) {
-        if (verseNumber >= entry['start'] && verseNumber <= entry['end']) {
-          return i + 1;
-        }
-      }
-    }
-  }
-  return 1;
-}

@@ -23,19 +23,29 @@ class BilingualVerseView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final surahInfo = _getSurahInfo(surahNumber);
     final juzNumber = JuzHelper.getJuzNumber(surahNumber, ayahNumber);
-    final surahInfo = surah[surahNumber - 1]; // Surah list is 0-indexed
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Surah header (only shown at the start of a Surah)
         if (showSurahHeader) _buildSurahHeader(context, surahInfo, juzNumber),
-
-        // Verse content
         _buildVerseContent(context),
       ],
     );
+  }
+
+  Map<String, dynamic> _getSurahInfo(int surahNumber) {
+    try {
+      return surah[surahNumber - 1];
+    } catch (e) {
+      return {
+        'name': 'Unknown',
+        'arabic': 'غير معروف',
+        'english': 'Unknown',
+        'aya': 0,
+      };
+    }
   }
 
   Widget _buildSurahHeader(
@@ -56,50 +66,53 @@ class BilingualVerseView extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Surah info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${surahInfo['name']} (${surahInfo['arabic']})',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${surahInfo['english']} • Surah $surahNumber • ${surahInfo['aya']} verses',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withOpacity(0.7),
-                  ),
-                ),
-              ],
+          _buildSurahInfo(context, surahInfo),
+          _buildJuzBadge(context, juzNumber),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSurahInfo(BuildContext context, Map<String, dynamic> surahInfo) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${surahInfo['name']} (${surahInfo['arabic']})',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).primaryColor,
             ),
           ),
-          // Juz number
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              'Juz $juzNumber',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onPrimary,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
+          const SizedBox(height: 4),
+          Text(
+            '${surahInfo['english']} • Surah $surahNumber • ${surahInfo['aya']} verses',
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildJuzBadge(BuildContext context, int juzNumber) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Theme.of(context).primaryColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        'Juz $juzNumber',
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onPrimary,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
       ),
     );
   }
@@ -117,19 +130,11 @@ class BilingualVerseView extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // English translation (left side)
             Expanded(
               flex: 1,
               child: _buildEnglishSection(context),
             ),
-            const SizedBox(width: 16),
-            // Divider
-            Container(
-              width: 1,
-              color: Theme.of(context).dividerColor,
-            ),
-            const SizedBox(width: 16),
-            // Arabic text (right side)
+            _buildDivider(context),
             Expanded(
               flex: 1,
               child: _buildArabicSection(context),
@@ -137,6 +142,14 @@ class BilingualVerseView extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDivider(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      width: 1,
+      color: Theme.of(context).dividerColor,
     );
   }
 
@@ -148,41 +161,49 @@ class BilingualVerseView extends StatelessWidget {
         language: 'English',
       ),
       builder: (context, snapshot) {
-        final translation = snapshot.data ?? 'Loading translation...';
-
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Verse number badge
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                '$surahNumber:$ayahNumber',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).primaryColor,
-                ),
-              ),
-            ),
+            _buildVerseBadge(context),
             const SizedBox(height: 8),
-            // English translation text
-            Text(
-              translation,
-              style: TextStyle(
-                fontSize: 14,
-                height: 1.6,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-              textAlign: TextAlign.left,
-            ),
+            _buildTranslationText(snapshot),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildVerseBadge(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).primaryColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        '$surahNumber:$ayahNumber',
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: Theme.of(context).primaryColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTranslationText(AsyncSnapshot<String?> snapshot) {
+    final translation = snapshot.data ?? 'Loading translation...';
+    final isLoading = snapshot.connectionState == ConnectionState.waiting;
+
+    return Text(
+      translation,
+      style: TextStyle(
+        fontSize: 14,
+        height: 1.6,
+        color: isLoading ? Colors.grey : null,
+        fontStyle: isLoading ? FontStyle.italic : null,
+      ),
+      textAlign: TextAlign.left,
     );
   }
 
@@ -190,22 +211,20 @@ class BilingualVerseView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        // Arabic text
         Text(
           arabicText,
           style: TextStyle(
             fontSize: 20,
             height: 1.8,
-            fontFamily: 'Amiri', // Use Arabic font if available
+            fontFamily: 'Amiri',
             color: Theme.of(context).colorScheme.onSurface,
           ),
           textAlign: TextAlign.right,
           textDirection: TextDirection.rtl,
         ),
         const SizedBox(height: 8),
-        // Transliteration placeholder
         Text(
-          'Transliteration', // This can be enhanced later with actual transliteration
+          'Transliteration',
           style: TextStyle(
             fontSize: 12,
             fontStyle: FontStyle.italic,

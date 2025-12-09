@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../controller/mushaf_controller.dart';
 import '../../../core/quran/data/suwar.dart';
-
 import '../../khatmah/widgets/khatmah_tab.dart';
 
 class SurahDrawer extends StatefulWidget {
@@ -39,104 +38,105 @@ class _SurahDrawerState extends State<SurahDrawer>
     return Drawer(
       child: Column(
         children: [
-          // Drawer header with tabs
-          Container(
-            color: Theme.of(context).primaryColor,
-            child: SafeArea(
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(
-                      'Al-Quran',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onPrimary,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  TabBar(
-                    controller: _tabController,
-                    indicatorColor: Theme.of(context).colorScheme.onPrimary,
-                    labelColor: Theme.of(context).colorScheme.onPrimary,
-                    unselectedLabelColor: Theme.of(context)
-                        .colorScheme
-                        .onPrimary
-                        .withOpacity(0.6),
-                    isScrollable:
-                        true, // Make scrollable to fit 4 tabs comfortably
-                    tabs: const [
-                      Tab(text: 'Surah'),
-                      Tab(text: 'Bookmarks'),
-                      Tab(text: 'Khatmah'),
-                      Tab(text: 'Note'),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Tab content
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildSurahList(),
-                _buildBookmarksList(),
-                KhatmahTab(controller: widget.controller),
-                _buildNotesTab(),
-              ],
-            ),
-          ),
+          _buildDrawerHeader(context),
+          Expanded(child: _buildTabView()),
         ],
       ),
     );
   }
 
-  Widget _buildSurahList() {
-    return ListView.builder(
-      itemCount: 114,
-      itemBuilder: (context, index) {
-        final surahNumber = index + 1;
-        final surahInfo = surah[index]; // Get from suwar.dart
-
-        return ListTile(
-          leading: CircleAvatar(
-            backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
-            child: Text(
-              '$surahNumber',
-              style: TextStyle(
-                color: Theme.of(context).primaryColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
+  Widget _buildDrawerHeader(BuildContext context) {
+    return Container(
+      color: Theme.of(context).primaryColor,
+      child: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'Al-Quran',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onPrimary,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
-          title: Text(
-            '${surahInfo['name']}',
-            style: const TextStyle(fontWeight: FontWeight.w500),
-          ),
-          subtitle: Text(
-            '${surahInfo['english']} • ${surahInfo['aya']} verses',
-            style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            TabBar(
+              controller: _tabController,
+              indicatorColor: Theme.of(context).colorScheme.onPrimary,
+              labelColor: Theme.of(context).colorScheme.onPrimary,
+              unselectedLabelColor:
+                  Theme.of(context).colorScheme.onPrimary.withOpacity(0.6),
+              isScrollable: true,
+              tabs: const [
+                Tab(text: 'Surah'),
+                Tab(text: 'Bookmarks'),
+                Tab(text: 'Khatmah'),
+                Tab(text: 'Note'),
+              ],
             ),
-          ),
-          trailing: Text(
-            surahInfo['arabic'],
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          onTap: () {
-            widget.onSurahSelected(surahNumber);
-            Navigator.pop(context); // Close the drawer
-          },
-        );
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabView() {
+    return TabBarView(
+      controller: _tabController,
+      children: [
+        _buildSurahList(),
+        _buildBookmarksList(),
+        KhatmahTab(controller: widget.controller),
+        _buildNotesTab(),
+      ],
+    );
+  }
+
+  Widget _buildSurahList() {
+    return ListView.builder(
+      itemCount: surah.length,
+      itemBuilder: (context, index) => _buildSurahItem(index + 1, surah[index]),
+    );
+  }
+
+  Widget _buildSurahItem(int surahNumber, Map<String, dynamic> surahInfo) {
+    return ListTile(
+      leading: _buildSurahAvatar(surahNumber, context),
+      title: Text(
+        surahInfo['name'] ?? 'Unknown',
+        style: const TextStyle(fontWeight: FontWeight.w500),
+      ),
+      subtitle: Text(
+        '${surahInfo['english']} • ${surahInfo['aya']} verses',
+        style: TextStyle(
+          fontSize: 12,
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+        ),
+      ),
+      trailing: Text(
+        surahInfo['arabic'] ?? '',
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+      ),
+      onTap: () {
+        widget.onSurahSelected(surahNumber);
+        Navigator.pop(context);
       },
+    );
+  }
+
+  Widget _buildSurahAvatar(int surahNumber, BuildContext context) {
+    return CircleAvatar(
+      backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
+      child: Text(
+        surahNumber.toString(),
+        style: TextStyle(
+          color: Theme.of(context).primaryColor,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
+      ),
     );
   }
 
@@ -147,29 +147,9 @@ class _SurahDrawerState extends State<SurahDrawer>
         final bookmarks = widget.controller.bookmarkedVerses;
 
         if (bookmarks.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.bookmark_border,
-                  size: 64,
-                  color:
-                      Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'No bookmarks yet',
-                  style: TextStyle(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withOpacity(0.6),
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
+          return _buildEmptyState(
+            icon: Icons.bookmark_border,
+            message: 'No bookmarks yet',
           );
         }
 
@@ -186,9 +166,7 @@ class _SurahDrawerState extends State<SurahDrawer>
               title: Text('Surah $surah, Verse $verse'),
               trailing: IconButton(
                 icon: const Icon(Icons.bookmark_remove),
-                onPressed: () {
-                  widget.controller.toggleBookmark(surah, verse);
-                },
+                onPressed: () => widget.controller.toggleBookmark(surah, verse),
               ),
               onTap: () {
                 widget.onSurahSelected(surah);
@@ -202,27 +180,29 @@ class _SurahDrawerState extends State<SurahDrawer>
   }
 
   Widget _buildNotesTab() {
+    return _buildEmptyState(
+      icon: Icons.note_alt_outlined,
+      message: 'Notes Feature\nComing Soon',
+    );
+  }
+
+  Widget _buildEmptyState({required IconData icon, required String message}) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.note_alt_outlined,
-              size: 64,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3)),
+          Icon(
+            icon,
+            size: 64,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+          ),
           const SizedBox(height: 16),
           Text(
-            'Notes Feature',
+            message,
+            textAlign: TextAlign.center,
             style: TextStyle(
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Coming Soon',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
-              fontSize: 14,
             ),
           ),
         ],

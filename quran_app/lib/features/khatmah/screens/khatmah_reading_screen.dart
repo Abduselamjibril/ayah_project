@@ -28,8 +28,6 @@ class _KhatmahReadingScreenState extends State<KhatmahReadingScreen> {
   @override
   void initState() {
     super.initState();
-    // Calculate initial index based on startPage
-    // If initialPage is 11 and startPage is 11, index is 0.
     final initialIndex = widget.initialPage - widget.startPage;
     _pageController = PageController(initialPage: initialIndex);
     _currentPage = widget.initialPage;
@@ -43,9 +41,7 @@ class _KhatmahReadingScreenState extends State<KhatmahReadingScreen> {
 
   void _onPageChanged(int index) {
     final newPage = widget.startPage + index;
-    setState(() {
-      _currentPage = newPage;
-    });
+    setState(() => _currentPage = newPage);
     _khatmahService.updateKhatmahProgress(widget.khatmahId, newPage);
   }
 
@@ -56,84 +52,130 @@ class _KhatmahReadingScreenState extends State<KhatmahReadingScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Quran Page View
-            Directionality(
-              textDirection: TextDirection.rtl,
-              child: PageView.builder(
-                controller: _pageController,
-                reverse: false, // right-to-left
-                itemCount: totalPages,
-                onPageChanged: _onPageChanged,
-                itemBuilder: (context, index) {
-                  final pageNumber = widget.startPage + index;
-                  return QuranPageContent(
-                    pageNumber: pageNumber,
-                    fontSize: null, // Use default
-                    textColor: Theme.of(context).colorScheme.onSurface,
-                    sp: 1.0,
-                    h: 1.0,
-                    scrollMode: ScrollMode.horizontal,
-                    onLongPress: null,
-                    onLongPressUp: null,
-                    onLongPressCancel: null,
-                    onLongPressDown: null,
-                  );
-                },
-              ),
-            ),
+      body: _buildReadingView(totalPages, progress, context),
+    );
+  }
 
-            // Top Bar (Overlay)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                color:
-                    Theme.of(context).scaffoldBackgroundColor.withOpacity(0.9),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    Column(
-                      children: [
-                        Text(
-                          'Khatmah Session',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        Text(
-                          'Page $progress of $totalPages',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 48), // Balance close button
-                  ],
-                ),
-              ),
-            ),
+  Widget _buildReadingView(int totalPages, int progress, BuildContext context) {
+    return SafeArea(
+      child: Stack(
+        children: [
+          _buildQuranPageView(totalPages, context),
+          _buildTopAppBar(context, progress, totalPages),
+          _buildProgressIndicator(progress, totalPages, context),
+        ],
+      ),
+    );
+  }
 
-            // Bottom Progress Bar
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: LinearProgressIndicator(
-                value: progress / totalPages,
-                backgroundColor: Colors.grey.withOpacity(0.2),
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  Theme.of(context).primaryColor,
-                ),
-              ),
+  Widget _buildQuranPageView(int totalPages, BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: PageView.builder(
+        controller: _pageController,
+        reverse: false,
+        itemCount: totalPages,
+        onPageChanged: _onPageChanged,
+        itemBuilder: (context, index) {
+          final pageNumber = widget.startPage + index;
+          return QuranPageContent(
+            key: ValueKey('khatmah_page_$pageNumber'),
+            pageNumber: pageNumber,
+            fontSize: null,
+            textColor: Theme.of(context).colorScheme.onSurface,
+            sp: 1.0,
+            h: 1.0,
+            onLongPress: null,
+            onLongPressUp: null,
+            onLongPressCancel: null,
+            onLongPressStart: null,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTopAppBar(BuildContext context, int progress, int totalPages) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
           ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildCloseButton(context),
+            _buildProgressInfo(progress, totalPages, context),
+            const SizedBox(width: 48), // Balance layout
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCloseButton(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.close),
+      onPressed: () => Navigator.pop(context),
+      tooltip: 'Close',
+    );
+  }
+
+  Widget _buildProgressInfo(
+      int progress, int totalPages, BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Khatmah Session',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          'Page $progress of $totalPages',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProgressIndicator(
+    int progress,
+    int totalPages,
+    BuildContext context,
+  ) {
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: Container(
+        height: 4,
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(2),
+          child: LinearProgressIndicator(
+            value: progress / totalPages,
+            backgroundColor: Theme.of(context).dividerColor,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              Theme.of(context).primaryColor,
+            ),
+            minHeight: 4,
+          ),
         ),
       ),
     );

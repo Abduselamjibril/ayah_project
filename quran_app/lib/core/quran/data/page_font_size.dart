@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 enum ScreenType { small, medium, large }
@@ -21,19 +20,17 @@ double getFontSize(int index, context) {
   //   }  else if (getDeviceType(context) == DeviceType.small) {
   //     return 20;
   //   }else
-  if( MediaQuery.of(context).orientation != Orientation.portrait){
+  if (MediaQuery.of(context).orientation != Orientation.portrait) {
     return 35;
-  }
- else if (getScreenType(context) == ScreenType.large) {
-      return 15;
-    } else if (getScreenType(context) == ScreenType.small) {
-      return 20;
-    }else
-  if (index == 1 || index == 2) {
+  } else if (getScreenType(context) == ScreenType.large) {
+    return 15;
+  } else if (getScreenType(context) == ScreenType.small) {
+    return 20;
+  } else if (index == 1 || index == 2) {
     return 25;
   } else if (index == 145 || index == 585) {
     return 22.7;
-  } else if (index == 532 || index == 533 || index == 523||index==577) {
+  } else if (index == 532 || index == 533 || index == 523 || index == 577) {
     return 22.5;
   } else if (index == 116 || index == 156) {
     return 23.4;
@@ -84,9 +81,6 @@ double getFontSize(int index, context) {
       index == 447) {
     return 22.8;
   } else {
-   
-    return 23.1; 
-
+    return 23.1;
   }
 }
-

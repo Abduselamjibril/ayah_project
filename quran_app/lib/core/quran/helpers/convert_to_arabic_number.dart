@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 String convertToArabicNumber(String number) {
   // print(number);
   String res = '';
@@ -10,6 +11,3 @@ String convertToArabicNumber(String number) {
 
   return res;
 }
-
-
-

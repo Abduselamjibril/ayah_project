@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import './../data/page_font_size.dart';
+import 'package:quran_app/core/quran/qcf_quran.dart';
 
 class HeaderWidget extends StatelessWidget {
   final int suraNumber;
@@ -8,7 +8,7 @@ class HeaderWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final mainframeImage = isDark
+    final frameAsset = isDark
         ? "assets/images/mainframe_dark.png"
         : "assets/images/mainframe.png";
 
@@ -20,8 +20,8 @@ class HeaderWidget extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            Image(
-              image: AssetImage(mainframeImage),
+            Image.asset(
+              frameAsset,
               width: getScreenType(context) == ScreenType.large ? 250 : 372,
             ),
             RichText(

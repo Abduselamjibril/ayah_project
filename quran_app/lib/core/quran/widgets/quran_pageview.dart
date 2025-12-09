@@ -1,28 +1,26 @@
-// quran_pageview.dart
-import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
-import './../data/page_data.dart';
-import './../data/quran_text.dart';
-import './../data/page_font_size.dart';
-import 'header_widget.dart';
+import 'package:flutter/material.dart';
+import 'package:quran_app/core/quran/qcf_quran.dart';
 
+/// Scrolling direction for the mushaf widget.
 enum ScrollMode { horizontal, vertical }
 
-/// A Quran mushaf that supports both horizontal (page-by-page) and vertical (continuous) scrolling.
+/// A horizontally swipeable Quran mushaf using internal QCF fonts.
+///
+/// - Uses `pageData` to determine surah/verse ranges for each page.
+/// - Renders each verse with `QcfVerse`, which applies the correct per-page font.
+/// - Supports RTL page order via `reverse: true` and `Directionality.rtl`.
 class PageviewQuran extends StatefulWidget {
-  /// 1-based initial page number (1..604) for horizontal mode
+  /// 1-based initial page number (1..604)
   final int initialPageNumber;
 
-  /// Initial surah number (1..114) for vertical mode
-  final int initialSurahNumber;
-
-  /// Scroll mode - horizontal (page view) or vertical (continuous)
+  /// Choose horizontal paging (default) or vertically stacked pages.
   final ScrollMode scrollMode;
 
-  /// Optional external controller for horizontal mode.
+  /// Optional external controller. If not provided, an internal one is created.
   final PageController? controller;
 
-  /// Optional external controller for vertical mode.
+  /// Scroll controller used when [scrollMode] is [ScrollMode.vertical].
   final ScrollController? verticalController;
 
   //sp (adding 1.sp to get the ratio of screen size for responsive font design)
@@ -31,11 +29,8 @@ class PageviewQuran extends StatefulWidget {
   //h (adding 1.h to get the ratio of screen size for responsive font design)
   final double h;
 
-  /// Optional callback when page changes in horizontal mode. Provides 1-based page number.
+  /// Optional callback when page changes. Provides 1-based page number.
   final ValueChanged<int>? onPageChanged;
-
-  /// Optional callback when surah changes in vertical mode. Provides 1-based surah number.
-  final ValueChanged<int>? onSurahChanged;
 
   /// Optional override font size passed to each `QcfVerse`.
   final double? fontSize;
@@ -59,17 +54,15 @@ class PageviewQuran extends StatefulWidget {
     int surahNumber,
     int verseNumber,
     LongPressStartDetails details,
-  )? onLongPressDown;
+  )? onLongPressStart;
 
   const PageviewQuran({
     super.key,
     this.initialPageNumber = 1,
-    this.initialSurahNumber = 1,
     this.scrollMode = ScrollMode.horizontal,
     this.controller,
     this.verticalController,
     this.onPageChanged,
-    this.onSurahChanged,
     this.fontSize,
     this.sp = 1,
     this.h = 1,
@@ -79,9 +72,8 @@ class PageviewQuran extends StatefulWidget {
     this.onLongPress,
     this.onLongPressUp,
     this.onLongPressCancel,
-    this.onLongPressDown,
-  })  : assert(initialPageNumber >= 1 && initialPageNumber <= totalPagesCount),
-        assert(initialSurahNumber >= 1 && initialSurahNumber <= 114);
+    this.onLongPressStart,
+  }) : assert(initialPageNumber >= 1 && initialPageNumber <= totalPagesCount);
 
   @override
   State<PageviewQuran> createState() => _PageviewQuranState();
@@ -89,32 +81,38 @@ class PageviewQuran extends StatefulWidget {
 
 class _PageviewQuranState extends State<PageviewQuran> {
   PageController? _internalController;
-  ScrollController? _internalVerticalController;
-  int _currentSurah = 1;
+  ScrollController? _internalScrollController;
+  int _lastReportedPage = 1;
+  bool _initialVerticalPositionApplied = false;
 
-  PageController get _pageController =>
-      widget.controller ?? _internalController!;
-
+  PageController get _controller => widget.controller ?? _internalController!;
   ScrollController get _verticalController =>
-      widget.verticalController ?? _internalVerticalController!;
+      widget.verticalController ?? _internalScrollController!;
 
   bool get _ownsController => widget.controller == null;
   bool get _ownsVerticalController => widget.verticalController == null;
+  bool get _isVertical => widget.scrollMode == ScrollMode.vertical;
 
   @override
   void initState() {
     super.initState();
-    _currentSurah = widget.initialSurahNumber;
+    _lastReportedPage = widget.initialPageNumber;
 
-    if (_ownsController && widget.scrollMode == ScrollMode.horizontal) {
+    if (!_isVertical && _ownsController) {
       _internalController = PageController(
         initialPage: widget.initialPageNumber - 1,
       );
     }
 
-    if (_ownsVerticalController) {
-      _internalVerticalController = ScrollController();
+    if (_isVertical && _ownsVerticalController) {
+      _internalScrollController = ScrollController();
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_isVertical) {
+        _ensureInitialVerticalOffset();
+      }
+    });
   }
 
   @override
@@ -123,7 +121,7 @@ class _PageviewQuranState extends State<PageviewQuran> {
       _internalController?.dispose();
     }
     if (_ownsVerticalController) {
-      _internalVerticalController?.dispose();
+      _internalScrollController?.dispose();
     }
     super.dispose();
   }
@@ -132,67 +130,114 @@ class _PageviewQuranState extends State<PageviewQuran> {
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Container(
-        color: widget.pageBackgroundColor,
-        child: widget.scrollMode == ScrollMode.horizontal
-            ? _buildHorizontalView()
-            : _buildVerticalView(),
+      child: _isVertical
+          ? _buildVerticalList(context)
+          : _buildHorizontalPager(context),
+    );
+  }
+
+  Widget _buildHorizontalPager(BuildContext context) {
+    return Container(
+      color: widget.pageBackgroundColor,
+      child: PageView.builder(
+        controller: _controller,
+        reverse: false, // right-to-left paging order
+        itemCount: totalPagesCount,
+        onPageChanged: (index) => widget.onPageChanged?.call(index + 1),
+        itemBuilder: (context, index) {
+          final pageNumber = index + 1; // 1-based page
+          return QuranPageContent(
+            pageNumber: pageNumber,
+            fontSize: widget.fontSize,
+            textColor: widget.textColor,
+            verseBackgroundColor: widget.verseBackgroundColor,
+            onLongPress: widget.onLongPress,
+            onLongPressUp: widget.onLongPressUp,
+            onLongPressCancel: widget.onLongPressCancel,
+            onLongPressStart: widget.onLongPressStart,
+            sp: widget.sp,
+            h: widget.h,
+          );
+        },
       ),
     );
   }
 
-  Widget _buildHorizontalView() {
-    return PageView.builder(
-      controller: _pageController,
-      reverse: false, // right-to-left paging order
-      itemCount: totalPagesCount,
-      onPageChanged: (index) =>
-          widget.onPageChanged?.call(index + 1), // 1-based
-      itemBuilder: (context, index) {
-        final pageNumber = index + 1; // 1-based page
-        return QuranPageContent(
-          pageNumber: pageNumber,
-          fontSize: widget.fontSize,
-          textColor: widget.textColor,
-          verseBackgroundColor: widget.verseBackgroundColor,
-          onLongPress: widget.onLongPress,
-          onLongPressUp: widget.onLongPressUp,
-          onLongPressCancel: widget.onLongPressCancel,
-          onLongPressDown: widget.onLongPressDown,
-          sp: widget.sp,
-          h: widget.h,
-          scrollMode: widget.scrollMode,
-        );
-      },
+  Widget _buildVerticalList(BuildContext context) {
+    final pageHeight = MediaQuery.of(context).size.height;
+
+    return Container(
+      color: widget.pageBackgroundColor,
+      child: NotificationListener<ScrollNotification>(
+        onNotification: _handleVerticalScrollNotification,
+        child: ListView.builder(
+          controller: _verticalController,
+          padding: EdgeInsets.zero,
+          physics: const ClampingScrollPhysics(),
+          itemCount: totalPagesCount,
+          itemBuilder: (context, index) {
+            final pageNumber = index + 1;
+            return SizedBox(
+              height: pageHeight,
+              child: QuranPageContent(
+                pageNumber: pageNumber,
+                fontSize: widget.fontSize,
+                textColor: widget.textColor,
+                verseBackgroundColor: widget.verseBackgroundColor,
+                onLongPress: widget.onLongPress,
+                onLongPressUp: widget.onLongPressUp,
+                onLongPressCancel: widget.onLongPressCancel,
+                onLongPressStart: widget.onLongPressStart,
+                sp: widget.sp,
+                h: widget.h,
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 
-  Widget _buildVerticalView() {
-    return ListView.builder(
-      controller: _verticalController,
-      itemCount: totalPagesCount, // 604 pages instead of 114 surahs
-      itemBuilder: (context, index) {
-        final pageNumber = index + 1;
-        return RepaintBoundary(
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height,
-            child: QuranPageContent(
-              pageNumber: pageNumber,
-              fontSize: widget.fontSize,
-              textColor: widget.textColor,
-              verseBackgroundColor: widget.verseBackgroundColor,
-              onLongPress: widget.onLongPress,
-              onLongPressUp: widget.onLongPressUp,
-              onLongPressCancel: widget.onLongPressCancel,
-              onLongPressDown: widget.onLongPressDown,
-              sp: widget.sp,
-              h: widget.h,
-              scrollMode: widget.scrollMode,
-            ),
-          ),
-        );
-      },
-    );
+  void _ensureInitialVerticalOffset() {
+    if (!_isVertical || _initialVerticalPositionApplied) return;
+
+    if (!_verticalController.hasClients) {
+      WidgetsBinding.instance.addPostFrameCallback((_) =>
+          _ensureInitialVerticalOffset()); // wait for the controller to attach
+      return;
+    }
+
+    final viewport = _verticalController.position.viewportDimension;
+    if (viewport == 0) {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _ensureInitialVerticalOffset());
+      return;
+    }
+
+    final targetOffset = (widget.initialPageNumber - 1) * viewport;
+    final maxOffset = _verticalController.position.maxScrollExtent;
+
+    _verticalController.jumpTo(targetOffset.clamp(0.0, maxOffset));
+    _initialVerticalPositionApplied = true;
+  }
+
+  bool _handleVerticalScrollNotification(ScrollNotification notification) {
+    if (!_isVertical || notification.metrics.viewportDimension == 0) {
+      return false;
+    }
+
+    final page =
+        (notification.metrics.pixels / notification.metrics.viewportDimension)
+                .round() +
+            1;
+    final clampedPage = page.clamp(1, totalPagesCount);
+
+    if (clampedPage != _lastReportedPage) {
+      _lastReportedPage = clampedPage;
+      widget.onPageChanged?.call(clampedPage);
+    }
+
+    return false;
   }
 }
 
@@ -204,17 +249,21 @@ class QuranPageContent extends StatelessWidget {
   final void Function(int surahNumber, int verseNumber)? onLongPress;
   final void Function(int surahNumber, int verseNumber)? onLongPressUp;
   final void Function(int surahNumber, int verseNumber)? onLongPressCancel;
+
+  //sp (adding 1.sp to get the ratio of screen size for responsive font design)
   final double sp;
+
+  //h (adding 1.h to get the ratio of screen size for responsive font design)
   final double h;
-  final ScrollMode scrollMode;
+
   final void Function(
     int surahNumber,
     int verseNumber,
     LongPressStartDetails details,
-  )? onLongPressDown;
+  )? onLongPressStart;
 
   const QuranPageContent({
-    super.key,
+    Key? key,
     required this.pageNumber,
     required this.fontSize,
     required this.textColor,
@@ -222,11 +271,10 @@ class QuranPageContent extends StatelessWidget {
     required this.onLongPress,
     required this.onLongPressUp,
     required this.onLongPressCancel,
-    required this.onLongPressDown,
+    required this.onLongPressStart,
     required this.sp,
     required this.h,
-    required this.scrollMode,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -238,12 +286,7 @@ class QuranPageContent extends StatelessWidget {
     if (pageNumber == 2 || pageNumber == 1) {
       verseSpans.add(
         WidgetSpan(
-          child: SizedBox(
-            height: scrollMode == ScrollMode.horizontal
-                ? MediaQuery.of(context).size.height * .175
-                : MediaQuery.of(context).size.height *
-                    .1, // Smaller for vertical
-          ),
+          child: SizedBox(height: MediaQuery.of(context).size.height * .175),
         ),
       );
     }
@@ -288,7 +331,7 @@ class QuranPageContent extends StatelessWidget {
         final spanRecognizer = LongPressGestureRecognizer();
         spanRecognizer.onLongPress = () => onLongPress?.call(surah, v);
         spanRecognizer.onLongPressStart =
-            (LongPressStartDetails d) => onLongPressDown?.call(surah, v, d);
+            (LongPressStartDetails d) => onLongPressStart?.call(surah, v, d);
         spanRecognizer.onLongPressUp = () => onLongPressUp?.call(surah, v);
         spanRecognizer.onLongPressEnd =
             (LongPressEndDetails d) => onLongPressCancel?.call(surah, v);
@@ -309,7 +352,7 @@ class QuranPageContent extends StatelessWidget {
                 text: getVerseNumberQCF(surah, v),
                 style: TextStyle(
                   fontFamily: pageFont,
-                  color: textColor.withOpacity(0.7),
+                  color: textColor,
                   height: 1.35 / h,
                   backgroundColor: verseBgColor,
                 ),
@@ -320,39 +363,8 @@ class QuranPageContent extends StatelessWidget {
       }
     }
 
-    // Calculate responsive horizontal padding
-    //  Small phones want minimal padding for max content
-    // Large screens (tablets) want more padding for readability
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isTablet = screenWidth > 600;
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
-
-    // Responsive padding calculation:
-    // - Phone portrait: 8-12px (minimal, maximize content)
-    // - Phone landscape: 16-20px (more breathing room)
-    // - Tablet portrait: 24-32px (better readability)
-    // - Tablet landscape: 32-48px (lots of space, comfortable reading)
-    double horizontalPadding;
-    if (isTablet) {
-      horizontalPadding = isLandscape ? 40.0 : 28.0;
-    } else {
-      horizontalPadding = isLandscape ? 18.0 : 10.0;
-    }
-
-    // Vertical padding also responsive
-    double verticalPadding;
-    if (isTablet) {
-      verticalPadding = isLandscape ? 16.0 : 12.0;
-    } else {
-      verticalPadding = isLandscape ? 12.0 : 12.0;
-    }
-
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: horizontalPadding,
-        vertical: verticalPadding,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
       color: Colors.transparent,
       child: Text.rich(
         TextSpan(children: verseSpans),

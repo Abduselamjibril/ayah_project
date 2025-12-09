@@ -1,9 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter/gestures.dart';
-// Update imports
-import './../data/quran_text.dart';
-import './../data/page_font_size.dart';
-import './../data/page_data.dart';
+import 'package:quran_app/core/quran/qcf_quran.dart';
 
 class QcfVerse extends StatefulWidget {
   final int surahNumber;
@@ -15,7 +12,7 @@ class QcfVerse extends StatefulWidget {
   final VoidCallback? onLongPressUp;
 
   final VoidCallback? onLongPressCancel;
-  final Function(LongPressStartDetails)? onLongPressDown;
+  final Function(LongPressDownDetails)? onLongPressDown;
   //sp (adding 1.sp to get the ratio of screen size for responsive font design)
   final double sp;
 
@@ -52,7 +49,7 @@ class _QcfVerseState extends State<QcfVerse> {
       text: TextSpan(
         recognizer: LongPressGestureRecognizer()
           ..onLongPress = widget.onLongPress
-          ..onLongPressStart = widget.onLongPressDown
+          ..onLongPressDown = widget.onLongPressDown
           ..onLongPressUp = widget.onLongPressUp
           ..onLongPressCancel = widget.onLongPressCancel,
         text: getVerseQCF(
@@ -74,7 +71,6 @@ class _QcfVerseState extends State<QcfVerse> {
           color: widget.textColor,
           height: 2.0 / widget.h,
           letterSpacing: 0,
-
           wordSpacing: 0,
           fontFamily: "QCF_P${pageNumber.toString().padLeft(3, '0')}",
           fontSize: widget.fontSize ?? pageFontSize / widget.sp,
