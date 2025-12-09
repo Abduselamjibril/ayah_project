@@ -36,7 +36,7 @@ class MyApp extends StatelessWidget {
           themeMode: themeService.themeMode,
           // Use the generated route system
           onGenerateRoute: AppRouter.generateRoute,
-          initialRoute: '/mushaf',
+          initialRoute: '/',
           debugShowCheckedModeBanner: false,
         );
       },
