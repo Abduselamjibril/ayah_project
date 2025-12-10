@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'package:quran_app/app/router.dart';
 import 'package:quran_app/core/database/init_database.dart';
+import 'package:quran_app/core/services/mushaf_settings_service.dart';
 import 'package:quran_app/core/services/theme_service.dart';
 
 Future<void> main() async {
@@ -14,6 +15,9 @@ Future<void> main() async {
 
   // Initialize theme service and load saved theme
   await ThemeService().initialize();
+
+  // Initialize mushaf settings (scroll mode, etc.)
+  await MushafSettingsService().initialize();
 
   // Run the app
   runApp(const MyApp());
