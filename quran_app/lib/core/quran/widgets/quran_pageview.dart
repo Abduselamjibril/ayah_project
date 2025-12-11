@@ -174,6 +174,7 @@ class _PageviewQuranState extends State<PageviewQuran> {
           controller: _verticalController,
           padding: EdgeInsets.zero,
           physics: const ClampingScrollPhysics(),
+          itemExtent: pageHeight, // Added for performance and stability
           itemCount: totalPagesCount,
           itemBuilder: (context, index) {
             final pageNumber = index + 1;
@@ -208,24 +209,26 @@ class _PageviewQuranState extends State<PageviewQuran> {
       return;
     }
 
+    // Use the first position to avoid "attached to multiple scroll views" exception
     final position = _verticalController.positions.first;
-    final viewport = position.viewportDimension;
-    if (viewport == 0) {
-      WidgetsBinding.instance
-          .addPostFrameCallback((_) => _ensureInitialVerticalOffset());
-      return;
-    }
 
     final pageHeight = MediaQuery.of(context).size.height;
     final targetOffset = (widget.initialPageNumber - 1) * pageHeight;
-    final maxOffset = position.maxScrollExtent;
 
+    // If we are already at the target (or very close), mark as applied
+    if ((position.pixels - targetOffset).abs() < 1.0) {
+      _initialVerticalPositionApplied = true;
+      return;
+    }
+
+    // Prevent bouncing back to page 1 if the user has already scrolled
     if (widget.initialPageNumber == 1 && position.pixels > 0) {
       _initialVerticalPositionApplied = true;
       return;
     }
 
-    _verticalController.jumpTo(targetOffset.clamp(0.0, maxOffset));
+    // Use jumpTo on the specific position
+    position.jumpTo(targetOffset.clamp(0.0, position.maxScrollExtent));
     _initialVerticalPositionApplied = true;
   }
 
