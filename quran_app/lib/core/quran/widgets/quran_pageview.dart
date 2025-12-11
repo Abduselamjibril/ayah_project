@@ -199,6 +199,7 @@ class _PageviewQuranState extends State<PageviewQuran> {
   }
 
   void _ensureInitialVerticalOffset() {
+    if (!mounted) return;
     if (!_isVertical || _initialVerticalPositionApplied) return;
 
     if (!_verticalController.hasClients) {
@@ -207,15 +208,22 @@ class _PageviewQuranState extends State<PageviewQuran> {
       return;
     }
 
-    final viewport = _verticalController.position.viewportDimension;
+    final position = _verticalController.positions.first;
+    final viewport = position.viewportDimension;
     if (viewport == 0) {
       WidgetsBinding.instance
           .addPostFrameCallback((_) => _ensureInitialVerticalOffset());
       return;
     }
 
-    final targetOffset = (widget.initialPageNumber - 1) * viewport;
-    final maxOffset = _verticalController.position.maxScrollExtent;
+    final pageHeight = MediaQuery.of(context).size.height;
+    final targetOffset = (widget.initialPageNumber - 1) * pageHeight;
+    final maxOffset = position.maxScrollExtent;
+
+    if (widget.initialPageNumber == 1 && position.pixels > 0) {
+      _initialVerticalPositionApplied = true;
+      return;
+    }
 
     _verticalController.jumpTo(targetOffset.clamp(0.0, maxOffset));
     _initialVerticalPositionApplied = true;
@@ -226,10 +234,8 @@ class _PageviewQuranState extends State<PageviewQuran> {
       return false;
     }
 
-    final page =
-        (notification.metrics.pixels / notification.metrics.viewportDimension)
-                .round() +
-            1;
+    final pageHeight = MediaQuery.of(context).size.height;
+    final page = (notification.metrics.pixels / pageHeight).round() + 1;
     final clampedPage = page.clamp(1, totalPagesCount);
 
     if (clampedPage != _lastReportedPage) {
