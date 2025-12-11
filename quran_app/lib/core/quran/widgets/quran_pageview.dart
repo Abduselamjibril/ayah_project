@@ -172,25 +172,28 @@ class _PageviewQuranState extends State<PageviewQuran> {
         onNotification: _handleVerticalScrollNotification,
         child: ListView.builder(
           controller: _verticalController,
-          padding: EdgeInsets.zero,
-          physics: const ClampingScrollPhysics(),
-          itemExtent: pageHeight, // Added for performance and stability
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          physics: const ClampingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ), // platform-typical (no bounce) for physical scroll feel
           itemCount: totalPagesCount,
           itemBuilder: (context, index) {
             final pageNumber = index + 1;
-            return SizedBox(
-              height: pageHeight,
-              child: QuranPageContent(
-                pageNumber: pageNumber,
-                fontSize: widget.fontSize,
-                textColor: widget.textColor,
-                verseBackgroundColor: widget.verseBackgroundColor,
-                onLongPress: widget.onLongPress,
-                onLongPressUp: widget.onLongPressUp,
-                onLongPressCancel: widget.onLongPressCancel,
-                onLongPressStart: widget.onLongPressStart,
-                sp: widget.sp,
-                h: widget.h,
+            return Center(
+              child: SizedBox(
+                height: pageHeight,
+                child: QuranPageContent(
+                  pageNumber: pageNumber,
+                  fontSize: widget.fontSize,
+                  textColor: widget.textColor,
+                  verseBackgroundColor: widget.verseBackgroundColor,
+                  onLongPress: widget.onLongPress,
+                  onLongPressUp: widget.onLongPressUp,
+                  onLongPressCancel: widget.onLongPressCancel,
+                  onLongPressStart: widget.onLongPressStart,
+                  sp: widget.sp,
+                  h: widget.h,
+                ),
               ),
             );
           },
