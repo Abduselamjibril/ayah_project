@@ -5,7 +5,6 @@ import '../../core/services/translation_service.dart';
 import '../../core/services/tafsir_service.dart';
 import '../../data/models/translation_model.dart';
 import '../../data/models/tafsir_model.dart';
-import '../../data/sources/remote/translation_api.dart';
 import '../../core/utils/language_utils.dart';
 import 'download_settings_page.dart';
 
@@ -26,12 +25,9 @@ class _DownloadsScreenState extends State<DownloadsScreen>
   List<TafsirEdition> _availableTafsirs = [];
   List<String> _downloadedTranslations = [];
   List<String> _downloadedTafsirs = [];
-  List<String> _availableLanguages = [];
-  String? _selectedLanguage;
 
   bool _isLoadingTranslations = true;
   bool _isLoadingTafsirs = true;
-  bool _isLoadingLanguages = true;
 
   final Map<String, double> _downloadProgress = {};
   final Map<String, bool> _isDownloading = {};
@@ -50,46 +46,18 @@ class _DownloadsScreenState extends State<DownloadsScreen>
   }
 
   Future<void> _loadData() async {
-    await _loadAvailableLanguages();
     await Future.wait([
+      _loadAvailableTranslations(),
       _loadAvailableTafsirs(),
       _loadDownloadedEditions(),
     ]);
   }
 
-  Future<void> _loadAvailableLanguages() async {
-    setState(() => _isLoadingLanguages = true);
-    try {
-      final languages = await _translationService.getAvailableLanguages();
-      setState(() {
-        _availableLanguages = languages;
-        _isLoadingLanguages = false;
-        // Default to English if available
-        if (languages.contains('en')) {
-          _selectedLanguage = 'en';
-          _loadAvailableTranslations();
-        } else if (languages.isNotEmpty) {
-          _selectedLanguage = languages.first;
-          _loadAvailableTranslations();
-        }
-      });
-    } catch (e) {
-      setState(() => _isLoadingLanguages = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading languages: $e')),
-        );
-      }
-    }
-  }
-
   Future<void> _loadAvailableTranslations() async {
-    if (_selectedLanguage == null) return;
-
     setState(() => _isLoadingTranslations = true);
     try {
       final translations =
-          await _translationService.getEditionsByLanguage(_selectedLanguage!);
+          await _translationService.getAllTranslationEditions();
       setState(() {
         _availableTranslations = translations;
         _isLoadingTranslations = false;
@@ -373,47 +341,6 @@ class _DownloadsScreenState extends State<DownloadsScreen>
   }
 
   Widget _buildTranslationsTab() {
-    return Column(
-      children: [
-        // Language selector
-        if (_isLoadingLanguages)
-          const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: CircularProgressIndicator(),
-          )
-        else if (_availableLanguages.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: DropdownButtonFormField<String>(
-              value: _selectedLanguage,
-              decoration: const InputDecoration(
-                labelText: 'Select Language',
-                border: OutlineInputBorder(),
-              ),
-              items: _availableLanguages.map((langCode) {
-                return DropdownMenuItem(
-                  value: langCode,
-                  child: Text(TranslationApi.getLanguageName(langCode)),
-                );
-              }).toList(),
-              onChanged: (newValue) {
-                setState(() {
-                  _selectedLanguage = newValue;
-                  _loadAvailableTranslations();
-                });
-              },
-            ),
-          ),
-
-        // Translations list
-        Expanded(
-          child: _buildTranslationsList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTranslationsList() {
     if (_isLoadingTranslations) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -423,7 +350,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('No translations available for this language'),
+            const Text('Unable to load translations'),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _loadAvailableTranslations,
@@ -434,44 +361,69 @@ class _DownloadsScreenState extends State<DownloadsScreen>
       );
     }
 
-    return ListView.builder(
-      itemCount: _availableTranslations.length,
-      itemBuilder: (context, index) {
-        final edition = _availableTranslations[index];
-        final isDownloaded =
-            _downloadedTranslations.contains(edition.identifier);
-        final isDownloading = _isDownloading[edition.identifier] == true;
-        final progress = _downloadProgress[edition.identifier];
-        final isBundled =
-            _translationService.isBundledEdition(edition.identifier);
+    // Group by language
+    final groupedByLanguage = <String, List<TranslationEdition>>{};
+    for (final translation in _availableTranslations) {
+      groupedByLanguage.putIfAbsent(translation.language, () => []);
+      groupedByLanguage[translation.language]!.add(translation);
+    }
 
-        return ListTile(
-          title: Text(edition.englishName),
-          subtitle: isDownloading
-              ? LinearProgressIndicator(value: progress)
-              : Text(
-                  isDownloaded
-                      ? (isBundled ? '✓ Downloaded (Built-in)' : '✓ Downloaded')
-                      : 'Tap to download',
-                ),
-          trailing: isDownloading
-              ? const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : isDownloaded
-                  ? (isBundled
-                      ? const Icon(Icons.star, color: Colors.amber)
-                      : IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () => _deleteTranslation(
-                              edition.identifier, edition.englishName),
-                        ))
-                  : IconButton(
-                      icon: const Icon(Icons.download),
-                      onPressed: () => _downloadTranslation(edition),
+    return ListView.builder(
+      itemCount: groupedByLanguage.length,
+      itemBuilder: (context, index) {
+        final langCode = groupedByLanguage.keys.elementAt(index);
+        final translations = groupedByLanguage[langCode]!;
+
+        return ExpansionTile(
+          leading: Text(
+            LanguageUtils.getLanguageFlag(langCode),
+            style: const TextStyle(fontSize: 24),
+          ),
+          title: Text(
+            LanguageUtils.getLanguageName(langCode),
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          subtitle: Text(
+              '${translations.length} translation${translations.length > 1 ? 's' : ''}'),
+          children: translations.map((edition) {
+            final isDownloaded =
+                _downloadedTranslations.contains(edition.identifier);
+            final isDownloading = _isDownloading[edition.identifier] == true;
+            final progress = _downloadProgress[edition.identifier];
+            final isBundled =
+                _translationService.isBundledEdition(edition.identifier);
+
+            return ListTile(
+              title: Text(edition.englishName),
+              subtitle: isDownloading
+                  ? LinearProgressIndicator(value: progress)
+                  : Text(
+                      isDownloaded
+                          ? (isBundled
+                              ? '✓ Downloaded (Built-in)'
+                              : '✓ Downloaded')
+                          : 'Tap to download',
                     ),
+              trailing: isDownloading
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : isDownloaded
+                      ? (isBundled
+                          ? const Icon(Icons.star, color: Colors.amber)
+                          : IconButton(
+                              icon: const Icon(Icons.delete),
+                              onPressed: () => _deleteTranslation(
+                                  edition.identifier, edition.englishName),
+                            ))
+                      : IconButton(
+                          icon: const Icon(Icons.download),
+                          onPressed: () => _downloadTranslation(edition),
+                        ),
+            );
+          }).toList(),
         );
       },
     );

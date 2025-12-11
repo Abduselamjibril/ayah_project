@@ -88,6 +88,28 @@ class TranslationService {
     }
   }
 
+  /// Get all available translation editions across all languages
+  Future<List<TranslationEdition>> getAllTranslationEditions() async {
+    if (!_isInitialized) await initialize();
+
+    try {
+      // Get all available languages
+      final languages = await getAvailableLanguages();
+
+      // Fetch editions for all languages
+      final allEditions = <TranslationEdition>[];
+      for (final language in languages) {
+        final editions = await getEditionsByLanguage(language);
+        allEditions.addAll(editions);
+      }
+
+      return allEditions;
+    } catch (e) {
+      print('Error fetching all translation editions: $e');
+      return [];
+    }
+  }
+
   /// Download a complete translation edition and store it locally
   ///
   /// [edition]: Translation edition to download

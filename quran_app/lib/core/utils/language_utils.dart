@@ -5,90 +5,104 @@ class LanguageUtils {
   /// Map of language codes to full language names
   static const Map<String, String> languageNames = {
     'ar': 'Arabic',
-    'en': 'English',
-    'fr': 'French',
-    'es': 'Spanish',
-    'de': 'German',
-    'tr': 'Turkish',
-    'ur': 'Urdu',
-    'id': 'Indonesian',
+    'am': 'Amharic',
+    'az': 'Azerbaijani',
+    'ber': 'Berber',
     'bn': 'Bengali',
-    'fa': 'Persian',
-    'ru': 'Russian',
-    'hi': 'Hindi',
-    'zh': 'Chinese',
-    'pt': 'Portuguese',
-    'it': 'Italian',
-    'nl': 'Dutch',
-    'pl': 'Polish',
-    'sv': 'Swedish',
-    'no': 'Norwegian',
-    'fi': 'Finnish',
+    'bs': 'Bosnian',
+    'ce': 'Chechen',
+    'cs': 'Czech',
     'da': 'Danish',
+    'de': 'German',
+    'dv': 'Dhivehi',
+    'en': 'English',
+    'es': 'Spanish',
+    'fa': 'Persian',
+    'fi': 'Finnish',
+    'fr': 'French',
+    'ha': 'Hausa',
+    'hi': 'Hindi',
+    'id': 'Indonesian',
+    'it': 'Italian',
     'ja': 'Japanese',
     'ko': 'Korean',
-    'vi': 'Vietnamese',
-    'th': 'Thai',
-    'ms': 'Malay',
-    'sq': 'Albanian',
-    'az': 'Azerbaijani',
-    'bs': 'Bosnian',
-    'cs': 'Czech',
     'ku': 'Kurdish',
     'ml': 'Malayalam',
+    'ms': 'Malay',
+    'nl': 'Dutch',
+    'no': 'Norwegian',
+    'pl': 'Polish',
+    'ps': 'Pashto',
+    'pt': 'Portuguese',
     'ro': 'Romanian',
+    'ru': 'Russian',
+    'sd': 'Sindhi',
     'so': 'Somali',
+    'sq': 'Albanian',
+    'sv': 'Swedish',
     'sw': 'Swahili',
     'ta': 'Tamil',
     'tg': 'Tajik',
+    'th': 'Thai',
+    'tr': 'Turkish',
     'tt': 'Tatar',
     'ug': 'Uyghur',
+    'ur': 'Urdu',
     'uz': 'Uzbek',
+    'vi': 'Vietnamese',
+    'zh': 'Chinese',
   };
 
   /// Map of language codes to flag emojis
   /// Note: Using representative country flags for languages
   static const Map<String, String> languageFlags = {
     'ar': '🇸🇦', // Saudi Arabia for Arabic
-    'en': '🇬🇧', // UK for English
-    'fr': '🇫🇷', // France
-    'es': '🇪🇸', // Spain
-    'de': '🇩🇪', // Germany
-    'tr': '🇹🇷', // Turkey
-    'ur': '🇵🇰', // Pakistan for Urdu
-    'id': '🇮🇩', // Indonesia
+    'am': '🇪🇹', // Ethiopia for Amharic
+    'az': '🇦🇿', // Azerbaijan
+    'ber': '🇲🇦', // Morocco for Berber
     'bn': '🇧🇩', // Bangladesh
-    'fa': '🇮🇷', // Iran for Persian
-    'ru': '🇷🇺', // Russia
-    'hi': '🇮🇳', // India for Hindi
-    'zh': '🇨🇳', // China
-    'pt': '🇵🇹', // Portugal
-    'it': '🇮🇹', // Italy
-    'nl': '🇳🇱', // Netherlands
-    'pl': '🇵🇱', // Poland
-    'sv': '🇸🇪', // Sweden
-    'no': '🇳🇴', // Norway
-    'fi': '🇫🇮', // Finland
+    'bs': '🇧🇦', // Bosnia
+    'ce': '🇷🇺', // Russia for Chechen
+    'cs': '🇨🇿', // Czech Republic
     'da': '🇩🇰', // Denmark
+    'de': '🇩🇪', // Germany
+    'dv': '🇲🇻', // Maldives for Dhivehi
+    'en': '🇬🇧', // UK for English
+    'es': '🇪🇸', // Spain
+    'fa': '🇮🇷', // Iran for Persian
+    'fi': '🇫🇮', // Finland
+    'fr': '🇫🇷', // France
+    'ha': '🇳🇬', // Nigeria for Hausa
+    'hi': '🇮🇳', // India for Hindi
+    'id': '🇮🇩', // Indonesia
+    'it': '🇮🇹', // Italy
     'ja': '🇯🇵', // Japan
     'ko': '🇰🇷', // South Korea
-    'vi': '🇻🇳', // Vietnam
-    'th': '🇹🇭', // Thailand
-    'ms': '🇲🇾', // Malaysia for Malay
-    'sq': '🇦🇱', // Albania
-    'az': '🇦🇿', // Azerbaijan
-    'bs': '🇧🇦', // Bosnia
-    'cs': '🇨🇿', // Czech Republic
-    'ku': '🇮🇶', // Iraq for Kurdish (representative)
+    'ku': '🇮🇶', // Iraq for Kurdish
     'ml': '🇮🇳', // India for Malayalam
+    'ms': '🇲🇾', // Malaysia for Malay
+    'nl': '🇳🇱', // Netherlands
+    'no': '🇳🇴', // Norway
+    'pl': '🇵🇱', // Poland
+    'ps': '🇦🇫', // Afghanistan for Pashto
+    'pt': '🇵🇹', // Portugal
     'ro': '🇷🇴', // Romania
+    'ru': '🇷🇺', // Russia
+    'sd': '🇵🇰', // Pakistan for Sindhi
     'so': '🇸🇴', // Somalia
+    'sq': '🇦🇱', // Albania
+    'sv': '🇸🇪', // Sweden
     'sw': '🇹🇿', // Tanzania for Swahili
     'ta': '🇮🇳', // India for Tamil
     'tg': '🇹🇯', // Tajikistan
+    'th': '🇹🇭', // Thailand
+    'tr': '🇹🇷', // Turkey
     'tt': '🇷🇺', // Russia for Tatar
     'ug': '🇨🇳', // China for Uyghur
+    'ur': '🇵🇰', // Pakistan for Urdu
     'uz': '🇺🇿', // Uzbekistan
+    'vi': '🇻🇳', // Vietnam
+    'zh': '🇨🇳', // China
   };
 
   /// Get full language name from code
