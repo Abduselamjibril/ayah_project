@@ -35,9 +35,7 @@ class MyApp extends StatelessWidget {
       builder: (context, child) {
         return MaterialApp(
           title: 'Quran App',
-          theme: themeService.lightTheme,
-          darkTheme: themeService.darkTheme,
-          themeMode: themeService.themeMode,
+          theme: themeService.themeData,
           // Use the generated route system
           onGenerateRoute: AppRouter.generateRoute,
           initialRoute: '/',
