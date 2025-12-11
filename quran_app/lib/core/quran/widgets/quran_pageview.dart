@@ -208,21 +208,30 @@ class _PageviewQuranState extends State<PageviewQuran> {
         controller: _verticalController,
         physics: const BouncingScrollPhysics(),
         itemCount: totalPagesCount,
+        // Cache nearby pages for smoother scrolling
+        cacheExtent: viewportHeight * 2, // Cache 2 pages above and below
+        // Keep alive widgets to avoid rebuilding
+        addAutomaticKeepAlives: true,
+        // Add repaint boundaries automatically
+        addRepaintBoundaries: true,
         itemBuilder: (context, index) {
           final pageNumber = index + 1;
           return SizedBox(
             height: viewportHeight,
-            child: QuranPageContent(
-              pageNumber: pageNumber,
-              fontSize: widget.fontSize,
-              textColor: widget.textColor,
-              verseBackgroundColor: widget.verseBackgroundColor,
-              onLongPress: widget.onLongPress,
-              onLongPressUp: widget.onLongPressUp,
-              onLongPressCancel: widget.onLongPressCancel,
-              onLongPressStart: widget.onLongPressStart,
-              sp: widget.sp,
-              h: widget.h,
+            // Wrap each page in RepaintBoundary for better performance
+            child: RepaintBoundary(
+              child: QuranPageContent(
+                pageNumber: pageNumber,
+                fontSize: widget.fontSize,
+                textColor: widget.textColor,
+                verseBackgroundColor: widget.verseBackgroundColor,
+                onLongPress: widget.onLongPress,
+                onLongPressUp: widget.onLongPressUp,
+                onLongPressCancel: widget.onLongPressCancel,
+                onLongPressStart: widget.onLongPressStart,
+                sp: widget.sp,
+                h: widget.h,
+              ),
             ),
           );
         },
@@ -231,7 +240,7 @@ class _PageviewQuranState extends State<PageviewQuran> {
   }
 }
 
-class QuranPageContent extends StatelessWidget {
+class QuranPageContent extends StatefulWidget {
   final int pageNumber;
   final double? fontSize;
   final Color textColor;
@@ -267,13 +276,23 @@ class QuranPageContent extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<QuranPageContent> createState() => _QuranPageContentState();
+}
+
+class _QuranPageContentState extends State<QuranPageContent>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
-    final ranges = getPageData(pageNumber);
-    final pageFont = "QCF_P${pageNumber.toString().padLeft(3, '0')}";
-    final baseFontSize = getFontSize(pageNumber, context) / sp;
+    super.build(context); // Must call super when using AutomaticKeepAliveClientMixin
+    final ranges = getPageData(widget.pageNumber);
+    final pageFont = "QCF_P${widget.pageNumber.toString().padLeft(3, '0')}";
+    final baseFontSize = getFontSize(widget.pageNumber, context) / widget.sp;
 
     final verseSpans = <InlineSpan>[];
-    if (pageNumber == 2 || pageNumber == 1) {
+    if (widget.pageNumber == 2 || widget.pageNumber == 1) {
       verseSpans.add(
         WidgetSpan(
           child: SizedBox(height: MediaQuery.of(context).size.height * .000001),
@@ -288,7 +307,7 @@ class QuranPageContent extends StatelessWidget {
       for (int v = start; v <= end; v++) {
         if (v == start && v == 1) {
           verseSpans.add(WidgetSpan(child: HeaderWidget(suraNumber: surah)));
-          if (pageNumber != 1 && pageNumber != 187) {
+          if (widget.pageNumber != 1 && widget.pageNumber != 187) {
             if (surah != 97) {
               verseSpans.add(
                 TextSpan(
@@ -296,9 +315,9 @@ class QuranPageContent extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: "QCF_P001",
                     fontSize: getScreenType(context) == ScreenType.large
-                        ? 13.2 / sp
-                        : 24 / sp,
-                    color: textColor,
+                        ? 13.2 / widget.sp
+                        : 24 / widget.sp,
+                    color: widget.textColor,
                   ),
                 ),
               );
@@ -309,9 +328,9 @@ class QuranPageContent extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: "QCF_BSML",
                     fontSize: getScreenType(context) == ScreenType.large
-                        ? 13.2 / sp
-                        : 18 / sp,
-                    color: textColor,
+                        ? 13.2 / widget.sp
+                        : 18 / widget.sp,
+                    color: widget.textColor,
                   ),
                 ),
               );
@@ -319,14 +338,14 @@ class QuranPageContent extends StatelessWidget {
           }
         }
         final spanRecognizer = LongPressGestureRecognizer();
-        spanRecognizer.onLongPress = () => onLongPress?.call(surah, v);
+        spanRecognizer.onLongPress = () => widget.onLongPress?.call(surah, v);
         spanRecognizer.onLongPressStart =
-            (LongPressStartDetails d) => onLongPressStart?.call(surah, v, d);
-        spanRecognizer.onLongPressUp = () => onLongPressUp?.call(surah, v);
+            (LongPressStartDetails d) => widget.onLongPressStart?.call(surah, v, d);
+        spanRecognizer.onLongPressUp = () => widget.onLongPressUp?.call(surah, v);
         spanRecognizer.onLongPressEnd =
-            (LongPressEndDetails d) => onLongPressCancel?.call(surah, v);
+            (LongPressEndDetails d) => widget.onLongPressCancel?.call(surah, v);
 
-        final verseBgColor = verseBackgroundColor?.call(surah, v);
+        final verseBgColor = widget.verseBackgroundColor?.call(surah, v);
 
         verseSpans.add(
           TextSpan(
@@ -342,8 +361,8 @@ class QuranPageContent extends StatelessWidget {
                 text: getVerseNumberQCF(surah, v),
                 style: TextStyle(
                   fontFamily: pageFont,
-                  color: textColor,
-                  height: 1.35 / h,
+                  color: widget.textColor,
+                  height: 1.35 / widget.h,
                   backgroundColor: verseBgColor,
                 ),
               ),
@@ -375,8 +394,8 @@ class QuranPageContent extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: pageFont,
                   fontSize: baseFontSize,
-                  color: textColor,
-                  height: (pageNumber == 1 || pageNumber == 2)
+                  color: widget.textColor,
+                  height: (widget.pageNumber == 1 || widget.pageNumber == 2)
                       ? 2.2
                       : MediaQuery.of(context).systemGestureInsets.left > 0 ==
                               false
