@@ -286,7 +286,7 @@ class QuranPageContent extends StatelessWidget {
     if (pageNumber == 2 || pageNumber == 1) {
       verseSpans.add(
         WidgetSpan(
-          child: SizedBox(height: MediaQuery.of(context).size.height * .175),
+          child: SizedBox(height: MediaQuery.of(context).size.height * .000001),
         ),
       );
     }
@@ -363,27 +363,43 @@ class QuranPageContent extends StatelessWidget {
       }
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
-      color: Colors.transparent,
-      child: Text.rich(
-        TextSpan(children: verseSpans),
-        locale: const Locale("ar"),
-        textAlign: TextAlign.center,
-        textDirection: TextDirection.rtl,
-        style: TextStyle(
-          fontFamily: pageFont,
-          fontSize: baseFontSize,
-          color: textColor,
-          height: (pageNumber == 1 || pageNumber == 2)
-              ? 2.2
-              : MediaQuery.of(context).systemGestureInsets.left > 0 == false
-                  ? 2.2
-                  : MediaQuery.of(context).viewPadding.top > 0
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
+          color: Colors.transparent,
+          child: FittedBox(
+            fit: BoxFit
+                .scaleDown, // shrink text as needed to avoid overflow on wide/narrow screens
+            alignment: Alignment.center,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: constraints.maxWidth,
+                minWidth: constraints.maxWidth,
+              ),
+              child: Text.rich(
+                TextSpan(children: verseSpans),
+                locale: const Locale("ar"),
+                textAlign: TextAlign.center,
+                textDirection: TextDirection.rtl,
+                style: TextStyle(
+                  fontFamily: pageFont,
+                  fontSize: baseFontSize,
+                  color: textColor,
+                  height: (pageNumber == 1 || pageNumber == 2)
                       ? 2.2
-                      : 2.2,
-        ),
-      ),
+                      : MediaQuery.of(context).systemGestureInsets.left > 0 ==
+                              false
+                          ? 2.2
+                          : MediaQuery.of(context).viewPadding.top > 0
+                              ? 2.2
+                              : 2.2,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
