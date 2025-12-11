@@ -6,7 +6,7 @@ import '../features/settings/settings_screen.dart';
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
-      case '/mushaf':
+      case '/':
         return MaterialPageRoute(builder: (_) => const MushafScreen());
       case '/settings':
         return MaterialPageRoute(builder: (_) => const SettingsScreen());

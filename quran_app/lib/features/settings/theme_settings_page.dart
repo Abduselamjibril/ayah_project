@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/quran/widgets/quran_pageview.dart';
+import '../../core/services/mushaf_settings_service.dart';
 import '../../core/services/theme_service.dart';
 
 class ThemeSettingsPage extends StatelessWidget {
@@ -7,39 +9,79 @@ class ThemeSettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeService = ThemeService();
+    final mushafSettings = MushafSettingsService();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('App Appearance'),
       ),
       body: AnimatedBuilder(
-        animation: themeService,
+        animation: Listenable.merge([themeService, mushafSettings]),
         builder: (context, child) {
           return ListView(
+            padding: const EdgeInsets.all(16),
             children: [
-              _buildThemeOption(
-                context,
-                title: 'Light Theme',
-                subtitle: 'Parchment style',
-                mode: ThemeMode.light,
-                isSelected: themeService.themeMode == ThemeMode.light,
-                icon: Icons.wb_sunny,
+              const Padding(
+                padding: EdgeInsets.only(bottom: 16),
+                child: Text(
+                  'Theme Selection',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
               ),
-              _buildThemeOption(
+              // Theme list - vertical layout
+              _buildThemeCard(
                 context,
-                title: 'Dark Theme',
-                subtitle: 'Comfortable for night reading',
-                mode: ThemeMode.dark,
-                isSelected: themeService.themeMode == ThemeMode.dark,
-                icon: Icons.nightlight_round,
+                theme: AppTheme.goldenParchment,
+                isSelected:
+                    themeService.currentTheme == AppTheme.goldenParchment,
               ),
-              _buildThemeOption(
+              const SizedBox(height: 12),
+              _buildThemeCard(
                 context,
-                title: 'System Theme',
-                subtitle: 'Follow system theme',
-                mode: ThemeMode.system,
-                isSelected: themeService.themeMode == ThemeMode.system,
-                icon: Icons.brightness_auto,
+                theme: AppTheme.midnightBlueprint,
+                isSelected:
+                    themeService.currentTheme == AppTheme.midnightBlueprint,
+              ),
+              const SizedBox(height: 12),
+              _buildThemeCard(
+                context,
+                theme: AppTheme.mintGarden,
+                isSelected: themeService.currentTheme == AppTheme.mintGarden,
+              ),
+              const SizedBox(height: 12),
+              _buildThemeCard(
+                context,
+                theme: AppTheme.ornateTwilight,
+                isSelected:
+                    themeService.currentTheme == AppTheme.ornateTwilight,
+              ),
+              const SizedBox(height: 24),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(0, 8, 0, 8),
+                child: Text(
+                  'Mushaf Layout',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+              ),
+              _buildMushafLayoutOption(
+                context,
+                title: 'Page View (Horizontal)',
+                subtitle: 'Swipe pages one by one',
+                mode: ScrollMode.horizontal,
+                isSelected: mushafSettings.scrollMode == ScrollMode.horizontal,
+                icon: Icons.view_day,
+                onSelect: () =>
+                    mushafSettings.setScrollMode(ScrollMode.horizontal),
+              ),
+              _buildMushafLayoutOption(
+                context,
+                title: 'Continuous Scroll (Vertical)',
+                subtitle: 'Scroll vertically through the mushaf',
+                mode: ScrollMode.vertical,
+                isSelected: mushafSettings.scrollMode == ScrollMode.vertical,
+                icon: Icons.view_stream,
+                onSelect: () =>
+                    mushafSettings.setScrollMode(ScrollMode.vertical),
               ),
             ],
           );
@@ -48,16 +90,130 @@ class ThemeSettingsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildThemeOption(
+  Widget _buildThemeCard(
+    BuildContext context, {
+    required AppTheme theme,
+    required bool isSelected,
+  }) {
+    final imagePath = ThemeService.getMainframeImagePath(theme);
+    final themeName = ThemeService.getThemeName(theme);
+
+    return GestureDetector(
+      onTap: () {
+        ThemeService().setTheme(theme);
+      },
+      child: Container(
+        height: 80,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? Theme.of(context).primaryColor
+                : Colors.grey.withOpacity(0.3),
+            width: isSelected ? 3 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Theme.of(context).primaryColor.withOpacity(0.3),
+                    blurRadius: 8,
+                    spreadRadius: 2,
+                  )
+                ]
+              : null,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            children: [
+              // Full width image showing right side
+              Positioned.fill(
+                child: ClipRect(
+                  child: Align(
+                    alignment: Alignment
+                        .centerLeft, // This shows the RIGHT side of the image
+                    widthFactor: 0.5, // Show only right half
+                    child: Image.asset(
+                      imagePath,
+                      fit: BoxFit.cover,
+                      height: double.infinity,
+                      width: double.infinity,
+                    ),
+                  ),
+                ),
+              ),
+              // Gradient overlay for smooth transition from text to image
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        Theme.of(context).scaffoldBackgroundColor,
+                        Theme.of(context)
+                            .scaffoldBackgroundColor
+                            .withOpacity(0.95),
+                        Theme.of(context)
+                            .scaffoldBackgroundColor
+                            .withOpacity(0.8),
+                        Theme.of(context)
+                            .scaffoldBackgroundColor
+                            .withOpacity(0.5),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.3, 0.45, 0.6, 0.75],
+                    ),
+                  ),
+                ),
+              ),
+              // Theme name and checkmark on top
+              Positioned.fill(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          themeName,
+                          style: TextStyle(
+                            fontWeight:
+                                isSelected ? FontWeight.bold : FontWeight.w600,
+                            fontSize: 16,
+                            color: isSelected
+                                ? Theme.of(context).primaryColor
+                                : Theme.of(context).textTheme.bodyLarge?.color,
+                          ),
+                        ),
+                      ),
+                      if (isSelected)
+                        Icon(
+                          Icons.check_circle,
+                          color: Theme.of(context).primaryColor,
+                          size: 24,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMushafLayoutOption(
     BuildContext context, {
     required String title,
     required String subtitle,
-    required ThemeMode mode,
+    required ScrollMode mode,
     required bool isSelected,
     required IconData icon,
+    required VoidCallback onSelect,
   }) {
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: isSelected
@@ -85,9 +241,7 @@ class ThemeSettingsPage extends StatelessWidget {
         trailing: isSelected
             ? Icon(Icons.check_circle, color: Theme.of(context).primaryColor)
             : null,
-        onTap: () {
-          ThemeService().setThemeMode(mode);
-        },
+        onTap: onSelect,
       ),
     );
   }

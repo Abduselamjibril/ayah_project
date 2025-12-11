@@ -1,4 +1,7 @@
 // lib/features/downloads/download_settings_page.dart
+import 'dart:async';
+
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -13,11 +16,20 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
   bool _wifiOnly = true;
   bool _backgroundDownload = false;
   bool _isLoading = true;
+  List<ConnectivityResult> _connections = const [ConnectivityResult.none];
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
+    _initConnectivityListener();
+  }
+
+  @override
+  void dispose() {
+    _connectivitySub?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadSettings() async {
@@ -26,6 +38,20 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
       _wifiOnly = prefs.getBool('download_wifi_only') ?? true;
       _backgroundDownload = prefs.getBool('download_background') ?? false;
       _isLoading = false;
+    });
+  }
+
+  Future<void> _initConnectivityListener() async {
+    final connectivity = Connectivity();
+    final initial = await connectivity.checkConnectivity();
+    if (mounted) {
+      setState(() => _connections = initial);
+    }
+
+    _connectivitySub = connectivity.onConnectivityChanged.listen((status) {
+      if (mounted) {
+        setState(() => _connections = status);
+      }
     });
   }
 
@@ -84,6 +110,10 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
       ),
       body: ListView(
         children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: _buildConnectionStatusCard(),
+          ),
           const Padding(
             padding: EdgeInsets.all(16.0),
             child: Text(
@@ -119,7 +149,7 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
           SwitchListTile(
             title: const Text('Allow Background Downloads'),
             subtitle: const Text(
-              'Continue downloading when app is in background',
+              'Keep downloads running when you switch apps. On iOS the app must stay in foreground for reliability.',
             ),
             value: _backgroundDownload,
             onChanged: _saveBackgroundDownload,
@@ -212,5 +242,74 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
         ],
       ),
     );
+  }
+
+  Widget _buildConnectionStatusCard() {
+    final active = _choosePrimaryConnection(_connections);
+
+    final color = switch (active) {
+      ConnectivityResult.wifi => Colors.green,
+      ConnectivityResult.mobile => Colors.orange,
+      ConnectivityResult.ethernet => Colors.green,
+      ConnectivityResult.vpn => Colors.blue,
+      _ => Colors.red,
+    };
+
+    final label = switch (active) {
+      ConnectivityResult.wifi => 'Connected to WiFi',
+      ConnectivityResult.mobile => 'Using mobile data',
+      ConnectivityResult.ethernet => 'Ethernet connection',
+      ConnectivityResult.vpn => 'VPN connection',
+      _ => 'Offline',
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.podcasts, color: color),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style:
+                        TextStyle(color: color, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                const Text(
+                  'These settings are enforced before downloads start.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh connection',
+            onPressed: () async {
+              final status = await Connectivity().checkConnectivity();
+              if (mounted) setState(() => _connections = status);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  ConnectivityResult _choosePrimaryConnection(List<ConnectivityResult> list) {
+    if (list.any((e) => e == ConnectivityResult.wifi))
+      return ConnectivityResult.wifi;
+    if (list.any((e) => e == ConnectivityResult.ethernet))
+      return ConnectivityResult.ethernet;
+    if (list.any((e) => e == ConnectivityResult.vpn))
+      return ConnectivityResult.vpn;
+    if (list.any((e) => e == ConnectivityResult.mobile))
+      return ConnectivityResult.mobile;
+    return ConnectivityResult.none;
   }
 }

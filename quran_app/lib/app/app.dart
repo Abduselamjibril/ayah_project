@@ -12,8 +12,7 @@ class App extends StatelessWidget {
       theme: ThemeData(primarySwatch: Colors.green, useMaterial3: true),
       // Use the generated route system
       onGenerateRoute: AppRouter.generateRoute,
-      initialRoute:
-          '/mushaf', // Start with mushaf screen, or change to your home
+      initialRoute: '/', // Start with mushaf screen, or change to your home
       debugShowCheckedModeBanner: false,
     );
   }

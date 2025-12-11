@@ -20,8 +20,8 @@ class PageviewQuran extends StatefulWidget {
   /// Optional external controller. If not provided, an internal one is created.
   final PageController? controller;
 
-  /// Scroll controller used when [scrollMode] is [ScrollMode.vertical].
-  final ScrollController? verticalController;
+  /// Scroll controller for vertical mode (smooth scrolling)
+  final ScrollController? verticalScrollController;
 
   //sp (adding 1.sp to get the ratio of screen size for responsive font design)
   final double sp;
@@ -61,7 +61,7 @@ class PageviewQuran extends StatefulWidget {
     this.initialPageNumber = 1,
     this.scrollMode = ScrollMode.horizontal,
     this.controller,
-    this.verticalController,
+    this.verticalScrollController,
     this.onPageChanged,
     this.fontSize,
     this.sp = 1,
@@ -81,38 +81,67 @@ class PageviewQuran extends StatefulWidget {
 
 class _PageviewQuranState extends State<PageviewQuran> {
   PageController? _internalController;
-  ScrollController? _internalScrollController;
-  int _lastReportedPage = 1;
-  bool _initialVerticalPositionApplied = false;
+  ScrollController? _internalVerticalController;
+  int _currentPage = 1;
+  double? _viewportHeight;
 
   PageController get _controller => widget.controller ?? _internalController!;
   ScrollController get _verticalController =>
-      widget.verticalController ?? _internalScrollController!;
+      widget.verticalScrollController ?? _internalVerticalController!;
 
   bool get _ownsController => widget.controller == null;
-  bool get _ownsVerticalController => widget.verticalController == null;
+  bool get _ownsVerticalController => widget.verticalScrollController == null;
   bool get _isVertical => widget.scrollMode == ScrollMode.vertical;
 
   @override
   void initState() {
     super.initState();
-    _lastReportedPage = widget.initialPageNumber;
+    _currentPage = widget.initialPageNumber;
 
-    if (!_isVertical && _ownsController) {
+    if (_ownsController && !_isVertical) {
       _internalController = PageController(
         initialPage: widget.initialPageNumber - 1,
       );
     }
 
-    if (_isVertical && _ownsVerticalController) {
-      _internalScrollController = ScrollController();
-    }
+    if (_isVertical) {
+      _internalVerticalController = ScrollController();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_isVertical) {
-        _ensureInitialVerticalOffset();
-      }
-    });
+      // Add scroll listener for vertical mode
+      _verticalController.addListener(_handleVerticalScroll);
+
+      // Calculate initial scroll position after layout
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _jumpToPage(widget.initialPageNumber);
+      });
+    }
+  }
+
+  void _handleVerticalScroll() {
+    if (!_isVertical || _viewportHeight == null || _viewportHeight! <= 0)
+      return;
+
+    final scrollOffset = _verticalController.offset;
+
+    // Calculate current page based on scroll position
+    final newPage = (scrollOffset / _viewportHeight!).round() + 1;
+
+    // Ensure page is within valid range
+    if (newPage >= 1 && newPage <= totalPagesCount && newPage != _currentPage) {
+      _currentPage = newPage;
+      widget.onPageChanged?.call(_currentPage);
+    }
+  }
+
+  void _jumpToPage(int page) {
+    if (!_isVertical || _viewportHeight == null || _viewportHeight! <= 0)
+      return;
+
+    if (page >= 1 && page <= totalPagesCount) {
+      final offset = (page - 1) * _viewportHeight!;
+      _verticalController.jumpTo(offset);
+      _currentPage = page;
+    }
   }
 
   @override
@@ -121,13 +150,17 @@ class _PageviewQuranState extends State<PageviewQuran> {
       _internalController?.dispose();
     }
     if (_ownsVerticalController) {
-      _internalScrollController?.dispose();
+      _internalVerticalController?.removeListener(_handleVerticalScroll);
+      _internalVerticalController?.dispose();
     }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Store viewport height for calculations
+    _viewportHeight = MediaQuery.of(context).size.height;
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: _isVertical
@@ -143,7 +176,10 @@ class _PageviewQuranState extends State<PageviewQuran> {
         controller: _controller,
         reverse: false, // right-to-left paging order
         itemCount: totalPagesCount,
-        onPageChanged: (index) => widget.onPageChanged?.call(index + 1),
+        onPageChanged: (index) {
+          _currentPage = index + 1;
+          widget.onPageChanged?.call(_currentPage);
+        },
         itemBuilder: (context, index) {
           final pageNumber = index + 1; // 1-based page
           return QuranPageContent(
@@ -164,21 +200,26 @@ class _PageviewQuranState extends State<PageviewQuran> {
   }
 
   Widget _buildVerticalList(BuildContext context) {
-    final pageHeight = MediaQuery.of(context).size.height;
+    final viewportHeight = MediaQuery.of(context).size.height;
 
     return Container(
       color: widget.pageBackgroundColor,
-      child: NotificationListener<ScrollNotification>(
-        onNotification: _handleVerticalScrollNotification,
-        child: ListView.builder(
-          controller: _verticalController,
-          padding: EdgeInsets.zero,
-          physics: const ClampingScrollPhysics(),
-          itemCount: totalPagesCount,
-          itemBuilder: (context, index) {
-            final pageNumber = index + 1;
-            return SizedBox(
-              height: pageHeight,
+      child: ListView.builder(
+        controller: _verticalController,
+        physics: const BouncingScrollPhysics(),
+        itemCount: totalPagesCount,
+        // Cache nearby pages for smoother scrolling
+        cacheExtent: viewportHeight * 2, // Cache 2 pages above and below
+        // Keep alive widgets to avoid rebuilding
+        addAutomaticKeepAlives: true,
+        // Add repaint boundaries automatically
+        addRepaintBoundaries: true,
+        itemBuilder: (context, index) {
+          final pageNumber = index + 1;
+          return SizedBox(
+            height: viewportHeight,
+            // Wrap each page in RepaintBoundary for better performance
+            child: RepaintBoundary(
               child: QuranPageContent(
                 pageNumber: pageNumber,
                 fontSize: widget.fontSize,
@@ -191,57 +232,15 @@ class _PageviewQuranState extends State<PageviewQuran> {
                 sp: widget.sp,
                 h: widget.h,
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }
-
-  void _ensureInitialVerticalOffset() {
-    if (!_isVertical || _initialVerticalPositionApplied) return;
-
-    if (!_verticalController.hasClients) {
-      WidgetsBinding.instance.addPostFrameCallback((_) =>
-          _ensureInitialVerticalOffset()); // wait for the controller to attach
-      return;
-    }
-
-    final viewport = _verticalController.position.viewportDimension;
-    if (viewport == 0) {
-      WidgetsBinding.instance
-          .addPostFrameCallback((_) => _ensureInitialVerticalOffset());
-      return;
-    }
-
-    final targetOffset = (widget.initialPageNumber - 1) * viewport;
-    final maxOffset = _verticalController.position.maxScrollExtent;
-
-    _verticalController.jumpTo(targetOffset.clamp(0.0, maxOffset));
-    _initialVerticalPositionApplied = true;
-  }
-
-  bool _handleVerticalScrollNotification(ScrollNotification notification) {
-    if (!_isVertical || notification.metrics.viewportDimension == 0) {
-      return false;
-    }
-
-    final page =
-        (notification.metrics.pixels / notification.metrics.viewportDimension)
-                .round() +
-            1;
-    final clampedPage = page.clamp(1, totalPagesCount);
-
-    if (clampedPage != _lastReportedPage) {
-      _lastReportedPage = clampedPage;
-      widget.onPageChanged?.call(clampedPage);
-    }
-
-    return false;
-  }
 }
 
-class QuranPageContent extends StatelessWidget {
+class QuranPageContent extends StatefulWidget {
   final int pageNumber;
   final double? fontSize;
   final Color textColor;
@@ -277,16 +276,26 @@ class QuranPageContent extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<QuranPageContent> createState() => _QuranPageContentState();
+}
+
+class _QuranPageContentState extends State<QuranPageContent>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
-    final ranges = getPageData(pageNumber);
-    final pageFont = "QCF_P${pageNumber.toString().padLeft(3, '0')}";
-    final baseFontSize = getFontSize(pageNumber, context) / sp;
+    super.build(context); // Must call super when using AutomaticKeepAliveClientMixin
+    final ranges = getPageData(widget.pageNumber);
+    final pageFont = "QCF_P${widget.pageNumber.toString().padLeft(3, '0')}";
+    final baseFontSize = getFontSize(widget.pageNumber, context) / widget.sp;
 
     final verseSpans = <InlineSpan>[];
-    if (pageNumber == 2 || pageNumber == 1) {
+    if (widget.pageNumber == 2 || widget.pageNumber == 1) {
       verseSpans.add(
         WidgetSpan(
-          child: SizedBox(height: MediaQuery.of(context).size.height * .175),
+          child: SizedBox(height: MediaQuery.of(context).size.height * .000001),
         ),
       );
     }
@@ -298,7 +307,7 @@ class QuranPageContent extends StatelessWidget {
       for (int v = start; v <= end; v++) {
         if (v == start && v == 1) {
           verseSpans.add(WidgetSpan(child: HeaderWidget(suraNumber: surah)));
-          if (pageNumber != 1 && pageNumber != 187) {
+          if (widget.pageNumber != 1 && widget.pageNumber != 187) {
             if (surah != 97) {
               verseSpans.add(
                 TextSpan(
@@ -306,9 +315,9 @@ class QuranPageContent extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: "QCF_P001",
                     fontSize: getScreenType(context) == ScreenType.large
-                        ? 13.2 / sp
-                        : 24 / sp,
-                    color: textColor,
+                        ? 13.2 / widget.sp
+                        : 24 / widget.sp,
+                    color: widget.textColor,
                   ),
                 ),
               );
@@ -319,9 +328,9 @@ class QuranPageContent extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: "QCF_BSML",
                     fontSize: getScreenType(context) == ScreenType.large
-                        ? 13.2 / sp
-                        : 18 / sp,
-                    color: textColor,
+                        ? 13.2 / widget.sp
+                        : 18 / widget.sp,
+                    color: widget.textColor,
                   ),
                 ),
               );
@@ -329,14 +338,14 @@ class QuranPageContent extends StatelessWidget {
           }
         }
         final spanRecognizer = LongPressGestureRecognizer();
-        spanRecognizer.onLongPress = () => onLongPress?.call(surah, v);
+        spanRecognizer.onLongPress = () => widget.onLongPress?.call(surah, v);
         spanRecognizer.onLongPressStart =
-            (LongPressStartDetails d) => onLongPressStart?.call(surah, v, d);
-        spanRecognizer.onLongPressUp = () => onLongPressUp?.call(surah, v);
+            (LongPressStartDetails d) => widget.onLongPressStart?.call(surah, v, d);
+        spanRecognizer.onLongPressUp = () => widget.onLongPressUp?.call(surah, v);
         spanRecognizer.onLongPressEnd =
-            (LongPressEndDetails d) => onLongPressCancel?.call(surah, v);
+            (LongPressEndDetails d) => widget.onLongPressCancel?.call(surah, v);
 
-        final verseBgColor = verseBackgroundColor?.call(surah, v);
+        final verseBgColor = widget.verseBackgroundColor?.call(surah, v);
 
         verseSpans.add(
           TextSpan(
@@ -352,8 +361,8 @@ class QuranPageContent extends StatelessWidget {
                 text: getVerseNumberQCF(surah, v),
                 style: TextStyle(
                   fontFamily: pageFont,
-                  color: textColor,
-                  height: 1.35 / h,
+                  color: widget.textColor,
+                  height: 1.35 / widget.h,
                   backgroundColor: verseBgColor,
                 ),
               ),
@@ -363,27 +372,43 @@ class QuranPageContent extends StatelessWidget {
       }
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
-      color: Colors.transparent,
-      child: Text.rich(
-        TextSpan(children: verseSpans),
-        locale: const Locale("ar"),
-        textAlign: TextAlign.center,
-        textDirection: TextDirection.rtl,
-        style: TextStyle(
-          fontFamily: pageFont,
-          fontSize: baseFontSize,
-          color: textColor,
-          height: (pageNumber == 1 || pageNumber == 2)
-              ? 2.2
-              : MediaQuery.of(context).systemGestureInsets.left > 0 == false
-                  ? 2.2
-                  : MediaQuery.of(context).viewPadding.top > 0
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
+          color: Colors.transparent,
+          child: FittedBox(
+            fit: BoxFit
+                .scaleDown, // shrink text as needed to avoid overflow on wide/narrow screens
+            alignment: Alignment.center,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: constraints.maxWidth,
+                minWidth: constraints.maxWidth,
+              ),
+              child: Text.rich(
+                TextSpan(children: verseSpans),
+                locale: const Locale("ar"),
+                textAlign: TextAlign.center,
+                textDirection: TextDirection.rtl,
+                style: TextStyle(
+                  fontFamily: pageFont,
+                  fontSize: baseFontSize,
+                  color: widget.textColor,
+                  height: (widget.pageNumber == 1 || widget.pageNumber == 2)
                       ? 2.2
-                      : 2.2,
-        ),
-      ),
+                      : MediaQuery.of(context).systemGestureInsets.left > 0 ==
+                              false
+                          ? 2.2
+                          : MediaQuery.of(context).viewPadding.top > 0
+                              ? 2.2
+                              : 2.2,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

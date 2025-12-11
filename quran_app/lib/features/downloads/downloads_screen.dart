@@ -1,8 +1,11 @@
 // lib/features/downloads/downloads_screen.dart
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/translation_service.dart';
 import '../../core/services/tafsir_service.dart';
+import '../../data/models/translation_model.dart';
+import '../../data/models/tafsir_model.dart';
 import '../../core/utils/language_utils.dart';
 import 'download_settings_page.dart';
 
@@ -19,8 +22,8 @@ class _DownloadsScreenState extends State<DownloadsScreen>
   final TranslationService _translationService = TranslationService.instance;
   final TafsirService _tafsirService = TafsirService.instance;
 
-  List<Map<String, dynamic>> _availableTranslations = [];
-  List<Map<String, dynamic>> _availableTafsirs = [];
+  List<TranslationEdition> _availableTranslations = [];
+  List<TafsirEdition> _availableTafsirs = [];
   List<String> _downloadedTranslations = [];
   List<String> _downloadedTafsirs = [];
 
@@ -54,7 +57,8 @@ class _DownloadsScreenState extends State<DownloadsScreen>
   Future<void> _loadAvailableTranslations() async {
     setState(() => _isLoadingTranslations = true);
     try {
-      final translations = await _translationService.getAvailableTranslations();
+      final translations =
+          await _translationService.getAllTranslationEditions();
       setState(() {
         _availableTranslations = translations;
         _isLoadingTranslations = false;
@@ -105,15 +109,49 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     final prefs = await SharedPreferences.getInstance();
     final wifiOnly = prefs.getBool('download_wifi_only') ?? true;
 
-    if (wifiOnly && mounted) {
+    final connectivity = await Connectivity().checkConnectivity();
+    final hasConnection = connectivity.isNotEmpty &&
+        connectivity.any((e) => e != ConnectivityResult.none);
+    if (!hasConnection) {
+      _showSnack('No internet connection. Please connect and retry.');
+      return false;
+    }
+
+    final onWifi = connectivity.contains(ConnectivityResult.wifi);
+    final onMobile = connectivity.contains(ConnectivityResult.mobile);
+
+    if (wifiOnly && !onWifi) {
+      if (!mounted) return false;
       final proceed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('WiFi Only Mode'),
+          title: const Text('WiFi Required'),
           content: const Text(
-            'Your settings require WiFi for downloads. '
-            'Make sure you are connected to WiFi before proceeding.\n\n'
-            'Continue anyway?',
+            'Downloads are limited to WiFi in settings. Connect to WiFi or override to use current connection.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Override once'),
+            ),
+          ],
+        ),
+      );
+      return proceed ?? false;
+    }
+
+    if (!wifiOnly && onMobile) {
+      if (!mounted) return true;
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Use mobile data?'),
+          content: const Text(
+            'This download may consume mobile data. Continue?',
           ),
           actions: [
             TextButton(
@@ -129,25 +167,33 @@ class _DownloadsScreenState extends State<DownloadsScreen>
       );
       return proceed ?? false;
     }
+
     return true;
   }
 
-  Future<void> _downloadTranslation(String identifier, String name) async {
+  void _showSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _downloadTranslation(TranslationEdition edition) async {
     // Check WiFi preference first
     final canProceed = await _checkWifiPreference();
     if (!canProceed) return;
 
     setState(() {
-      _isDownloading[identifier] = true;
-      _downloadProgress[identifier] = 0.0;
+      _isDownloading[edition.identifier] = true;
+      _downloadProgress[edition.identifier] = 0.0;
     });
 
     try {
       final success = await _translationService.downloadTranslation(
-        identifier,
-        onProgress: (current, total) {
+        edition,
+        onProgress: (progress) {
           setState(() {
-            _downloadProgress[identifier] = current / total;
+            _downloadProgress[edition.identifier] = progress;
           });
         },
       );
@@ -156,7 +202,9 @@ class _DownloadsScreenState extends State<DownloadsScreen>
         await _loadDownloadedEditions();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$name downloaded successfully')),
+            SnackBar(
+                content:
+                    Text('${edition.englishName} downloaded successfully')),
           );
         }
       } else {
@@ -168,28 +216,28 @@ class _DownloadsScreenState extends State<DownloadsScreen>
       }
     } finally {
       setState(() {
-        _isDownloading[identifier] = false;
-        _downloadProgress.remove(identifier);
+        _isDownloading[edition.identifier] = false;
+        _downloadProgress.remove(edition.identifier);
       });
     }
   }
 
-  Future<void> _downloadTafsir(String identifier, String name) async {
+  Future<void> _downloadTafsir(TafsirEdition edition) async {
     // Check WiFi preference first
     final canProceed = await _checkWifiPreference();
     if (!canProceed) return;
 
     setState(() {
-      _isDownloading[identifier] = true;
-      _downloadProgress[identifier] = 0.0;
+      _isDownloading[edition.identifier] = true;
+      _downloadProgress[edition.identifier] = 0.0;
     });
 
     try {
       final success = await _tafsirService.downloadTafsir(
-        identifier,
-        onProgress: (current, total) {
+        edition,
+        onProgress: (progress) {
           setState(() {
-            _downloadProgress[identifier] = current / total;
+            _downloadProgress[edition.identifier] = progress;
           });
         },
       );
@@ -198,7 +246,9 @@ class _DownloadsScreenState extends State<DownloadsScreen>
         await _loadDownloadedEditions();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$name downloaded successfully')),
+            SnackBar(
+                content:
+                    Text('${edition.englishName} downloaded successfully')),
           );
         }
       } else {
@@ -210,13 +260,21 @@ class _DownloadsScreenState extends State<DownloadsScreen>
       }
     } finally {
       setState(() {
-        _isDownloading[identifier] = false;
-        _downloadProgress.remove(identifier);
+        _isDownloading[edition.identifier] = false;
+        _downloadProgress.remove(edition.identifier);
       });
     }
   }
 
   Future<void> _deleteTranslation(String identifier, String name) async {
+    // Check if it's a bundled edition
+    if (_translationService.isBundledEdition(identifier)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot delete bundled translations')),
+      );
+      return;
+    }
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -249,6 +307,14 @@ class _DownloadsScreenState extends State<DownloadsScreen>
   }
 
   Future<void> _deleteTafsir(String identifier, String name) async {
+    // Check if it's a bundled edition
+    if (_tafsirService.isBundledEdition(identifier)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot delete bundled tafsirs')),
+      );
+      return;
+    }
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -339,11 +405,10 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     }
 
     // Group by language
-    final groupedByLanguage = <String, List<Map<String, dynamic>>>{};
+    final groupedByLanguage = <String, List<TranslationEdition>>{};
     for (final translation in _availableTranslations) {
-      final langCode = translation['language'] as String? ?? 'unknown';
-      groupedByLanguage.putIfAbsent(langCode, () => []);
-      groupedByLanguage[langCode]!.add(translation);
+      groupedByLanguage.putIfAbsent(translation.language, () => []);
+      groupedByLanguage[translation.language]!.add(translation);
     }
 
     return ListView.builder(
@@ -351,9 +416,6 @@ class _DownloadsScreenState extends State<DownloadsScreen>
       itemBuilder: (context, index) {
         final langCode = groupedByLanguage.keys.elementAt(index);
         final translations = groupedByLanguage[langCode]!;
-
-        // Use language utils to get display name with flag
-        final displayName = LanguageUtils.getDisplayName(langCode);
 
         return ExpansionTile(
           leading: Text(
@@ -366,19 +428,25 @@ class _DownloadsScreenState extends State<DownloadsScreen>
           ),
           subtitle: Text(
               '${translations.length} translation${translations.length > 1 ? 's' : ''}'),
-          children: translations.map((translation) {
-            final identifier = translation['identifier'] as String;
-            final name = translation['englishName'] as String? ??
-                translation['name'] as String;
-            final isDownloaded = _downloadedTranslations.contains(identifier);
-            final isDownloading = _isDownloading[identifier] == true;
-            final progress = _downloadProgress[identifier];
+          children: translations.map((edition) {
+            final isDownloaded =
+                _downloadedTranslations.contains(edition.identifier);
+            final isDownloading = _isDownloading[edition.identifier] == true;
+            final progress = _downloadProgress[edition.identifier];
+            final isBundled =
+                _translationService.isBundledEdition(edition.identifier);
 
             return ListTile(
-              title: Text(name),
+              title: Text(edition.englishName),
               subtitle: isDownloading
                   ? LinearProgressIndicator(value: progress)
-                  : Text(isDownloaded ? '✓ Downloaded' : 'Tap to download'),
+                  : Text(
+                      isDownloaded
+                          ? (isBundled
+                              ? '✓ Downloaded (Built-in)'
+                              : '✓ Downloaded')
+                          : 'Tap to download',
+                    ),
               trailing: isDownloading
                   ? const SizedBox(
                       width: 24,
@@ -386,14 +454,16 @@ class _DownloadsScreenState extends State<DownloadsScreen>
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : isDownloaded
-                      ? IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () => _deleteTranslation(identifier, name),
-                        )
+                      ? (isBundled
+                          ? const Icon(Icons.star, color: Colors.amber)
+                          : IconButton(
+                              icon: const Icon(Icons.delete),
+                              onPressed: () => _deleteTranslation(
+                                  edition.identifier, edition.englishName),
+                            ))
                       : IconButton(
                           icon: const Icon(Icons.download),
-                          onPressed: () =>
-                              _downloadTranslation(identifier, name),
+                          onPressed: () => _downloadTranslation(edition),
                         ),
             );
           }).toList(),
@@ -424,11 +494,10 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     }
 
     // Group by language
-    final groupedByLanguage = <String, List<Map<String, dynamic>>>{};
+    final groupedByLanguage = <String, List<TafsirEdition>>{};
     for (final tafsir in _availableTafsirs) {
-      final langCode = tafsir['language'] as String? ?? 'unknown';
-      groupedByLanguage.putIfAbsent(langCode, () => []);
-      groupedByLanguage[langCode]!.add(tafsir);
+      groupedByLanguage.putIfAbsent(tafsir.language, () => []);
+      groupedByLanguage[tafsir.language]!.add(tafsir);
     }
 
     return ListView.builder(
@@ -448,19 +517,25 @@ class _DownloadsScreenState extends State<DownloadsScreen>
           ),
           subtitle:
               Text('${tafsirs.length} tafsir${tafsirs.length > 1 ? 's' : ''}'),
-          children: tafsirs.map((tafsir) {
-            final identifier = tafsir['identifier'] as String;
-            final name =
-                tafsir['englishName'] as String? ?? tafsir['name'] as String;
-            final isDownloaded = _downloadedTafsirs.contains(identifier);
-            final isDownloading = _isDownloading[identifier] == true;
-            final progress = _downloadProgress[identifier];
+          children: tafsirs.map((edition) {
+            final isDownloaded =
+                _downloadedTafsirs.contains(edition.identifier);
+            final isDownloading = _isDownloading[edition.identifier] == true;
+            final progress = _downloadProgress[edition.identifier];
+            final isBundled =
+                _tafsirService.isBundledEdition(edition.identifier);
 
             return ListTile(
-              title: Text(name),
+              title: Text(edition.englishName),
               subtitle: isDownloading
                   ? LinearProgressIndicator(value: progress)
-                  : Text(isDownloaded ? '✓ Downloaded' : 'Tap to download'),
+                  : Text(
+                      isDownloaded
+                          ? (isBundled
+                              ? '✓ Downloaded (Built-in)'
+                              : '✓ Downloaded')
+                          : 'Tap to download',
+                    ),
               trailing: isDownloading
                   ? const SizedBox(
                       width: 24,
@@ -468,13 +543,16 @@ class _DownloadsScreenState extends State<DownloadsScreen>
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : isDownloaded
-                      ? IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () => _deleteTafsir(identifier, name),
-                        )
+                      ? (isBundled
+                          ? const Icon(Icons.star, color: Colors.amber)
+                          : IconButton(
+                              icon: const Icon(Icons.delete),
+                              onPressed: () => _deleteTafsir(
+                                  edition.identifier, edition.englishName),
+                            ))
                       : IconButton(
                           icon: const Icon(Icons.download),
-                          onPressed: () => _downloadTafsir(identifier, name),
+                          onPressed: () => _downloadTafsir(edition),
                         ),
             );
           }).toList(),

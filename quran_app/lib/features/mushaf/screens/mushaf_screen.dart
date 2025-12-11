@@ -32,29 +32,17 @@ class _MushafScreenState extends State<MushafScreen> {
         onSurahSelected: _jumpToSurah,
         controller: _controller,
       ),
-      body: _buildMushafView(),
+      body: ListenableBuilder(
+        listenable: _controller,
+        builder: (context, _) => _buildMushafView(),
+      ),
     );
   }
 
   AppBar _buildAppBar(BuildContext context) {
-    final scrollMode = _controller.scrollMode;
-    final icon = scrollMode == ScrollMode.horizontal
-        ? Icons.view_day
-        : Icons.view_stream;
-    final tooltip = scrollMode == ScrollMode.horizontal
-        ? 'Switch to Continuous Scroll'
-        : 'Switch to Page View';
-
     return AppBar(
       title: const Text('Al-Quran'),
       actions: [
-        IconButton(
-          icon: Icon(icon),
-          onPressed: () {
-            setState(() => _controller.toggleScrollMode());
-          },
-          tooltip: tooltip,
-        ),
         IconButton(
           icon: const Icon(Icons.settings),
           tooltip: 'Settings',
