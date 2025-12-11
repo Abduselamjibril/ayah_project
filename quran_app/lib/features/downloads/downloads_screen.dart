@@ -1,4 +1,5 @@
 // lib/features/downloads/downloads_screen.dart
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/translation_service.dart';
@@ -108,15 +109,49 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     final prefs = await SharedPreferences.getInstance();
     final wifiOnly = prefs.getBool('download_wifi_only') ?? true;
 
-    if (wifiOnly && mounted) {
+    final connectivity = await Connectivity().checkConnectivity();
+    final hasConnection = connectivity.isNotEmpty &&
+        connectivity.any((e) => e != ConnectivityResult.none);
+    if (!hasConnection) {
+      _showSnack('No internet connection. Please connect and retry.');
+      return false;
+    }
+
+    final onWifi = connectivity.contains(ConnectivityResult.wifi);
+    final onMobile = connectivity.contains(ConnectivityResult.mobile);
+
+    if (wifiOnly && !onWifi) {
+      if (!mounted) return false;
       final proceed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('WiFi Only Mode'),
+          title: const Text('WiFi Required'),
           content: const Text(
-            'Your settings require WiFi for downloads. '
-            'Make sure you are connected to WiFi before proceeding.\\n\\n'
-            'Continue anyway?',
+            'Downloads are limited to WiFi in settings. Connect to WiFi or override to use current connection.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Override once'),
+            ),
+          ],
+        ),
+      );
+      return proceed ?? false;
+    }
+
+    if (!wifiOnly && onMobile) {
+      if (!mounted) return true;
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Use mobile data?'),
+          content: const Text(
+            'This download may consume mobile data. Continue?',
           ),
           actions: [
             TextButton(
@@ -132,7 +167,15 @@ class _DownloadsScreenState extends State<DownloadsScreen>
       );
       return proceed ?? false;
     }
+
     return true;
+  }
+
+  void _showSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   Future<void> _downloadTranslation(TranslationEdition edition) async {

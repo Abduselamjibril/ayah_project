@@ -28,40 +28,32 @@ class ThemeSettingsPage extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                 ),
               ),
-              // Theme grid - 2x2 layout
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 0.85,
-                children: [
-                  _buildThemeCard(
-                    context,
-                    theme: AppTheme.goldenParchment,
-                    isSelected:
-                        themeService.currentTheme == AppTheme.goldenParchment,
-                  ),
-                  _buildThemeCard(
-                    context,
-                    theme: AppTheme.midnightBlueprint,
-                    isSelected:
-                        themeService.currentTheme == AppTheme.midnightBlueprint,
-                  ),
-                  _buildThemeCard(
-                    context,
-                    theme: AppTheme.mintGarden,
-                    isSelected:
-                        themeService.currentTheme == AppTheme.mintGarden,
-                  ),
-                  _buildThemeCard(
-                    context,
-                    theme: AppTheme.forestRitual,
-                    isSelected:
-                        themeService.currentTheme == AppTheme.forestRitual,
-                  ),
-                ],
+              // Theme list - vertical layout
+              _buildThemeCard(
+                context,
+                theme: AppTheme.goldenParchment,
+                isSelected:
+                    themeService.currentTheme == AppTheme.goldenParchment,
+              ),
+              const SizedBox(height: 12),
+              _buildThemeCard(
+                context,
+                theme: AppTheme.midnightBlueprint,
+                isSelected:
+                    themeService.currentTheme == AppTheme.midnightBlueprint,
+              ),
+              const SizedBox(height: 12),
+              _buildThemeCard(
+                context,
+                theme: AppTheme.mintGarden,
+                isSelected: themeService.currentTheme == AppTheme.mintGarden,
+              ),
+              const SizedBox(height: 12),
+              _buildThemeCard(
+                context,
+                theme: AppTheme.ornateTwilight,
+                isSelected:
+                    themeService.currentTheme == AppTheme.ornateTwilight,
               ),
               const SizedBox(height: 24),
               const Padding(
@@ -111,6 +103,7 @@ class ThemeSettingsPage extends StatelessWidget {
         ThemeService().setTheme(theme);
       },
       child: Container(
+        height: 80,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
@@ -131,73 +124,75 @@ class ThemeSettingsPage extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: Column(
+          child: Stack(
             children: [
-              // Half image preview
-              Expanded(
-                flex: 7,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // Show top half of the mainframe image
-                    Align(
-                      alignment: Alignment.topCenter,
-                      child: ClipRect(
-                        child: Align(
-                          alignment: Alignment.topCenter,
-                          heightFactor: 0.5, // Show only top half
-                          child: Image.asset(
-                            imagePath,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                          ),
-                        ),
-                      ),
+              // Full width image showing right side
+              Positioned.fill(
+                child: ClipRect(
+                  child: Align(
+                    alignment: Alignment
+                        .centerLeft, // This shows the RIGHT side of the image
+                    widthFactor: 0.5, // Show only right half
+                    child: Image.asset(
+                      imagePath,
+                      fit: BoxFit.cover,
+                      height: double.infinity,
+                      width: double.infinity,
                     ),
-                    // Selection indicator overlay
-                    if (isSelected)
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).primaryColor,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.check,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                  ],
+                  ),
                 ),
               ),
-              // Theme name
-              Expanded(
-                flex: 3,
+              // Gradient overlay for smooth transition from text to image
+              Positioned.fill(
                 child: Container(
-                  width: double.infinity,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  color: isSelected
-                      ? Theme.of(context).primaryColor.withOpacity(0.1)
-                      : Theme.of(context).cardColor,
-                  child: Center(
-                    child: Text(
-                      themeName,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.w600,
-                        fontSize: 13,
-                        color: isSelected
-                            ? Theme.of(context).primaryColor
-                            : Theme.of(context).textTheme.bodyLarge?.color,
-                      ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        Theme.of(context).scaffoldBackgroundColor,
+                        Theme.of(context)
+                            .scaffoldBackgroundColor
+                            .withOpacity(0.95),
+                        Theme.of(context)
+                            .scaffoldBackgroundColor
+                            .withOpacity(0.8),
+                        Theme.of(context)
+                            .scaffoldBackgroundColor
+                            .withOpacity(0.5),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.3, 0.45, 0.6, 0.75],
                     ),
+                  ),
+                ),
+              ),
+              // Theme name and checkmark on top
+              Positioned.fill(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          themeName,
+                          style: TextStyle(
+                            fontWeight:
+                                isSelected ? FontWeight.bold : FontWeight.w600,
+                            fontSize: 16,
+                            color: isSelected
+                                ? Theme.of(context).primaryColor
+                                : Theme.of(context).textTheme.bodyLarge?.color,
+                          ),
+                        ),
+                      ),
+                      if (isSelected)
+                        Icon(
+                          Icons.check_circle,
+                          color: Theme.of(context).primaryColor,
+                          size: 24,
+                        ),
+                    ],
                   ),
                 ),
               ),

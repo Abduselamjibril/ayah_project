@@ -7,7 +7,7 @@ enum AppTheme {
   goldenParchment, // mainframe.png
   midnightBlueprint, // mainframe_dark.png
   mintGarden, // green_mainframe.png
-  forestRitual, // green_mainframe_dark.png
+  ornateTwilight, // green_mainframe_dark.png
 }
 
 class ThemeService extends ChangeNotifier {
@@ -36,7 +36,7 @@ class ThemeService extends ChangeNotifier {
         return 'assets/images/mainframe_dark.png';
       case AppTheme.mintGarden:
         return 'assets/images/green_mainframe.png';
-      case AppTheme.forestRitual:
+      case AppTheme.ornateTwilight:
         return 'assets/images/green_mainframe_dark.png';
     }
   }
@@ -50,8 +50,8 @@ class ThemeService extends ChangeNotifier {
         return 'Midnight Blueprint';
       case AppTheme.mintGarden:
         return 'Mint Garden';
-      case AppTheme.forestRitual:
-        return 'Forest Ritual';
+      case AppTheme.ornateTwilight:
+        return 'Ornate Twilight';
     }
   }
 
@@ -93,8 +93,8 @@ class ThemeService extends ChangeNotifier {
         return _midnightBlueprintTheme;
       case AppTheme.mintGarden:
         return _mintGardenTheme;
-      case AppTheme.forestRitual:
-        return _forestRitualTheme;
+      case AppTheme.ornateTwilight:
+        return _ornateTwilightTheme;
     }
   }
 
@@ -191,8 +191,8 @@ class ThemeService extends ChangeNotifier {
     );
   }
 
-  /// Forest Ritual Theme (Green Dark)
-  ThemeData get _forestRitualTheme {
+  /// Ornate Twilight Theme (Green Dark)
+  ThemeData get _ornateTwilightTheme {
     return ThemeData(
       useMaterial3: false,
       brightness: Brightness.dark,

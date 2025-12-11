@@ -1,5 +1,4 @@
 // lib/core/services/tafsir_service.dart
-import 'package:quran_library/quran_library.dart';
 import 'package:quran_app/core/database/dao/tafsir_dao.dart';
 import 'package:quran_app/core/database/app_database.dart';
 import 'package:quran_app/data/sources/remote/tafsir_api.dart';
@@ -23,9 +22,6 @@ class TafsirService {
     if (_isInitialized) return;
 
     try {
-      // Initialize QuranLibrary
-      await QuranLibrary.init();
-
       // Initialize DAO
       final database = await AppDatabase.instance.database;
       _tafsirDao = TafsirDao(database);

@@ -19,9 +19,9 @@ class AppColors {
   static const Color greenLightAccent = Color(0xFF50A78A);
   static const Color greenLightText = Colors.black87;
 
-// Theme Name: "Forest Ritual"
-  static const Color greenDarkBackground = Color(0xFF1E2E1E);
-  static const Color greenDarkSurface = Color(0xFF2F4F2F);
-  static const Color greenDarkAccent = Color(0xFF88C999);
+// Theme Name: " Ornate Twilight"
+  static const Color greenDarkBackground = Color.fromARGB(255, 0, 0, 0);
+  static const Color greenDarkSurface = Color(0xFF1C1C1C);
+  static const Color greenDarkAccent = Color(0xFFB0AFAF);
   static const Color greenDarkText = Colors.white70;
 }

@@ -25,7 +25,7 @@ class DatabaseInitializer {
     }
   }
 
-  /// Initialize quran_library services
+  /// Initialize app services
   static Future<void> _initializeServices() async {
     try {
       // Initialize Translation Service
