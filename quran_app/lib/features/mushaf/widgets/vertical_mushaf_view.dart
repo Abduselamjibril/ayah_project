@@ -19,65 +19,31 @@ class VerticalMushafView extends StatefulWidget {
 
 class _VerticalMushafViewState extends State<VerticalMushafView> {
   int _lastPage = 1;
-  bool _isUpdatingFromScroll = false;
 
   @override
   void initState() {
     super.initState();
     _lastPage = widget.controller.currentPage;
     widget.controller.addListener(_onControllerChanged);
-    widget.scrollController.addListener(_onScroll);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToPage(_lastPage);
-    });
   }
 
   @override
   void dispose() {
     widget.controller.removeListener(_onControllerChanged);
-    widget.scrollController.removeListener(_onScroll);
     super.dispose();
   }
 
   void _onControllerChanged() {
-    if (_isUpdatingFromScroll) return;
-
     if (widget.controller.currentPage != _lastPage) {
       _lastPage = widget.controller.currentPage;
-      _scrollToPage(_lastPage);
+      final viewportHeight = MediaQuery.of(context).size.height;
+      final offset = (_lastPage - 1) * viewportHeight;
+      widget.scrollController.animateTo(
+        offset,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     }
-  }
-
-  void _onScroll() {
-    if (!widget.scrollController.hasClients) return;
-
-    final pageHeight = MediaQuery.of(context).size.height;
-    final offset = widget.scrollController.offset;
-
-    int currentPage = (offset / pageHeight).round() + 1;
-    currentPage = currentPage.clamp(1, 604);
-
-    if (currentPage != _lastPage) {
-      _lastPage = currentPage;
-      _isUpdatingFromScroll = true;
-      widget.controller.setPage(currentPage);
-      _isUpdatingFromScroll = false;
-    }
-  }
-
-  void _scrollToPage(int pageNumber) {
-    if (!widget.scrollController.hasClients) return;
-
-    final pageHeight = MediaQuery.of(context).size.height;
-    final targetPosition = (pageNumber - 1) * pageHeight;
-
-    widget.scrollController.animateTo(
-      targetPosition.clamp(
-          0.0, widget.scrollController.position.maxScrollExtent),
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeInOut,
-    );
   }
 
   @override
@@ -88,7 +54,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
           key: ValueKey('vertical_${widget.controller.currentPage}'),
           initialPageNumber: widget.controller.currentPage,
           scrollMode: ScrollMode.vertical,
-          verticalController: widget.scrollController,
+          verticalScrollController: widget.scrollController,
           onPageChanged: (page) {
             _lastPage = page;
             widget.controller.setPage(page);
@@ -152,6 +118,18 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
           );
         },
       ),
+    );
+  }
+
+  void _scrollToPage(int page) {
+    if (page < 1 || page > 604) return;
+
+    final viewportHeight = MediaQuery.of(context).size.height;
+    final offset = (page - 1) * viewportHeight;
+    widget.scrollController.animateTo(
+      offset,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
     );
   }
 

@@ -20,8 +20,8 @@ class PageviewQuran extends StatefulWidget {
   /// Optional external controller. If not provided, an internal one is created.
   final PageController? controller;
 
-  /// Scroll controller used when [scrollMode] is [ScrollMode.vertical].
-  final ScrollController? verticalController;
+  /// Scroll controller for vertical mode (smooth scrolling)
+  final ScrollController? verticalScrollController;
 
   //sp (adding 1.sp to get the ratio of screen size for responsive font design)
   final double sp;
@@ -61,7 +61,7 @@ class PageviewQuran extends StatefulWidget {
     this.initialPageNumber = 1,
     this.scrollMode = ScrollMode.horizontal,
     this.controller,
-    this.verticalController,
+    this.verticalScrollController,
     this.onPageChanged,
     this.fontSize,
     this.sp = 1,
@@ -81,38 +81,67 @@ class PageviewQuran extends StatefulWidget {
 
 class _PageviewQuranState extends State<PageviewQuran> {
   PageController? _internalController;
-  ScrollController? _internalScrollController;
-  int _lastReportedPage = 1;
-  bool _initialVerticalPositionApplied = false;
+  ScrollController? _internalVerticalController;
+  int _currentPage = 1;
+  double? _viewportHeight;
 
   PageController get _controller => widget.controller ?? _internalController!;
   ScrollController get _verticalController =>
-      widget.verticalController ?? _internalScrollController!;
+      widget.verticalScrollController ?? _internalVerticalController!;
 
   bool get _ownsController => widget.controller == null;
-  bool get _ownsVerticalController => widget.verticalController == null;
+  bool get _ownsVerticalController => widget.verticalScrollController == null;
   bool get _isVertical => widget.scrollMode == ScrollMode.vertical;
 
   @override
   void initState() {
     super.initState();
-    _lastReportedPage = widget.initialPageNumber;
+    _currentPage = widget.initialPageNumber;
 
-    if (!_isVertical && _ownsController) {
+    if (_ownsController && !_isVertical) {
       _internalController = PageController(
         initialPage: widget.initialPageNumber - 1,
       );
     }
 
-    if (_isVertical && _ownsVerticalController) {
-      _internalScrollController = ScrollController();
-    }
+    if (_isVertical) {
+      _internalVerticalController = ScrollController();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_isVertical) {
-        _ensureInitialVerticalOffset();
-      }
-    });
+      // Add scroll listener for vertical mode
+      _verticalController.addListener(_handleVerticalScroll);
+
+      // Calculate initial scroll position after layout
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _jumpToPage(widget.initialPageNumber);
+      });
+    }
+  }
+
+  void _handleVerticalScroll() {
+    if (!_isVertical || _viewportHeight == null || _viewportHeight! <= 0)
+      return;
+
+    final scrollOffset = _verticalController.offset;
+
+    // Calculate current page based on scroll position
+    final newPage = (scrollOffset / _viewportHeight!).round() + 1;
+
+    // Ensure page is within valid range
+    if (newPage >= 1 && newPage <= totalPagesCount && newPage != _currentPage) {
+      _currentPage = newPage;
+      widget.onPageChanged?.call(_currentPage);
+    }
+  }
+
+  void _jumpToPage(int page) {
+    if (!_isVertical || _viewportHeight == null || _viewportHeight! <= 0)
+      return;
+
+    if (page >= 1 && page <= totalPagesCount) {
+      final offset = (page - 1) * _viewportHeight!;
+      _verticalController.jumpTo(offset);
+      _currentPage = page;
+    }
   }
 
   @override
@@ -121,13 +150,17 @@ class _PageviewQuranState extends State<PageviewQuran> {
       _internalController?.dispose();
     }
     if (_ownsVerticalController) {
-      _internalScrollController?.dispose();
+      _internalVerticalController?.removeListener(_handleVerticalScroll);
+      _internalVerticalController?.dispose();
     }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Store viewport height for calculations
+    _viewportHeight = MediaQuery.of(context).size.height;
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: _isVertical
@@ -143,7 +176,10 @@ class _PageviewQuranState extends State<PageviewQuran> {
         controller: _controller,
         reverse: false, // right-to-left paging order
         itemCount: totalPagesCount,
-        onPageChanged: (index) => widget.onPageChanged?.call(index + 1),
+        onPageChanged: (index) {
+          _currentPage = index + 1;
+          widget.onPageChanged?.call(_currentPage);
+        },
         itemBuilder: (context, index) {
           final pageNumber = index + 1; // 1-based page
           return QuranPageContent(
@@ -164,92 +200,34 @@ class _PageviewQuranState extends State<PageviewQuran> {
   }
 
   Widget _buildVerticalList(BuildContext context) {
-    final pageHeight = MediaQuery.of(context).size.height;
+    final viewportHeight = MediaQuery.of(context).size.height;
 
     return Container(
       color: widget.pageBackgroundColor,
-      child: NotificationListener<ScrollNotification>(
-        onNotification: _handleVerticalScrollNotification,
-        child: ListView.builder(
-          controller: _verticalController,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          physics: const ClampingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics(),
-          ), // platform-typical (no bounce) for physical scroll feel
-          itemCount: totalPagesCount,
-          itemBuilder: (context, index) {
-            final pageNumber = index + 1;
-            return Center(
-              child: SizedBox(
-                height: pageHeight,
-                child: QuranPageContent(
-                  pageNumber: pageNumber,
-                  fontSize: widget.fontSize,
-                  textColor: widget.textColor,
-                  verseBackgroundColor: widget.verseBackgroundColor,
-                  onLongPress: widget.onLongPress,
-                  onLongPressUp: widget.onLongPressUp,
-                  onLongPressCancel: widget.onLongPressCancel,
-                  onLongPressStart: widget.onLongPressStart,
-                  sp: widget.sp,
-                  h: widget.h,
-                ),
-              ),
-            );
-          },
-        ),
+      child: ListView.builder(
+        controller: _verticalController,
+        physics: const BouncingScrollPhysics(),
+        itemCount: totalPagesCount,
+        itemBuilder: (context, index) {
+          final pageNumber = index + 1;
+          return SizedBox(
+            height: viewportHeight,
+            child: QuranPageContent(
+              pageNumber: pageNumber,
+              fontSize: widget.fontSize,
+              textColor: widget.textColor,
+              verseBackgroundColor: widget.verseBackgroundColor,
+              onLongPress: widget.onLongPress,
+              onLongPressUp: widget.onLongPressUp,
+              onLongPressCancel: widget.onLongPressCancel,
+              onLongPressStart: widget.onLongPressStart,
+              sp: widget.sp,
+              h: widget.h,
+            ),
+          );
+        },
       ),
     );
-  }
-
-  void _ensureInitialVerticalOffset() {
-    if (!mounted) return;
-    if (!_isVertical || _initialVerticalPositionApplied) return;
-
-    if (!_verticalController.hasClients) {
-      WidgetsBinding.instance.addPostFrameCallback((_) =>
-          _ensureInitialVerticalOffset()); // wait for the controller to attach
-      return;
-    }
-
-    // Use the first position to avoid "attached to multiple scroll views" exception
-    final position = _verticalController.positions.first;
-
-    final pageHeight = MediaQuery.of(context).size.height;
-    final targetOffset = (widget.initialPageNumber - 1) * pageHeight;
-
-    // If we are already at the target (or very close), mark as applied
-    if ((position.pixels - targetOffset).abs() < 1.0) {
-      _initialVerticalPositionApplied = true;
-      return;
-    }
-
-    // Prevent bouncing back to page 1 if the user has already scrolled
-    if (widget.initialPageNumber == 1 && position.pixels > 0) {
-      _initialVerticalPositionApplied = true;
-      return;
-    }
-
-    // Use jumpTo on the specific position
-    position.jumpTo(targetOffset.clamp(0.0, position.maxScrollExtent));
-    _initialVerticalPositionApplied = true;
-  }
-
-  bool _handleVerticalScrollNotification(ScrollNotification notification) {
-    if (!_isVertical || notification.metrics.viewportDimension == 0) {
-      return false;
-    }
-
-    final pageHeight = MediaQuery.of(context).size.height;
-    final page = (notification.metrics.pixels / pageHeight).round() + 1;
-    final clampedPage = page.clamp(1, totalPagesCount);
-
-    if (clampedPage != _lastReportedPage) {
-      _lastReportedPage = clampedPage;
-      widget.onPageChanged?.call(clampedPage);
-    }
-
-    return false;
   }
 }
 
