@@ -51,7 +51,6 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     return Stack(
       children: [
         PageviewQuran(
-          key: ValueKey('vertical_${widget.controller.currentPage}'),
           initialPageNumber: widget.controller.currentPage,
           scrollMode: ScrollMode.vertical,
           verticalScrollController: widget.scrollController,
