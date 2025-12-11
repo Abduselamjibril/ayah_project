@@ -2,15 +2,21 @@
 import 'package:quran_library/quran_library.dart';
 import 'package:quran_app/core/database/dao/translation_dao.dart';
 import 'package:quran_app/core/database/app_database.dart';
-import 'package:quran_app/data/sources/remote/alquran_api.dart';
+import 'package:quran_app/data/sources/remote/translation_api.dart';
+import 'package:quran_app/data/sources/local/translation_local.dart';
+import 'package:quran_app/data/models/translation_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class TranslationService {
   static final TranslationService instance = TranslationService._init();
   TranslationService._init();
 
   late TranslationDao _translationDao;
-  final AlQuranApi _api = AlQuranApi();
+  late TranslationLocal _translationLocal;
+  final TranslationApi _api = TranslationApi();
   bool _isInitialized = false;
+
+  static const String _bundledLoadedKey = 'bundled_translation_loaded';
 
   /// Initialize the translation service
   Future<void> initialize() async {
@@ -23,107 +29,102 @@ class TranslationService {
       // Initialize DAO
       final database = await AppDatabase.instance.database;
       _translationDao = TranslationDao(database);
+      _translationLocal = TranslationLocal(_translationDao);
 
       _isInitialized = true;
       print('TranslationService initialized successfully');
+
+      // Load bundled translation on first run
+      await _loadBundledTranslationIfNeeded();
     } catch (e) {
       print('Error initializing TranslationService: $e');
       rethrow;
     }
   }
 
-  /// Get available editions (translations) from AlQuran.cloud API
-  Future<List<Map<String, dynamic>>> getAvailableTranslations({
-    String? language,
-  }) async {
+  /// Load bundled translation if not already loaded
+  Future<void> _loadBundledTranslationIfNeeded() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final isLoaded = prefs.getBool(_bundledLoadedKey) ?? false;
+
+      if (!isLoaded) {
+        print('First run detected, loading bundled translation...');
+        await _translationLocal.loadBundledTranslation();
+        await prefs.setBool(_bundledLoadedKey, true);
+        print('Bundled translation loaded and marked as complete');
+      } else {
+        print('Bundled translation already loaded, skipping');
+      }
+    } catch (e) {
+      print('Error loading bundled translation: $e');
+      // Don't rethrow, app can still function without bundled data
+    }
+  }
+
+  /// Get list of available languages from API
+  Future<List<String>> getAvailableLanguages() async {
     if (!_isInitialized) await initialize();
 
     try {
-      return await _api.getEditions(
-        format: 'text',
-        language: language,
-        type: 'translation',
-      );
+      return await _api.getLanguages();
     } catch (e) {
-      print('Error fetching available translations: $e');
+      print('Error fetching available languages: $e');
+      return [];
+    }
+  }
+
+  /// Get available translation editions for a specific language
+  Future<List<TranslationEdition>> getEditionsByLanguage(
+      String languageCode) async {
+    if (!_isInitialized) await initialize();
+
+    try {
+      final editions = await _api.getEditionsByLanguage(languageCode);
+      return editions.map((e) => TranslationEdition.fromJson(e)).toList();
+    } catch (e) {
+      print('Error fetching editions for language $languageCode: $e');
       return [];
     }
   }
 
   /// Download a complete translation edition and store it locally
   ///
-  /// [editionIdentifier]: e.g., 'en.asad', 'ar.muyassar', 'fr.hamidullah'
-  /// [onProgress]: Optional callback to report download progress (current surah / 114)
+  /// [edition]: Translation edition to download
+  /// [onProgress]: Optional callback to report download progress (0.0 to 1.0)
   Future<bool> downloadTranslation(
-    String editionIdentifier, {
-    Function(int currentSurah, int totalSurahs)? onProgress,
+    TranslationEdition edition, {
+    Function(double progress)? onProgress,
   }) async {
     if (!_isInitialized) await initialize();
 
     try {
-      print('Downloading translation: $editionIdentifier');
+      print('Downloading translation: ${edition.identifier}');
+      onProgress?.call(0.0);
 
-      // Download all 114 surahs
-      for (int surahNumber = 1; surahNumber <= 114; surahNumber++) {
-        onProgress?.call(surahNumber, 114);
+      // Download complete Quran data
+      final data = await _api.downloadTranslation(edition.identifier);
 
-        final surahData = await _api.getSurah(surahNumber, editionIdentifier);
-        final ayahs = surahData['ayahs'] as List<dynamic>;
+      // Parse and prepare for database insertion
+      final translationsToInsert = await _translationLocal.parseTranslationData(
+        data,
+        edition.language,
+        edition.englishName,
+        edition.identifier,
+      );
 
-        // Prepare batch data
-        final translations = <Map<String, dynamic>>[];
-        for (final ayah in ayahs) {
-          translations.add({
-            'surah_number':
-                surahNumber, // Fixed: use actual surah number from loop
-            'ayah_number': ayah['numberInSurah'], // verse number within surah
-            'language': surahData['edition']['language'] ?? 'unknown',
-            'translator': surahData['edition']['englishName'] ?? '',
-            'edition_identifier': editionIdentifier,
-            'text': ayah['text'],
-          });
-        }
+      onProgress?.call(0.5);
 
-        // Insert batch for this surah
-        await _translationDao.insertBatch(translations);
-      }
+      // Batch insert into database
+      print('Inserting ${translationsToInsert.length} translation verses');
+      await _translationDao.insertBatch(translationsToInsert);
 
-      print('Translation download completed: $editionIdentifier');
+      onProgress?.call(1.0);
+      print('Translation download completed: ${edition.identifier}');
       return true;
     } catch (e) {
       print('Error downloading translation: $e');
       return false;
-    }
-  }
-
-  /// Get translation for a specific verse
-  /// Returns from database if exists, otherwise fetches from API
-  Future<String?> getTranslation({
-    required int surahNumber,
-    required int ayahNumber,
-    required String language,
-    String? translator,
-  }) async {
-    if (!_isInitialized) await initialize();
-
-    try {
-      // First, check database
-      final cached = await _translationDao.getTranslation(
-        surahNumber,
-        ayahNumber,
-        language,
-        translator,
-      );
-
-      if (cached != null) {
-        return cached['text'] as String?;
-      }
-
-      // If not in database, return message to download
-      return 'Translation not available offline. Please download from Downloads screen.';
-    } catch (e) {
-      print('Error getting translation: $e');
-      return null;
     }
   }
 
@@ -141,7 +142,7 @@ class TranslationService {
           await _translationDao.isEditionDownloaded(editionIdentifier);
 
       if (isDownloaded) {
-        // Get from database - we need to query by edition_identifier
+        // Get from database
         final results =
             await AppDatabase.instance.database.then((db) => db.query(
                   'translations',
@@ -156,16 +157,7 @@ class TranslationService {
         }
       }
 
-      // Not in database, fetch from API directly
-      try {
-        final ayahData = await _api.getAyah(
-          AlQuranApi.formatAyahReference(surahNumber, ayahNumber),
-          editionIdentifier,
-        );
-        return ayahData['text'] as String?;
-      } catch (e) {
-        return 'Translation not available. Please download from Downloads screen.';
-      }
+      return 'Translation not available. Please download from Downloads screen.';
     } catch (e) {
       print('Error getting translation by edition: $e');
       return null;
@@ -187,7 +179,7 @@ class TranslationService {
     return await _translationDao.isEditionDownloaded(editionIdentifier);
   }
 
-  /// Get list of all downloaded translation editions
+  /// Get list of all downloaded translation edition identifiers
   Future<List<String>> getDownloadedTranslations() async {
     if (!_isInitialized) await initialize();
     return await _translationDao.getDownloadedEditions();
@@ -198,6 +190,12 @@ class TranslationService {
     if (!_isInitialized) await initialize();
 
     try {
+      // Prevent deletion of bundled translation
+      if (editionIdentifier == 'en.asad') {
+        print('Cannot delete bundled translation: $editionIdentifier');
+        return false;
+      }
+
       final count = await _translationDao.deleteByEdition(editionIdentifier);
       return count > 0;
     } catch (e) {
@@ -206,28 +204,8 @@ class TranslationService {
     }
   }
 
-  /// Get list of available languages
-  List<String> getAvailableLanguages() {
-    return [
-      'English',
-      'French',
-      'Turkish',
-      'Arabic',
-      'Urdu',
-      'Indonesian',
-      'Spanish',
-    ];
-  }
-
-  /// Get list of available translations from quran_library
-  Future<List<dynamic>> getAvailableTranslationsList() async {
-    if (!_isInitialized) await initialize();
-
-    try {
-      return QuranLibrary().translationList ?? [];
-    } catch (e) {
-      print('Error getting translation list: $e');
-      return [];
-    }
+  /// Check if an edition is bundled with the app
+  bool isBundledEdition(String editionIdentifier) {
+    return editionIdentifier == 'en.asad';
   }
 }

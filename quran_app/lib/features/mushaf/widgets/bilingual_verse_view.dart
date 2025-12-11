@@ -155,10 +155,10 @@ class BilingualVerseView extends StatelessWidget {
 
   Widget _buildEnglishSection(BuildContext context) {
     return FutureBuilder<String?>(
-      future: TranslationService.instance.getTranslation(
+      future: TranslationService.instance.getTranslationByEdition(
         surahNumber: surahNumber,
         ayahNumber: ayahNumber,
-        language: 'English',
+        editionIdentifier: 'en.asad', // Use bundled English translation
       ),
       builder: (context, snapshot) {
         return Column(
