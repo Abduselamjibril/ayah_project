@@ -216,8 +216,11 @@ class _PageviewQuranState extends State<PageviewQuran> {
         addRepaintBoundaries: true,
         itemBuilder: (context, index) {
           final pageNumber = index + 1;
+          final isLandscape =
+              MediaQuery.of(context).orientation == Orientation.landscape;
+
           return SizedBox(
-            height: viewportHeight,
+            height: isLandscape ? null : viewportHeight,
             // Wrap each page in RepaintBoundary for better performance
             child: RepaintBoundary(
               child: QuranPageContent(
@@ -231,6 +234,7 @@ class _PageviewQuranState extends State<PageviewQuran> {
                 onLongPressStart: widget.onLongPressStart,
                 sp: widget.sp,
                 h: widget.h,
+                allowInternalScroll: false,
               ),
             ),
           );
@@ -261,6 +265,8 @@ class QuranPageContent extends StatefulWidget {
     LongPressStartDetails details,
   )? onLongPressStart;
 
+  final bool allowInternalScroll;
+
   const QuranPageContent({
     Key? key,
     required this.pageNumber,
@@ -273,6 +279,7 @@ class QuranPageContent extends StatefulWidget {
     required this.onLongPressStart,
     required this.sp,
     required this.h,
+    this.allowInternalScroll = true,
   }) : super(key: key);
 
   @override
@@ -286,7 +293,8 @@ class _QuranPageContentState extends State<QuranPageContent>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // Must call super when using AutomaticKeepAliveClientMixin
+    super.build(
+        context); // Must call super when using AutomaticKeepAliveClientMixin
     final ranges = getPageData(widget.pageNumber);
     final pageFont = "QCF_P${widget.pageNumber.toString().padLeft(3, '0')}";
     final baseFontSize = getFontSize(widget.pageNumber, context) / widget.sp;
@@ -314,9 +322,12 @@ class _QuranPageContentState extends State<QuranPageContent>
                   text: " ﱁ  ﱂﱃﱄ\n",
                   style: TextStyle(
                     fontFamily: "QCF_P001",
-                    fontSize: getScreenType(context) == ScreenType.large
-                        ? 13.2 / widget.sp
-                        : 24 / widget.sp,
+                    fontSize: MediaQuery.of(context).orientation ==
+                            Orientation.landscape
+                        ? 35 / widget.sp
+                        : getScreenType(context) == ScreenType.large
+                            ? 13.2 / widget.sp
+                            : 24 / widget.sp,
                     color: widget.textColor,
                   ),
                 ),
@@ -327,9 +338,12 @@ class _QuranPageContentState extends State<QuranPageContent>
                   text: "齃𧻓𥳐龎\n",
                   style: TextStyle(
                     fontFamily: "QCF_BSML",
-                    fontSize: getScreenType(context) == ScreenType.large
-                        ? 13.2 / widget.sp
-                        : 18 / widget.sp,
+                    fontSize: MediaQuery.of(context).orientation ==
+                            Orientation.landscape
+                        ? 30 / widget.sp
+                        : getScreenType(context) == ScreenType.large
+                            ? 13.2 / widget.sp
+                            : 18 / widget.sp,
                     color: widget.textColor,
                   ),
                 ),
@@ -339,9 +353,10 @@ class _QuranPageContentState extends State<QuranPageContent>
         }
         final spanRecognizer = LongPressGestureRecognizer();
         spanRecognizer.onLongPress = () => widget.onLongPress?.call(surah, v);
-        spanRecognizer.onLongPressStart =
-            (LongPressStartDetails d) => widget.onLongPressStart?.call(surah, v, d);
-        spanRecognizer.onLongPressUp = () => widget.onLongPressUp?.call(surah, v);
+        spanRecognizer.onLongPressStart = (LongPressStartDetails d) =>
+            widget.onLongPressStart?.call(surah, v, d);
+        spanRecognizer.onLongPressUp =
+            () => widget.onLongPressUp?.call(surah, v);
         spanRecognizer.onLongPressEnd =
             (LongPressEndDetails d) => widget.onLongPressCancel?.call(surah, v);
 
@@ -374,12 +389,20 @@ class _QuranPageContentState extends State<QuranPageContent>
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        return Container(
+        final screenType = getScreenType(context);
+        final isLandscape =
+            MediaQuery.of(context).orientation == Orientation.landscape;
+        final isTablet = screenType == ScreenType.large;
+        final useFitWidth = isLandscape;
+
+        // Use contain for tablets to fill screen, scaleDown for others to avoid overflow
+        final fitMode = isTablet ? BoxFit.contain : BoxFit.scaleDown;
+
+        final content = Container(
           padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
           color: Colors.transparent,
           child: FittedBox(
-            fit: BoxFit
-                .scaleDown, // shrink text as needed to avoid overflow on wide/narrow screens
+            fit: useFitWidth ? BoxFit.fitWidth : fitMode,
             alignment: Alignment.center,
             child: ConstrainedBox(
               constraints: BoxConstraints(
@@ -408,6 +431,16 @@ class _QuranPageContentState extends State<QuranPageContent>
             ),
           ),
         );
+
+        if (useFitWidth && widget.allowInternalScroll) {
+          return SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            physics: const BouncingScrollPhysics(),
+            child: content,
+          );
+        }
+
+        return content;
       },
     );
   }
