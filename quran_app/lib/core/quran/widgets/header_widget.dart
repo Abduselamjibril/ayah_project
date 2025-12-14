@@ -20,7 +20,11 @@ class HeaderWidget extends StatelessWidget {
           children: [
             Image.asset(
               frameAsset,
-              width: getScreenType(context) == ScreenType.large ? 250 : 372,
+              width: MediaQuery.of(context).orientation == Orientation.landscape
+                  ? 600
+                  : getScreenType(context) == ScreenType.large
+                      ? 250
+                      : 372,
             ),
             RichText(
               textAlign: TextAlign.center,
@@ -28,8 +32,12 @@ class HeaderWidget extends StatelessWidget {
                 text: "$suraNumber",
                 style: TextStyle(
                   fontFamily: "arsura",
-                  fontSize:
-                      getScreenType(context) == ScreenType.large ? 16 : 29,
+                  fontSize: MediaQuery.of(context).orientation ==
+                          Orientation.landscape
+                      ? 45 // Larger font for landscape
+                      : getScreenType(context) == ScreenType.large
+                          ? 16
+                          : 29,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),

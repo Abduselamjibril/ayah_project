@@ -322,9 +322,12 @@ class _QuranPageContentState extends State<QuranPageContent>
                   text: " ﱁ  ﱂﱃﱄ\n",
                   style: TextStyle(
                     fontFamily: "QCF_P001",
-                    fontSize: getScreenType(context) == ScreenType.large
-                        ? 13.2 / widget.sp
-                        : 24 / widget.sp,
+                    fontSize: MediaQuery.of(context).orientation ==
+                            Orientation.landscape
+                        ? 35 / widget.sp
+                        : getScreenType(context) == ScreenType.large
+                            ? 13.2 / widget.sp
+                            : 24 / widget.sp,
                     color: widget.textColor,
                   ),
                 ),
@@ -335,9 +338,12 @@ class _QuranPageContentState extends State<QuranPageContent>
                   text: "齃𧻓𥳐龎\n",
                   style: TextStyle(
                     fontFamily: "QCF_BSML",
-                    fontSize: getScreenType(context) == ScreenType.large
-                        ? 13.2 / widget.sp
-                        : 18 / widget.sp,
+                    fontSize: MediaQuery.of(context).orientation ==
+                            Orientation.landscape
+                        ? 30 / widget.sp
+                        : getScreenType(context) == ScreenType.large
+                            ? 13.2 / widget.sp
+                            : 18 / widget.sp,
                     color: widget.textColor,
                   ),
                 ),
