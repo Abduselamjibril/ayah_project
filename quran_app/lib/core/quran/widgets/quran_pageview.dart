@@ -216,8 +216,11 @@ class _PageviewQuranState extends State<PageviewQuran> {
         addRepaintBoundaries: true,
         itemBuilder: (context, index) {
           final pageNumber = index + 1;
+          final isLandscape =
+              MediaQuery.of(context).orientation == Orientation.landscape;
+
           return SizedBox(
-            height: viewportHeight,
+            height: isLandscape ? null : viewportHeight,
             // Wrap each page in RepaintBoundary for better performance
             child: RepaintBoundary(
               child: QuranPageContent(
@@ -231,6 +234,7 @@ class _PageviewQuranState extends State<PageviewQuran> {
                 onLongPressStart: widget.onLongPressStart,
                 sp: widget.sp,
                 h: widget.h,
+                allowInternalScroll: false,
               ),
             ),
           );
@@ -261,6 +265,8 @@ class QuranPageContent extends StatefulWidget {
     LongPressStartDetails details,
   )? onLongPressStart;
 
+  final bool allowInternalScroll;
+
   const QuranPageContent({
     Key? key,
     required this.pageNumber,
@@ -273,6 +279,7 @@ class QuranPageContent extends StatefulWidget {
     required this.onLongPressStart,
     required this.sp,
     required this.h,
+    this.allowInternalScroll = true,
   }) : super(key: key);
 
   @override
@@ -419,7 +426,7 @@ class _QuranPageContentState extends State<QuranPageContent>
           ),
         );
 
-        if (useFitWidth) {
+        if (useFitWidth && widget.allowInternalScroll) {
           return SingleChildScrollView(
             scrollDirection: Axis.vertical,
             physics: const BouncingScrollPhysics(),

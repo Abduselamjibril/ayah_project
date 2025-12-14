@@ -56,13 +56,6 @@ class _MushafScreenState extends State<MushafScreen> {
   }
 
   Widget _buildMushafView() {
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
-
-    if (isLandscape) {
-      return HorizontalMushafView(controller: _controller);
-    }
-
     return _controller.scrollMode == ScrollMode.horizontal
         ? HorizontalMushafView(controller: _controller)
         : VerticalMushafView(
