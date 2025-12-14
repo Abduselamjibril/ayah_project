@@ -324,7 +324,9 @@ class _QuranPageContentState extends State<QuranPageContent>
                     fontFamily: "QCF_P001",
                     fontSize: MediaQuery.of(context).orientation ==
                             Orientation.landscape
-                        ? 35 / widget.sp
+                        ? getScreenType(context) == ScreenType.large
+                            ? 50 / widget.sp // Tablet landscape
+                            : 35 / widget.sp // Phone landscape
                         : getScreenType(context) == ScreenType.large
                             ? 13.2 / widget.sp
                             : 24 / widget.sp,
@@ -340,7 +342,9 @@ class _QuranPageContentState extends State<QuranPageContent>
                     fontFamily: "QCF_BSML",
                     fontSize: MediaQuery.of(context).orientation ==
                             Orientation.landscape
-                        ? 30 / widget.sp
+                        ? getScreenType(context) == ScreenType.large
+                            ? 45 / widget.sp // Tablet landscape
+                            : 30 / widget.sp // Phone landscape
                         : getScreenType(context) == ScreenType.large
                             ? 13.2 / widget.sp
                             : 18 / widget.sp,

@@ -21,7 +21,11 @@ double getFontSize(int index, context) {
   //     return 20;
   //   }else
   if (MediaQuery.of(context).orientation != Orientation.portrait) {
-    return 35;
+    // Landscape orientation
+    if (getScreenType(context) == ScreenType.large) {
+      return 45; // Tablet landscape
+    }
+    return 35; // Phone landscape
   } else if (getScreenType(context) == ScreenType.large) {
     return 30;
   } else if (getScreenType(context) == ScreenType.small) {

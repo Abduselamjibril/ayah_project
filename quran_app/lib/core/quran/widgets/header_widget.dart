@@ -21,7 +21,10 @@ class HeaderWidget extends StatelessWidget {
             Image.asset(
               frameAsset,
               width: MediaQuery.of(context).orientation == Orientation.landscape
-                  ? 600
+                  ? getScreenType(context) == ScreenType.large
+                      ? MediaQuery.of(context).size.width *
+                          0.7 // Tablet landscape
+                      : 600 // Phone landscape
                   : getScreenType(context) == ScreenType.large
                       ? 250
                       : 372,
@@ -34,7 +37,9 @@ class HeaderWidget extends StatelessWidget {
                   fontFamily: "arsura",
                   fontSize: MediaQuery.of(context).orientation ==
                           Orientation.landscape
-                      ? 45 // Larger font for landscape
+                      ? getScreenType(context) == ScreenType.large
+                          ? 60 // Tablet landscape
+                          : 45 // Phone landscape
                       : getScreenType(context) == ScreenType.large
                           ? 16
                           : 29,
