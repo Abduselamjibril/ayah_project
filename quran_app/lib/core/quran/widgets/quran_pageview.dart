@@ -380,7 +380,7 @@ class _QuranPageContentState extends State<QuranPageContent>
         final isLandscape =
             MediaQuery.of(context).orientation == Orientation.landscape;
         final isTablet = screenType == ScreenType.large;
-        final useFitWidth = isLandscape && !isTablet;
+        final useFitWidth = isLandscape;
 
         // Use contain for tablets to fill screen, scaleDown for others to avoid overflow
         final fitMode = isTablet ? BoxFit.contain : BoxFit.scaleDown;
