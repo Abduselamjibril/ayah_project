@@ -23,7 +23,7 @@ double getFontSize(int index, context) {
   if (MediaQuery.of(context).orientation != Orientation.portrait) {
     return 35;
   } else if (getScreenType(context) == ScreenType.large) {
-    return 15;
+    return 30;
   } else if (getScreenType(context) == ScreenType.small) {
     return 20;
   } else if (index == 1 || index == 2) {
