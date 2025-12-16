@@ -32,7 +32,6 @@ flutter:
     - assets/images/
     - assets/fonts/qcf/
     - assets/fonts/QCF2BSMLfonts/
-    - assets/Data/
 
   fonts:
     # Surah number font

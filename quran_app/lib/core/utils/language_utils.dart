@@ -1,5 +1,3 @@
-// lib/core/utils/language_utils.dart
-
 /// Utility class for language code to full name mapping and flag emojis
 class LanguageUtils {
   /// Map of language codes to full language names
@@ -51,6 +49,33 @@ class LanguageUtils {
     'uz': 'Uzbek',
     'vi': 'Vietnamese',
     'zh': 'Chinese',
+
+    // New languages added from the loaded list:
+    'ast': 'Assamese', // ISO 639-3 'asm'
+    'bgr': 'Bulgarian', // ISO 639-1 'bg'
+    'dar': 'Dari', // ISO 639-3 'prs' or 639-1 'fa' (Persian/Farsi)
+    'lug': 'Ganda', // Luganda (ISO 639-1 'lg')
+    'gu': 'Gujarati', // ISO 639-1
+    'he': 'Hebrew', // ISO 639-1 'iw' or 'he'
+    'kn': 'Kannada', // ISO 639-1
+    'kk': 'Kazakh', // ISO 639-1
+    'km': 'Central Khmer', // ISO 639-1
+    'rw': 'Kinyarwanda', // ISO 639-1
+    'mrw': 'Maranao', // ISO 639-3 (No 2-letter code)
+    'mr': 'Marathi', // ISO 639-1
+    'ne': 'Nepali', // ISO 639-1
+    'om': 'Oromo', // ISO 639-1
+    'si': 'Sinhala', // Sinhala/Sinhalese (ISO 639-1)
+    'tl': 'Tagalog', // ISO 639-1
+    'te': 'Telugu', // ISO 639-1
+    'uk': 'Ukrainian', // ISO 639-1
+    'yo': 'Yoruba', // ISO 639-1
+    'bm': 'Bambara', // ISO 639-1
+    // Note: 'Amazigh' (Tamazight) is broadly covered by 'ber' (Berber)
+    // 'albanian' and 'azeri' are covered by 'sq' and 'az'
+    // 'divehi', 'dhivehi', 'maldivian' are covered by 'dv'
+    // 'uighur' is covered by 'ug'
+    // 'yuw' and 'yau' are likely misspellings or obscure/regional codes and are omitted for standardisation
   };
 
   /// Map of language codes to flag emojis
@@ -59,7 +84,7 @@ class LanguageUtils {
     'ar': '🇸🇦', // Saudi Arabia for Arabic
     'am': '🇪🇹', // Ethiopia for Amharic
     'az': '🇦🇿', // Azerbaijan
-    'ber': '🇲🇦', // Morocco for Berber
+    'ber': '🇲🇦', // Morocco for Berber (Amazigh)
     'bn': '🇧🇩', // Bangladesh
     'bs': '🇧🇦', // Bosnia
     'ce': '🇷🇺', // Russia for Chechen
@@ -84,7 +109,7 @@ class LanguageUtils {
     'nl': '🇳🇱', // Netherlands
     'no': '🇳🇴', // Norway
     'pl': '🇵🇱', // Poland
-    'ps': '🇦🇫', // Afghanistan for Pashto
+    'ps': '🇦🇫', // Afghanistan for Pashto (Dari is also often spoken in AF)
     'pt': '🇵🇹', // Portugal
     'ro': '🇷🇴', // Romania
     'ru': '🇷🇺', // Russia
@@ -103,6 +128,28 @@ class LanguageUtils {
     'uz': '🇺🇿', // Uzbekistan
     'vi': '🇻🇳', // Vietnam
     'zh': '🇨🇳', // China
+
+    // New flags added:
+    'ast': '🇮🇳', // India for Assamese
+    'bgr': '🇧🇬', // Bulgaria for Bulgarian
+    'dar': '🇦🇫', // Afghanistan for Dari
+    'lug': '🇺🇬', // Uganda for Ganda
+    'gu': '🇮🇳', // India for Gujarati
+    'he': '🇮🇱', // Israel for Hebrew
+    'kn': '🇮🇳', // India for Kannada
+    'kk': '🇰🇿', // Kazakhstan for Kazakh
+    'km': '🇰🇭', // Cambodia for Central Khmer
+    'rw': '🇷🇼', // Rwanda for Kinyarwanda
+    'mrw': '🇵🇭', // Philippines for Maranao
+    'mr': '🇮🇳', // India for Marathi
+    'ne': '🇳🇵', // Nepal for Nepali
+    'om': '🇪🇹', // Ethiopia for Oromo
+    'si': '🇱🇰', // Sri Lanka for Sinhala/Sinhalese
+    'tl': '🇵🇭', // Philippines for Tagalog
+    'te': '🇮🇳', // India for Telugu
+    'uk': '🇺🇦', // Ukraine for Ukrainian
+    'yo': '🇳🇬', // Nigeria for Yoruba
+    'bm': '🇲🇱', // Mali for Bambara
   };
 
   /// Get full language name from code

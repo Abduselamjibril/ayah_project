@@ -2,7 +2,7 @@
 import 'package:quran_app/core/database/dao/translation_dao.dart';
 import 'package:quran_app/core/database/app_database.dart';
 import 'package:quran_app/data/sources/remote/translation_api.dart';
-import 'package:quran_app/data/sources/local/translation_local.dart';
+
 import 'package:quran_app/data/models/translation_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,11 +11,10 @@ class TranslationService {
   TranslationService._init();
 
   late TranslationDao _translationDao;
-  late TranslationLocal _translationLocal;
   final TranslationApi _api = TranslationApi();
   bool _isInitialized = false;
 
-  static const String _bundledLoadedKey = 'bundled_translation_loaded';
+  static const String _selectedTranslationKey = 'selected_translation_id';
 
   /// Initialize the translation service
   Future<void> initialize() async {
@@ -25,36 +24,12 @@ class TranslationService {
       // Initialize DAO
       final database = await AppDatabase.instance.database;
       _translationDao = TranslationDao(database);
-      _translationLocal = TranslationLocal(_translationDao);
 
       _isInitialized = true;
       print('TranslationService initialized successfully');
-
-      // Load bundled translation on first run
-      await _loadBundledTranslationIfNeeded();
     } catch (e) {
       print('Error initializing TranslationService: $e');
       rethrow;
-    }
-  }
-
-  /// Load bundled translation if not already loaded
-  Future<void> _loadBundledTranslationIfNeeded() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final isLoaded = prefs.getBool(_bundledLoadedKey) ?? false;
-
-      if (!isLoaded) {
-        print('First run detected, loading bundled translation...');
-        await _translationLocal.loadBundledTranslation();
-        await prefs.setBool(_bundledLoadedKey, true);
-        print('Bundled translation loaded and marked as complete');
-      } else {
-        print('Bundled translation already loaded, skipping');
-      }
-    } catch (e) {
-      print('Error loading bundled translation: $e');
-      // Don't rethrow, app can still function without bundled data
     }
   }
 
@@ -72,14 +47,13 @@ class TranslationService {
 
   /// Get available translation editions for a specific language
   Future<List<TranslationEdition>> getEditionsByLanguage(
-      String languageCode) async {
+      String languageName) async {
     if (!_isInitialized) await initialize();
 
     try {
-      final editions = await _api.getEditionsByLanguage(languageCode);
-      return editions.map((e) => TranslationEdition.fromJson(e)).toList();
+      return await _api.getEditionsByLanguage(languageName);
     } catch (e) {
-      print('Error fetching editions for language $languageCode: $e');
+      print('Error fetching editions for language $languageName: $e');
       return [];
     }
   }
@@ -89,17 +63,7 @@ class TranslationService {
     if (!_isInitialized) await initialize();
 
     try {
-      // Get all available languages
-      final languages = await getAvailableLanguages();
-
-      // Fetch editions for all languages
-      final allEditions = <TranslationEdition>[];
-      for (final language in languages) {
-        final editions = await getEditionsByLanguage(language);
-        allEditions.addAll(editions);
-      }
-
-      return allEditions;
+      return await _api.getAllTranslations();
     } catch (e) {
       print('Error fetching all translation editions: $e');
       return [];
@@ -117,28 +81,43 @@ class TranslationService {
     if (!_isInitialized) await initialize();
 
     try {
-      print('Downloading translation: ${edition.identifier}');
+      print('Downloading translation: ${edition.id} (${edition.name})');
       onProgress?.call(0.0);
 
       // Download complete Quran data
-      final data = await _api.downloadTranslation(edition.identifier);
-
-      // Parse and prepare for database insertion
-      final translationsToInsert = await _translationLocal.parseTranslationData(
-        data,
-        edition.language,
-        edition.englishName,
-        edition.identifier,
+      // New API returns a list of TranslatedAyah directly
+      final ayahs = await _api.downloadTranslation(
+        edition.id,
+        onProgress: (current, total) {
+          // Calculate progress based on surahs downloaded
+          // We allocate 90% of progress to downloading, 10% to inserting
+          final downloadProgress = (current / total) * 0.9;
+          onProgress?.call(downloadProgress);
+        },
       );
 
-      onProgress?.call(0.5);
+      print('Converting ${ayahs.length} verses for database insertion');
+      final translationsToInsert = ayahs.map((ayah) {
+        return ayah.toDatabase(
+          language: edition.languageName,
+          translator: edition.name,
+        );
+      }).toList();
+
+      onProgress?.call(0.95);
 
       // Batch insert into database
       print('Inserting ${translationsToInsert.length} translation verses');
       await _translationDao.insertBatch(translationsToInsert);
 
+      // Set as selected if none is selected
+      final currentSelected = await getSelectedTranslationId();
+      if (currentSelected == null) {
+        await setSelectedTranslationId(edition.id);
+      }
+
       onProgress?.call(1.0);
-      print('Translation download completed: ${edition.identifier}');
+      print('Translation download completed: ${edition.id}');
       return true;
     } catch (e) {
       print('Error downloading translation: $e');
@@ -208,13 +187,15 @@ class TranslationService {
     if (!_isInitialized) await initialize();
 
     try {
-      // Prevent deletion of bundled translation
-      if (editionIdentifier == 'en.asad') {
-        print('Cannot delete bundled translation: $editionIdentifier');
-        return false;
+      final count = await _translationDao.deleteByEdition(editionIdentifier);
+
+      // If deleted was selected, clear selection
+      final selectedId = await getSelectedTranslationId();
+      if (selectedId.toString() == editionIdentifier) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(_selectedTranslationKey);
       }
 
-      final count = await _translationDao.deleteByEdition(editionIdentifier);
       return count > 0;
     } catch (e) {
       print('Error deleting translation: $e');
@@ -224,6 +205,38 @@ class TranslationService {
 
   /// Check if an edition is bundled with the app
   bool isBundledEdition(String editionIdentifier) {
-    return editionIdentifier == 'en.asad';
+    return false; // No bundled editions anymore
+  }
+
+  // User Selection Persistence
+
+  /// Get the selected translation ID (returns int ID of the resource)
+  Future<int?> getSelectedTranslationId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_selectedTranslationKey);
+  }
+
+  /// Set the selected translation ID
+  Future<void> setSelectedTranslationId(int id) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_selectedTranslationKey, id);
+    print('Selected translation set to: $id');
+  }
+
+  /// Get full details of the selected translation
+  /// Returns null if no translation is selected or if metadata fetch fails
+  Future<TranslationEdition?> getSelectedTranslation() async {
+    final id = await getSelectedTranslationId();
+    if (id == null) return null;
+
+    // We need to find the edition in the available list to get its details (name, language, etc.)
+    // We could cache this list, but for now we fetch it.
+    // Optimization: Cache all translations in a map in memory.
+    final allEditions = await getAllTranslationEditions();
+    try {
+      return allEditions.firstWhere((e) => e.id == id);
+    } catch (e) {
+      return null;
+    }
   }
 }
