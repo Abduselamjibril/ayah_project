@@ -439,7 +439,8 @@ class _DownloadsScreenState extends State<DownloadsScreen>
       itemCount: sortedLanguages.length,
       itemBuilder: (context, index) {
         final langName = sortedLanguages[index];
-        final langCode = TranslationApi.getLanguageCode(langName);
+        final langCode = LanguageUtils.getCodeForName(langName) ??
+            TranslationApi.getLanguageCode(langName);
         final hasCode = langCode != null && langCode.isNotEmpty;
 
         final displayFlag =
@@ -545,7 +546,8 @@ class _DownloadsScreenState extends State<DownloadsScreen>
       itemCount: sortedLanguages.length,
       itemBuilder: (context, index) {
         final langName = sortedLanguages[index];
-        final langCode = TranslationApi.getLanguageCode(langName);
+        final langCode = LanguageUtils.getCodeForName(langName) ??
+            TranslationApi.getLanguageCode(langName);
         final hasCode = langCode != null && langCode.isNotEmpty;
 
         final displayFlag =

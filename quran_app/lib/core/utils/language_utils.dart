@@ -173,4 +173,16 @@ class LanguageUtils {
     final name = getLanguageName(code);
     return flag.isNotEmpty ? '$flag $name' : name;
   }
+
+  /// Try to resolve a language code from a full language name.
+  /// Returns null if no matching code is found.
+  static String? getCodeForName(String name) {
+    final lowerName = name.toLowerCase();
+    for (final entry in languageNames.entries) {
+      if (entry.value.toLowerCase() == lowerName) {
+        return entry.key;
+      }
+    }
+    return null;
+  }
 }
