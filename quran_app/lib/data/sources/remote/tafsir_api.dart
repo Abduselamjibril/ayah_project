@@ -41,11 +41,6 @@ class TafsirApi {
     }
   }
 
-  /// Download complete Quran tafsir for a specific edition
-  ///
-  /// [tafsirId]: Tafsir resource ID (integer, e.g., 169)
-  /// Returns complete Quran data with all surahs and ayahs
-  /// Note: This requires 114 API calls (one per surah)
   Future<List<TafsirAyah>> downloadTafsir(
     int tafsirId, {
     Function(int currentSurah, int totalSurahs)? onProgress,
@@ -54,6 +49,8 @@ class TafsirApi {
     const totalSurahs = 114;
 
     try {
+      print('=== TAFSIR API: Starting download for tafsir ID $tafsirId ===');
+
       // Download each surah
       for (int surahNumber = 1; surahNumber <= totalSurahs; surahNumber++) {
         if (onProgress != null) {
@@ -61,20 +58,46 @@ class TafsirApi {
         }
 
         final uri = Uri.parse(
-            '${ApiEndpoints.baseUrl}${ApiEndpoints.tafsirsBySurah(tafsirId, surahNumber)}&fields=verse_key');
+            '${ApiEndpoints.baseUrl}${ApiEndpoints.tafsirsBySurah(tafsirId, surahNumber)}');
 
-        print('Downloading tafsir for surah $surahNumber/$totalSurahs');
+        print('TAFSIR API: Downloading surah $surahNumber/$totalSurahs');
+        print('TAFSIR API: URL = $uri');
+
         final response = await http.get(uri).timeout(_timeout);
+
+        print('TAFSIR API: Response status = ${response.statusCode}');
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
+          print('TAFSIR API: Response keys = ${data.keys.toList()}');
+
           if (data['tafsirs'] != null) {
-            final tafsirs = (data['tafsirs'] as List)
-                .map((json) => TafsirAyah.fromJson(json))
-                .toList();
+            final tafsirsList = data['tafsirs'] as List;
+            print(
+                'TAFSIR API: Found ${tafsirsList.length} tafsir entries for surah $surahNumber');
+
+            if (tafsirsList.isNotEmpty) {
+              // Sample first entry
+              print(
+                  'TAFSIR API: Sample entry keys = ${tafsirsList.first.keys.toList()}');
+              print(
+                  'TAFSIR API: Sample verse_key = ${tafsirsList.first['verse_key']}');
+              print(
+                  'TAFSIR API: Sample resource_id = ${tafsirsList.first['resource_id']}');
+            }
+
+            final tafsirs =
+                tafsirsList.map((json) => TafsirAyah.fromJson(json)).toList();
             allAyahs.addAll(tafsirs);
+            print('TAFSIR API: Total ayahs so far = ${allAyahs.length}');
+          } else {
+            print('TAFSIR API: WARNING - No "tafsirs" key in response');
+            print(
+                'TAFSIR API: Response body = ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}...');
           }
         } else {
+          print('TAFSIR API: ERROR - HTTP ${response.statusCode}');
+          print('TAFSIR API: Error body = ${response.body}');
           throw Exception(
               'HTTP ${response.statusCode} for surah $surahNumber: ${response.body}');
         }
@@ -85,9 +108,11 @@ class TafsirApi {
         }
       }
 
-      print('Download complete: ${allAyahs.length} verses');
+      print('TAFSIR API: Download complete - ${allAyahs.length} total verses');
       return allAyahs;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('TAFSIR API: ERROR - Failed to download: $e');
+      print('TAFSIR API: Stack trace: $stackTrace');
       throw Exception('Failed to download tafsir $tafsirId: $e');
     }
   }

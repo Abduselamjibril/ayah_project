@@ -40,41 +40,74 @@ class _TafsirScreenState extends State<TafsirScreen> {
     setState(() => _isLoading = true);
 
     try {
+      print(
+          '=== TafsirScreen: Loading content for ${widget.surahNumber}:${widget.ayahNumber} ===');
+
       // 1. Check for selected Tafsir
+      final selectedTafsirId = await _tafsirService.getSelectedTafsirId();
+      print('Selected Tafsir ID: $selectedTafsirId');
+
       _selectedTafsir = await _tafsirService.getSelectedTafsir();
+      print(
+          'Selected Tafsir Edition: ${_selectedTafsir?.name} (ID: ${_selectedTafsir?.id})');
 
       // 2. Check for selected Translation
+      final selectedTranslationId =
+          await _translationService.getSelectedTranslationId();
+      print('Selected Translation ID: $selectedTranslationId');
+
       _selectedTranslation = await _translationService.getSelectedTranslation();
+      print(
+          'Selected Translation Edition: ${_selectedTranslation?.name} (ID: ${_selectedTranslation?.id})');
 
-      // 3. Determine what to show (Prioritize Tafsir if usually desired, or stick to last selection?)
-      // For now: Show Tafsir if available, else Translation.
-      // But user said "transletion name or tefsir name".
-      // Let's check which one actually has content for this ayah?
-      // Or better, check if we have persisted user preference for MODE.
-      // For now, simple logic:
-
+      // 3. Determine what to show (Prioritize Tafsir if available, else Translation)
       if (_selectedTafsir != null) {
+        print('Attempting to load Tafsir...');
         _activeType = 'tafsir';
+
+        // Check if tafsir is downloaded
+        final isDownloaded = await _tafsirService
+            .isTafsirDownloaded(_selectedTafsir!.id.toString());
+        print(
+            'Is Tafsir downloaded? $isDownloaded (checking with ID: ${_selectedTafsir!.id})');
+
         final tafsirText = await _tafsirService.getTafsirByEdition(
           surahNumber: widget.surahNumber,
           ayahNumber: widget.ayahNumber,
           editionIdentifier: _selectedTafsir!.id.toString(),
         );
+        print(
+            'Loaded Tafsir text: ${tafsirText?.substring(0, tafsirText.length > 50 ? 50 : tafsirText.length)}...');
         _content = tafsirText;
       } else if (_selectedTranslation != null) {
+        print('Attempting to load Translation...');
         _activeType = 'translation';
+
+        // Check if translation is downloaded
+        final isDownloaded = await _translationService
+            .isTranslationDownloaded(_selectedTranslation!.id.toString());
+        print(
+            'Is Translation downloaded? $isDownloaded (checking with ID: ${_selectedTranslation!.id})');
+
         final transText = await _translationService.getTranslationByEdition(
           surahNumber: widget.surahNumber,
           ayahNumber: widget.ayahNumber,
           editionIdentifier: _selectedTranslation!.id.toString(),
         );
+        print(
+            'Loaded Translation text: ${transText?.substring(0, transText.length > 50 ? 50 : transText.length)}...');
         _content = transText;
       } else {
+        print('No tafsir or translation selected');
         _activeType = 'none';
         _content =
             'No translation or tafsir selected. Please select one from settings.';
       }
+
+      print('Active type: $_activeType');
+      print('=== TafsirScreen: Load complete ===');
     } catch (e) {
+      print('ERROR in _loadContent: $e');
       _content = 'Error loading content: $e';
     } finally {
       if (mounted) {

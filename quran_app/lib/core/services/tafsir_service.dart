@@ -45,10 +45,6 @@ class TafsirService {
     }
   }
 
-  /// Download a complete tafsir edition and store it locally
-  ///
-  /// [edition]: Tafsir edition to download
-  /// [onProgress]: Optional callback to report download progress (0.0 to 1.0)
   Future<bool> downloadTafsir(
     TafsirEdition edition, {
     Function(double progress)? onProgress,
@@ -56,7 +52,9 @@ class TafsirService {
     if (!_isInitialized) await initialize();
 
     try {
-      print('Downloading tafsir: ${edition.id} (${edition.name})');
+      print('=== DOWNLOAD START: Tafsir ${edition.id} (${edition.name}) ===');
+      print(
+          'Edition details: ID=${edition.id}, Language=${edition.languageName}, Author=${edition.authorName}');
       onProgress?.call(0.0);
 
       // Download complete Quran data
@@ -71,7 +69,14 @@ class TafsirService {
         },
       );
 
-      print('Converting ${ayahs.length} verses for database insertion');
+      print('Downloaded ${ayahs.length} verses from API');
+
+      // Sample first ayah to check resourceId
+      if (ayahs.isNotEmpty) {
+        print(
+            'Sample ayah: ${ayahs.first.surahNumber}:${ayahs.first.ayahNumber}, resourceId=${ayahs.first.resourceId}');
+      }
+
       final tafsirsToInsert = ayahs.map((ayah) {
         return ayah.toDatabase(
           language: edition.languageName,
@@ -79,23 +84,44 @@ class TafsirService {
         );
       }).toList();
 
+      // Sample first database entry
+      if (tafsirsToInsert.isNotEmpty) {
+        print(
+            'Sample database entry: edition_identifier="${tafsirsToInsert.first['edition_identifier']}"');
+        print(
+            '  surah=${tafsirsToInsert.first['surah_number']}, ayah=${tafsirsToInsert.first['ayah_number']}');
+        print(
+            '  language="${tafsirsToInsert.first['language']}", scholar="${tafsirsToInsert.first['scholar']}"');
+      }
+
       onProgress?.call(0.95);
 
       // Batch insert into database
-      print('Inserting ${tafsirsToInsert.length} tafsir verses');
+      print(
+          'Inserting ${tafsirsToInsert.length} tafsir verses into database...');
       await _tafsirDao.insertBatch(tafsirsToInsert);
+      print('Database insertion complete');
+
+      // Verify insertion
+      final isDownloaded =
+          await _tafsirDao.isEditionDownloaded(edition.id.toString());
+      print(
+          'Verification: isEditionDownloaded("${edition.id}") = $isDownloaded');
 
       // Set as selected if none is selected
       final currentSelected = await getSelectedTafsirId();
+      print('Current selected tafsir ID: $currentSelected');
       if (currentSelected == null) {
         await setSelectedTafsirId(edition.id);
+        print('Auto-selected tafsir ID: ${edition.id}');
       }
 
       onProgress?.call(1.0);
-      print('Tafsir download completed: ${edition.id}');
+      print('=== DOWNLOAD COMPLETE: Tafsir ${edition.id} ===');
       return true;
     } catch (e) {
-      print('Error downloading tafsir: $e');
+      print('ERROR downloading tafsir: $e');
+      print('Stack trace: ${StackTrace.current}');
       return false;
     }
   }
@@ -109,9 +135,13 @@ class TafsirService {
     if (!_isInitialized) await initialize();
 
     try {
+      print(
+          'TafsirService: Getting tafsir for $surahNumber:$ayahNumber, edition: $editionIdentifier');
+
       // Check if this edition is downloaded
       final isDownloaded =
           await _tafsirDao.isEditionDownloaded(editionIdentifier);
+      print('TafsirService: Edition downloaded status: $isDownloaded');
 
       if (isDownloaded) {
         // Get from database
@@ -124,14 +154,20 @@ class TafsirService {
                   limit: 1,
                 ));
 
+        print('TafsirService: Query results count: ${results.length}');
         if (results.isNotEmpty) {
+          print(
+              'TafsirService: Found tafsir text (${results.first['text'].toString().length} chars)');
           return results.first['text'] as String?;
+        } else {
+          print('TafsirService: No tafsir found for this ayah in database');
         }
       }
 
+      print('TafsirService: Returning not available message');
       return 'Tafsir not available. Please download from Downloads screen.';
     } catch (e) {
-      print('Error getting tafsir by edition: $e');
+      print('TafsirService ERROR getting tafsir by edition: $e');
       return null;
     }
   }

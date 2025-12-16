@@ -13,7 +13,7 @@ class ApiEndpoints {
   // Tafsir endpoints
   static const String tafsirs = '/resources/tafsirs';
   static String tafsirsBySurah(int tafsirId, int chapterNumber) =>
-      '/quran/tafsirs/$tafsirId?chapter_number=$chapterNumber';
+      '/tafsirs/$tafsirId/by_chapter/$chapterNumber';
 
   // Languages endpoint
   static const String languages = '/resources/languages';
