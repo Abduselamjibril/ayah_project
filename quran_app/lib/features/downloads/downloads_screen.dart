@@ -446,7 +446,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
                   : Text(isDownloaded ? 'Downloaded' : 'Not downloaded'),
               onTap: null,
               trailing: isDownloading
-                  ? Text('$percent%')
+                  ? const SizedBox.shrink()
                   : Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -552,7 +552,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
                   : Text(isDownloaded ? 'Downloaded' : 'Not downloaded'),
               onTap: null,
               trailing: isDownloading
-                  ? Text('$percent%')
+                  ? const SizedBox.shrink()
                   : Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
