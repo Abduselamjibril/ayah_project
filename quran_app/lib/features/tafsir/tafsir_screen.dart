@@ -1,5 +1,7 @@
 // lib/features/tafsir/tafsir_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_html/flutter_html.dart';
+import 'package:html_unescape/html_unescape.dart';
 import 'package:quran_app/core/services/tafsir_service.dart';
 import 'package:quran_app/core/services/translation_service.dart';
 import 'package:quran_app/data/models/tafsir_model.dart';
@@ -23,12 +25,29 @@ class TafsirScreen extends StatefulWidget {
 class _TafsirScreenState extends State<TafsirScreen> {
   final TranslationService _translationService = TranslationService.instance;
   final TafsirService _tafsirService = TafsirService.instance;
+  final HtmlUnescape _unescaper = HtmlUnescape();
 
   TranslationEdition? _selectedTranslation;
   TafsirEdition? _selectedTafsir;
   String? _content;
   bool _isLoading = true;
   String _activeType = 'none'; // 'translation', 'tafsir', or 'none'
+  String _contentSource = 'unknown';
+
+  bool get _contentHasHtml =>
+      _content != null && RegExp(r'<[^>]+>').hasMatch(_content!);
+
+  String _normalizeContent(String? raw) {
+    if (raw == null) return '';
+    String current = raw;
+    // Decode repeatedly to handle multi-escaped HTML such as &amp;lt;h2&amp;gt;.
+    for (int i = 0; i < 5; i++) {
+      final decoded = _unescaper.convert(current);
+      if (decoded == current) break;
+      current = decoded;
+    }
+    return current.trim();
+  }
 
   @override
   void initState() {
@@ -78,7 +97,8 @@ class _TafsirScreenState extends State<TafsirScreen> {
         );
         print(
             'Loaded Tafsir text: ${tafsirText?.substring(0, tafsirText.length > 50 ? 50 : tafsirText.length)}...');
-        _content = tafsirText;
+        _content = _normalizeContent(tafsirText);
+        _contentSource = 'tafsir-db-${_selectedTafsir!.id}';
       } else if (_selectedTranslation != null) {
         print('Attempting to load Translation...');
         _activeType = 'translation';
@@ -96,19 +116,29 @@ class _TafsirScreenState extends State<TafsirScreen> {
         );
         print(
             'Loaded Translation text: ${transText?.substring(0, transText.length > 50 ? 50 : transText.length)}...');
-        _content = transText;
+        _content = _normalizeContent(transText);
+        _contentSource = 'translation-db-${_selectedTranslation!.id}';
       } else {
         print('No tafsir or translation selected');
         _activeType = 'none';
         _content =
             'No translation or tafsir selected. Please select one from settings.';
+        _contentSource = 'none-selected';
       }
 
       print('Active type: $_activeType');
+      if (_content != null) {
+        print('Content source: $_contentSource');
+        print('DEBUG HTML CHECK START');
+        print(
+            'DEBUG RAW CONTENT: ${_content!.substring(0, _content!.length > 500 ? 500 : _content!.length)}');
+        print('DEBUG HTML CHECK END');
+      }
       print('=== TafsirScreen: Load complete ===');
     } catch (e) {
       print('ERROR in _loadContent: $e');
       _content = 'Error loading content: $e';
+      _contentSource = 'error';
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -199,16 +229,34 @@ class _TafsirScreenState extends State<TafsirScreen> {
                   // Content
                   Expanded(
                     child: SingleChildScrollView(
-                      child: Text(
-                        _content ?? 'Content not available',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          height: 1.6,
-                        ),
-                        textAlign: _activeType == 'none'
-                            ? TextAlign.center
-                            : TextAlign.start,
-                      ),
+                      child: _content == null
+                          ? const Text(
+                              'Content not available',
+                              style: TextStyle(
+                                fontSize: 18,
+                                height: 1.6,
+                              ),
+                              textAlign: TextAlign.center,
+                            )
+                          : (_activeType != 'none' || _contentHasHtml)
+                              ? Html(
+                                  data: _content!,
+                                  style: {
+                                    "body": Style(
+                                      fontSize: FontSize(18),
+                                      lineHeight: LineHeight(1.6),
+                                      textAlign: TextAlign.justify,
+                                    ),
+                                  },
+                                )
+                              : Text(
+                                  _content!,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    height: 1.6,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
                     ),
                   ),
                 ],

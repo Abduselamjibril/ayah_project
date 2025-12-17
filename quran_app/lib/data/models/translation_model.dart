@@ -1,5 +1,33 @@
 // lib/data/models/translation_model.dart
 
+import 'package:html_unescape/html_unescape.dart';
+
+final HtmlUnescape _unescaper = HtmlUnescape();
+
+String _stripHtmlToPlain(String value) {
+  // Unescape repeatedly to handle multi-escaped payloads.
+  String current = value;
+  for (int i = 0; i < 5; i++) {
+    final decoded = _unescaper.convert(current);
+    if (decoded == current) break;
+    current = decoded;
+  }
+
+  // Convert common block tags to line breaks before stripping everything else.
+  current = current.replaceAll(
+    RegExp(r'<\s*(p|div|br|h[1-6])[^>]*>', caseSensitive: false),
+    '\n',
+  );
+
+  // Remove remaining tags.
+  current = current.replaceAll(RegExp(r'<[^>]+>'), ' ');
+
+  // Collapse whitespace.
+  current = current.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+  return current;
+}
+
 /// Model for a translation edition
 class TranslationEdition {
   final int id; // Changed from String identifier to int id
@@ -87,6 +115,7 @@ class TranslatedAyah {
     required String language,
     required String translator,
   }) {
+    final sanitized = _stripHtmlToPlain(text);
     return {
       'surah_number': surahNumber,
       'ayah_number': ayahNumber,
@@ -94,7 +123,7 @@ class TranslatedAyah {
       'translator': translator,
       'edition_identifier':
           resourceId.toString(), // Store as string for compatibility
-      'text': text,
+      'text': sanitized,
     };
   }
 }
