@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'storage_management_page.dart';
 
 class DownloadSettingsPage extends StatefulWidget {
   const DownloadSettingsPage({super.key});
@@ -35,8 +36,9 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _wifiOnly = prefs.getBool('download_wifi_only') ?? true;
-      _backgroundDownload = prefs.getBool('download_background') ?? false;
+      // Defaults: WiFi-only OFF, Background downloads ON
+      _wifiOnly = prefs.getBool('download_wifi_only') ?? false;
+      _backgroundDownload = prefs.getBool('download_background') ?? true;
       _isLoading = false;
     });
   }
@@ -59,38 +61,14 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('download_wifi_only', value);
     setState(() => _wifiOnly = value);
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            value
-                ? 'Downloads will only use WiFi'
-                : 'Downloads can use mobile data',
-          ),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
+    // No warnings/snackbars per requirements
   }
 
   Future<void> _saveBackgroundDownload(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('download_background', value);
     setState(() => _backgroundDownload = value);
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            value
-                ? 'Background downloads enabled'
-                : 'Background downloads disabled',
-          ),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
+    // Full background service with notifications to be implemented separately
   }
 
   @override
@@ -170,25 +148,22 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                _buildInfoCard(
-                  icon: Icons.info_outline,
-                  title: 'Download Size',
-                  description:
-                      'Each translation/tafsir contains all 114 surahs. Size varies from 1-5 MB depending on the edition.',
-                ),
-                const SizedBox(height: 12),
-                _buildInfoCard(
-                  icon: Icons.storage,
-                  title: 'Storage',
-                  description:
-                      'Downloaded content is stored locally on your device for offline access.',
-                ),
-                const SizedBox(height: 12),
-                _buildInfoCard(
-                  icon: Icons.sync,
-                  title: 'Updates',
-                  description:
-                      'Downloaded editions do not auto-update. Delete and re-download to get latest version.',
+                GestureDetector(
+                  onTap: () async {
+                    // Navigate to storage management page
+                    if (!mounted) return;
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const StorageManagementPage(),
+                      ),
+                    );
+                  },
+                  child: _buildInfoCard(
+                    icon: Icons.storage,
+                    title: 'Storage',
+                    description:
+                        'View downloaded items by category, sizes, and bulk delete.',
+                  ),
                 ),
               ],
             ),
@@ -249,17 +224,17 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
 
     final color = switch (active) {
       ConnectivityResult.wifi => Colors.green,
-      ConnectivityResult.mobile => Colors.orange,
       ConnectivityResult.ethernet => Colors.green,
       ConnectivityResult.vpn => Colors.blue,
+      ConnectivityResult.mobile => Colors.orange,
       _ => Colors.red,
     };
 
     final label = switch (active) {
       ConnectivityResult.wifi => 'Connected to WiFi',
-      ConnectivityResult.mobile => 'Using mobile data',
       ConnectivityResult.ethernet => 'Ethernet connection',
       ConnectivityResult.vpn => 'VPN connection',
+      ConnectivityResult.mobile => 'Mobile data',
       _ => 'Offline',
     };
 
@@ -271,7 +246,7 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
       ),
       child: Row(
         children: [
-          Icon(Icons.podcasts, color: color),
+          Icon(Icons.wifi_tethering, color: color),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -282,19 +257,11 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
                         TextStyle(color: color, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
                 const Text(
-                  'These settings are enforced before downloads start.',
+                  'Network preference is applied before downloads.',
                   style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh connection',
-            onPressed: () async {
-              final status = await Connectivity().checkConnectivity();
-              if (mounted) setState(() => _connections = status);
-            },
           ),
         ],
       ),

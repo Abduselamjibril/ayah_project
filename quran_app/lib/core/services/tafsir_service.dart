@@ -2,7 +2,7 @@
 import 'package:quran_app/core/database/dao/tafsir_dao.dart';
 import 'package:quran_app/core/database/app_database.dart';
 import 'package:quran_app/data/sources/remote/tafsir_api.dart';
-import 'package:quran_app/data/sources/local/tafsir_local.dart';
+
 import 'package:quran_app/data/models/tafsir_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,11 +11,10 @@ class TafsirService {
   TafsirService._init();
 
   late TafsirDao _tafsirDao;
-  late TafsirLocal _tafsirLocal;
   final TafsirApi _api = TafsirApi();
   bool _isInitialized = false;
 
-  static const String _bundledLoadedKey = 'bundled_tafsir_loaded';
+  static const String _selectedTafsirKey = 'selected_tafsir_id';
 
   /// Initialize the tafsir service
   Future<void> initialize() async {
@@ -25,36 +24,12 @@ class TafsirService {
       // Initialize DAO
       final database = await AppDatabase.instance.database;
       _tafsirDao = TafsirDao(database);
-      _tafsirLocal = TafsirLocal(_tafsirDao);
 
       _isInitialized = true;
       print('TafsirService initialized successfully');
-
-      // Load bundled tafsir on first run
-      await _loadBundledTafsirIfNeeded();
     } catch (e) {
       print('Error initializing TafsirService: $e');
       rethrow;
-    }
-  }
-
-  /// Load bundled tafsir if not already loaded
-  Future<void> _loadBundledTafsirIfNeeded() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final isLoaded = prefs.getBool(_bundledLoadedKey) ?? false;
-
-      if (!isLoaded) {
-        print('First run detected, loading bundled tafsir...');
-        await _tafsirLocal.loadBundledTafsir();
-        await prefs.setBool(_bundledLoadedKey, true);
-        print('Bundled tafsir loaded and marked as complete');
-      } else {
-        print('Bundled tafsir already loaded, skipping');
-      }
-    } catch (e) {
-      print('Error loading bundled tafsir: $e');
-      // Don't rethrow, app can still function without bundled data
     }
   }
 
@@ -63,18 +38,13 @@ class TafsirService {
     if (!_isInitialized) await initialize();
 
     try {
-      final tafsirs = await _api.getAvailableTafsirs();
-      return tafsirs.map((t) => TafsirEdition.fromJson(t)).toList();
+      return await _api.getAvailableTafsirs();
     } catch (e) {
       print('Error fetching available tafsirs: $e');
       return [];
     }
   }
 
-  /// Download a complete tafsir edition and store it locally
-  ///
-  /// [edition]: Tafsir edition to download
-  /// [onProgress]: Optional callback to report download progress (0.0 to 1.0)
   Future<bool> downloadTafsir(
     TafsirEdition edition, {
     Function(double progress)? onProgress,
@@ -82,31 +52,76 @@ class TafsirService {
     if (!_isInitialized) await initialize();
 
     try {
-      print('Downloading tafsir: ${edition.identifier}');
+      print('=== DOWNLOAD START: Tafsir ${edition.id} (${edition.name}) ===');
+      print(
+          'Edition details: ID=${edition.id}, Language=${edition.languageName}, Author=${edition.authorName}');
       onProgress?.call(0.0);
 
       // Download complete Quran data
-      final data = await _api.downloadTafsir(edition.identifier);
-
-      // Parse and prepare for database insertion
-      final tafsirsToInsert = await _tafsirLocal.parseTafsirData(
-        data,
-        edition.language,
-        edition.englishName,
-        edition.identifier,
+      // New API returns a list of TafsirAyah directly
+      final ayahs = await _api.downloadTafsir(
+        edition.id,
+        onProgress: (current, total) {
+          // Calculate progress based on surahs downloaded
+          // We allocate 90% of progress to downloading, 10% to inserting
+          final downloadProgress = (current / total) * 0.9;
+          onProgress?.call(downloadProgress);
+        },
       );
 
-      onProgress?.call(0.5);
+      print('Downloaded ${ayahs.length} verses from API');
+
+      // Sample first ayah to check resourceId
+      if (ayahs.isNotEmpty) {
+        print(
+            'Sample ayah: ${ayahs.first.surahNumber}:${ayahs.first.ayahNumber}, resourceId=${ayahs.first.resourceId}');
+      }
+
+      final tafsirsToInsert = ayahs.map((ayah) {
+        return ayah.toDatabase(
+          language: edition.languageName,
+          scholar: edition.authorName, // Using authorName as scholar
+        );
+      }).toList();
+
+      // Sample first database entry
+      if (tafsirsToInsert.isNotEmpty) {
+        print(
+            'Sample database entry: edition_identifier="${tafsirsToInsert.first['edition_identifier']}"');
+        print(
+            '  surah=${tafsirsToInsert.first['surah_number']}, ayah=${tafsirsToInsert.first['ayah_number']}');
+        print(
+            '  language="${tafsirsToInsert.first['language']}", scholar="${tafsirsToInsert.first['scholar']}"');
+      }
+
+      onProgress?.call(0.95);
 
       // Batch insert into database
-      print('Inserting ${tafsirsToInsert.length} tafsir verses');
+      print(
+          'Inserting ${tafsirsToInsert.length} tafsir verses into database...');
       await _tafsirDao.insertBatch(tafsirsToInsert);
+      print('Database insertion complete');
+
+      // Verify insertion
+      final isDownloaded =
+          await _tafsirDao.isEditionDownloaded(edition.id.toString());
+      print(
+          'Verification: isEditionDownloaded("${edition.id}") = $isDownloaded');
+
+      // Set as selected if none is selected
+      final currentSelected = await getSelectedTafsirId();
+      print('Current selected tafsir ID: $currentSelected');
+      if (currentSelected == null) {
+        await setSelectedTafsirId(edition.id);
+        print('Auto-selected tafsir ID: ${edition.id}');
+      }
 
       onProgress?.call(1.0);
-      print('Tafsir download completed: ${edition.identifier}');
+      print('=== DOWNLOAD COMPLETE: Tafsir ${edition.id} ===');
       return true;
     } catch (e) {
-      print('Error downloading tafsir: $e');
+      print('ERROR downloading tafsir: $e');
+      print('Stack trace: ${StackTrace.current}');
       return false;
     }
   }
@@ -120,9 +135,13 @@ class TafsirService {
     if (!_isInitialized) await initialize();
 
     try {
+      print(
+          'TafsirService: Getting tafsir for $surahNumber:$ayahNumber, edition: $editionIdentifier');
+
       // Check if this edition is downloaded
       final isDownloaded =
           await _tafsirDao.isEditionDownloaded(editionIdentifier);
+      print('TafsirService: Edition downloaded status: $isDownloaded');
 
       if (isDownloaded) {
         // Get from database
@@ -135,14 +154,20 @@ class TafsirService {
                   limit: 1,
                 ));
 
+        print('TafsirService: Query results count: ${results.length}');
         if (results.isNotEmpty) {
+          print(
+              'TafsirService: Found tafsir text (${results.first['text'].toString().length} chars)');
           return results.first['text'] as String?;
+        } else {
+          print('TafsirService: No tafsir found for this ayah in database');
         }
       }
 
+      print('TafsirService: Returning not available message');
       return 'Tafsir not available. Please download from Downloads screen.';
     } catch (e) {
-      print('Error getting tafsir by edition: $e');
+      print('TafsirService ERROR getting tafsir by edition: $e');
       return null;
     }
   }
@@ -173,13 +198,15 @@ class TafsirService {
     if (!_isInitialized) await initialize();
 
     try {
-      // Prevent deletion of bundled tafsir
-      if (editionIdentifier == 'ar.muyassar') {
-        print('Cannot delete bundled tafsir: $editionIdentifier');
-        return false;
+      final count = await _tafsirDao.deleteByEdition(editionIdentifier);
+
+      // If deleted was selected, clear selection
+      final selectedId = await getSelectedTafsirId();
+      if (selectedId.toString() == editionIdentifier) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(_selectedTafsirKey);
       }
 
-      final count = await _tafsirDao.deleteByEdition(editionIdentifier);
       return count > 0;
     } catch (e) {
       print('Error deleting tafsir: $e');
@@ -189,6 +216,42 @@ class TafsirService {
 
   /// Check if an edition is bundled with the app
   bool isBundledEdition(String editionIdentifier) {
-    return editionIdentifier == 'ar.muyassar';
+    return false; // No bundled editions anymore
+  }
+
+  // User Selection Persistence
+
+  /// Get the selected tafsir ID (returns int ID of the resource)
+  Future<int?> getSelectedTafsirId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_selectedTafsirKey);
+  }
+
+  /// Set the selected tafsir ID
+  Future<void> setSelectedTafsirId(int id) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_selectedTafsirKey, id);
+    print('Selected tafsir set to: $id');
+  }
+
+  /// Get full details of the selected tafsir
+  /// Returns null if no tafsir is selected or if metadata fetch fails
+  Future<TafsirEdition?> getSelectedTafsir() async {
+    final id = await getSelectedTafsirId();
+    if (id == null) return null;
+
+    // Fetch all tafsirs to find the selected one
+    final allTafsirs = await getAvailableTafsirs();
+    try {
+      return allTafsirs.firstWhere((e) => e.id == id);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Provide a direct download URL for background downloads.
+  /// Returns null if a single-file export is not available.
+  String? getDownloadUrl(TafsirEdition edition) {
+    return _api.buildDownloadUrlOrNull(edition.id);
   }
 }
