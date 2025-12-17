@@ -6,6 +6,7 @@ import 'package:quran_app/core/services/tafsir_service.dart';
 import 'package:quran_app/core/services/translation_service.dart';
 import 'package:quran_app/data/models/tafsir_model.dart';
 import 'package:quran_app/data/models/translation_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class TafsirScreen extends StatefulWidget {
   final int surahNumber;
@@ -30,19 +31,18 @@ class _TafsirScreenState extends State<TafsirScreen> {
   TafsirEdition? _selectedTafsir;
   String? _content;
   bool _isLoading = true;
-  String _activeType = 'none'; // 'translation', 'tafsir', or 'none'
+  String _activeType = 'none';
   String _contentSource = 'unknown';
 
-  // Editions & download state
   List<TafsirEdition> _tafsirEditions = [];
   List<TranslationEdition> _translationEditions = [];
   Set<String> _downloadedTafsirs = <String>{};
   Set<String> _downloadedTranslations = <String>{};
   bool _isFetchingEditions = true;
   bool _isDownloading = false;
-  String? _downloadingType; // 'tafsir' or 'translation'
+  String? _downloadingType;
   int? _downloadingId;
-  double _downloadProgress = 0.0; // 0..1
+  double _downloadProgress = 0.0;
 
   bool get _contentHasHtml =>
       _content != null && RegExp(r'<[^>]+>').hasMatch(_content!);
@@ -50,7 +50,6 @@ class _TafsirScreenState extends State<TafsirScreen> {
   String _normalizeContent(String? raw) {
     if (raw == null) return '';
     String current = raw;
-    // Decode repeatedly to handle multi-escaped HTML such as &amp;lt;h2&amp;gt;.
     for (int i = 0; i < 5; i++) {
       final decoded = _unescaper.convert(current);
       if (decoded == current) break;
@@ -79,7 +78,6 @@ class _TafsirScreenState extends State<TafsirScreen> {
       final downloadedTafsirs = await _tafsirService.getDownloadedTafsirs();
       final downloadedTranslations =
           await _translationService.getDownloadedTranslations();
-
       setState(() {
         _tafsirEditions = tafsirs;
         _translationEditions = translations;
@@ -95,92 +93,39 @@ class _TafsirScreenState extends State<TafsirScreen> {
 
   Future<void> _loadContent() async {
     setState(() => _isLoading = true);
-
     try {
-      print(
-          '=== TafsirScreen: Loading content for ${widget.surahNumber}:${widget.ayahNumber} ===');
-
-      // 1. Check for selected Tafsir
-      final selectedTafsirId = await _tafsirService.getSelectedTafsirId();
-      print('Selected Tafsir ID: $selectedTafsirId');
-
       _selectedTafsir = await _tafsirService.getSelectedTafsir();
-      print(
-          'Selected Tafsir Edition: ${_selectedTafsir?.name} (ID: ${_selectedTafsir?.id})');
-
-      // 2. Check for selected Translation
-      final selectedTranslationId =
-          await _translationService.getSelectedTranslationId();
-      print('Selected Translation ID: $selectedTranslationId');
-
       _selectedTranslation = await _translationService.getSelectedTranslation();
-      print(
-          'Selected Translation Edition: ${_selectedTranslation?.name} (ID: ${_selectedTranslation?.id})');
 
-      // 3. Determine what to show (Prioritize Tafsir if available, else Translation)
       if (_selectedTafsir != null) {
-        print('Attempting to load Tafsir...');
         _activeType = 'tafsir';
-
-        // Check if tafsir is downloaded
-        final isDownloaded = await _tafsirService
-            .isTafsirDownloaded(_selectedTafsir!.id.toString());
-        print(
-            'Is Tafsir downloaded? $isDownloaded (checking with ID: ${_selectedTafsir!.id})');
-
         final tafsirText = await _tafsirService.getTafsirByEdition(
           surahNumber: widget.surahNumber,
           ayahNumber: widget.ayahNumber,
           editionIdentifier: _selectedTafsir!.id.toString(),
         );
-        print(
-            'Loaded Tafsir text: ${tafsirText?.substring(0, tafsirText.length > 50 ? 50 : tafsirText.length)}...');
         _content = _normalizeContent(tafsirText);
         _contentSource = 'tafsir-db-${_selectedTafsir!.id}';
       } else if (_selectedTranslation != null) {
-        print('Attempting to load Translation...');
         _activeType = 'translation';
-
-        // Check if translation is downloaded
-        final isDownloaded = await _translationService
-            .isTranslationDownloaded(_selectedTranslation!.id.toString());
-        print(
-            'Is Translation downloaded? $isDownloaded (checking with ID: ${_selectedTranslation!.id})');
-
         final transText = await _translationService.getTranslationByEdition(
           surahNumber: widget.surahNumber,
           ayahNumber: widget.ayahNumber,
           editionIdentifier: _selectedTranslation!.id.toString(),
         );
-        print(
-            'Loaded Translation text: ${transText?.substring(0, transText.length > 50 ? 50 : transText.length)}...');
         _content = _normalizeContent(transText);
         _contentSource = 'translation-db-${_selectedTranslation!.id}';
       } else {
-        print('No tafsir or translation selected');
         _activeType = 'none';
         _content =
             'No translation or tafsir selected. Please select one from settings.';
         _contentSource = 'none-selected';
       }
-
-      print('Active type: $_activeType');
-      if (_content != null) {
-        print('Content source: $_contentSource');
-        print('DEBUG HTML CHECK START');
-        print(
-            'DEBUG RAW CONTENT: ${_content!.substring(0, _content!.length > 500 ? 500 : _content!.length)}');
-        print('DEBUG HTML CHECK END');
-      }
-      print('=== TafsirScreen: Load complete ===');
     } catch (e) {
-      print('ERROR in _loadContent: $e');
       _content = 'Error loading content: $e';
       _contentSource = 'error';
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -244,12 +189,231 @@ class _TafsirScreenState extends State<TafsirScreen> {
     }
   }
 
+  Future<void> _openDownloadedPicker(String type) async {
+    final prefs = await SharedPreferences.getInstance();
+    final isTafsir = type == 'tafsir';
+    final downloadedIds =
+        isTafsir ? _downloadedTafsirs : _downloadedTranslations;
+    final editions = isTafsir
+        ? _tafsirEditions.cast<dynamic>()
+        : _translationEditions.cast<dynamic>();
+
+    final Set<String> langs = <String>{};
+    for (final e in editions) {
+      if (downloadedIds.contains(e.id.toString())) {
+        final name = (e.languageName ?? '').trim();
+        if (name.isNotEmpty) langs.add(name);
+      }
+    }
+    final languages = langs.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    if (languages.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(
+                'No downloaded ${isTafsir ? 'tafsirs' : 'translations'} found')),
+      );
+      return;
+    }
+
+    final lastLangKey =
+        isTafsir ? 'picker_last_lang_tafsir' : 'picker_last_lang_translation';
+    String selectedLanguage = prefs.getString(lastLangKey) ?? languages.first;
+    if (!languages.contains(selectedLanguage))
+      selectedLanguage = languages.first;
+
+    final currentSelectedId =
+        isTafsir ? _selectedTafsir?.id : _selectedTranslation?.id;
+    String filter = '';
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            List<dynamic> filtered = editions
+                .where((e) => downloadedIds.contains(e.id.toString()))
+                .where((e) =>
+                    (e.languageName ?? '').toLowerCase() ==
+                    selectedLanguage.toLowerCase())
+                .toList()
+              ..sort((a, b) =>
+                  a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+            if (filter.isNotEmpty) {
+              filtered = filtered
+                  .where((e) =>
+                      e.name.toLowerCase().contains(filter.toLowerCase()))
+                  .toList();
+            }
+
+            return Padding(
+              padding:
+                  EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+              child: SizedBox(
+                height: MediaQuery.of(ctx).size.height * 0.75,
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          Icon(isTafsir ? Icons.menu_book : Icons.translate,
+                              color: Theme.of(ctx).colorScheme.primary),
+                          const SizedBox(width: 8),
+                          Text('Choose ${isTafsir ? 'Tafsir' : 'Translation'}',
+                              style: Theme.of(ctx)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold)),
+                          const Spacer(),
+                          IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () => Navigator.of(ctx).pop()),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      height: 48,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        itemBuilder: (c, i) {
+                          final lang = languages[i];
+                          final selected = lang == selectedLanguage;
+                          return ChoiceChip(
+                            label: Text(lang),
+                            selected: selected,
+                            onSelected: (_) =>
+                                setSheetState(() => selectedLanguage = lang),
+                          );
+                        },
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemCount: languages.length,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: TextField(
+                        decoration: InputDecoration(
+                          prefixIcon: const Icon(Icons.search),
+                          hintText:
+                              'Search ${isTafsir ? 'tafsir' : 'translation'} editions',
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onChanged: (v) => setSheetState(() => filter = v),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: filtered.isEmpty
+                          ? Center(
+                              child: Text(
+                                  'No downloaded files for $selectedLanguage'))
+                          : ListView.separated(
+                              padding: const EdgeInsets.all(8),
+                              itemBuilder: (c, i) {
+                                final ed = filtered[i];
+                                final bool isCurrent =
+                                    ed.id == currentSelectedId;
+                                return Card(
+                                  child: ListTile(
+                                    leading: Icon(isTafsir
+                                        ? Icons.menu_book
+                                        : Icons.translate),
+                                    title: Text(ed.name,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis),
+                                    subtitle: Text(
+                                        '${ed.languageName ?? ''} • ID: ${ed.id}'),
+                                    trailing: isCurrent
+                                        ? const Icon(Icons.check_circle,
+                                            color: Colors.green)
+                                        : const Icon(Icons.circle_outlined),
+                                    onTap: () async {
+                                      await prefs.setString(
+                                          lastLangKey, selectedLanguage);
+                                      if (isTafsir) {
+                                        await _tafsirService
+                                            .setSelectedTafsirId(ed.id);
+                                        final chosen =
+                                            _tafsirEditions.firstWhere(
+                                          (e) => e.id == ed.id,
+                                          orElse: () =>
+                                              _selectedTafsir ??
+                                              _tafsirEditions.first,
+                                        );
+                                        if (mounted)
+                                          setState(
+                                              () => _selectedTafsir = chosen);
+                                      } else {
+                                        await _translationService
+                                            .setSelectedTranslationId(ed.id);
+                                        final chosen =
+                                            _translationEditions.firstWhere(
+                                          (e) => e.id == ed.id,
+                                          orElse: () =>
+                                              _selectedTranslation ??
+                                              _translationEditions.first,
+                                        );
+                                        if (mounted)
+                                          setState(() =>
+                                              _selectedTranslation = chosen);
+                                      }
+                                      await _loadContent();
+                                      if (mounted) Navigator.of(ctx).pop();
+                                    },
+                                  ),
+                                );
+                              },
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 6),
+                              itemCount: filtered.length,
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tafsir & Translation'),
-        actions: const [],
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) async {
+              if (value == 'pick-tafsir') {
+                await _openDownloadedPicker('tafsir');
+              } else if (value == 'pick-translation') {
+                await _openDownloadedPicker('translation');
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem<String>(
+                value: 'pick-tafsir',
+                child: Text('Choose Tafsir (Downloaded)'),
+              ),
+              PopupMenuItem<String>(
+                value: 'pick-translation',
+                child: Text('Choose Translation (Downloaded)'),
+              ),
+            ],
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -258,7 +422,6 @@ class _TafsirScreenState extends State<TafsirScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Selection controls
                   Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: Padding(
@@ -310,8 +473,7 @@ class _TafsirScreenState extends State<TafsirScreen> {
                                         _downloadingType == 'tafsir' &&
                                         _downloadingId == _selectedTafsir!.id
                                     ? _DownloadProgressChip(
-                                        progress: _downloadProgress,
-                                      )
+                                        progress: _downloadProgress)
                                     : OutlinedButton.icon(
                                         onPressed: _isDownloading
                                             ? null
@@ -361,8 +523,7 @@ class _TafsirScreenState extends State<TafsirScreen> {
                                         _downloadingId ==
                                             _selectedTranslation!.id
                                     ? _DownloadProgressChip(
-                                        progress: _downloadProgress,
-                                      )
+                                        progress: _downloadProgress)
                                     : OutlinedButton.icon(
                                         onPressed: _isDownloading
                                             ? null
@@ -377,7 +538,6 @@ class _TafsirScreenState extends State<TafsirScreen> {
                       ),
                     ),
                   ),
-                  // Header with Edition Name and Language
                   if (_activeType != 'none') ...[
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -385,18 +545,17 @@ class _TafsirScreenState extends State<TafsirScreen> {
                         color: Theme.of(context).primaryColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color:
-                              Theme.of(context).primaryColor.withOpacity(0.3),
-                        ),
+                            color: Theme.of(context)
+                                .primaryColor
+                                .withOpacity(0.3)),
                       ),
                       child: Row(
                         children: [
                           Icon(
-                            _activeType == 'tafsir'
-                                ? Icons.menu_book
-                                : Icons.translate,
-                            color: Theme.of(context).primaryColor,
-                          ),
+                              _activeType == 'tafsir'
+                                  ? Icons.menu_book
+                                  : Icons.translate,
+                              color: Theme.of(context).primaryColor),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
@@ -409,17 +568,14 @@ class _TafsirScreenState extends State<TafsirScreen> {
                                       : (_selectedTranslation?.name ??
                                           'Unknown Translation'),
                                   style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   'Language: ${_activeType == 'tafsir' ? (_selectedTafsir?.languageName ?? '') : (_selectedTranslation?.languageName ?? '')}',
                                   style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 14,
-                                  ),
+                                      color: Colors.grey[600], fontSize: 14),
                                 ),
                               ],
                             ),
@@ -429,24 +585,19 @@ class _TafsirScreenState extends State<TafsirScreen> {
                     ),
                     const SizedBox(height: 24),
                   ],
-
-                  // Content
                   Expanded(
                     child: SingleChildScrollView(
                       child: _content == null
                           ? const Text(
                               'Content not available',
-                              style: TextStyle(
-                                fontSize: 18,
-                                height: 1.6,
-                              ),
+                              style: TextStyle(fontSize: 18, height: 1.6),
                               textAlign: TextAlign.center,
                             )
                           : (_activeType != 'none' || _contentHasHtml)
                               ? Html(
                                   data: _content!,
                                   style: {
-                                    "body": Style(
+                                    'body': Style(
                                       fontSize: FontSize(18),
                                       lineHeight: LineHeight(1.6),
                                       textAlign: TextAlign.justify,
@@ -456,9 +607,7 @@ class _TafsirScreenState extends State<TafsirScreen> {
                               : Text(
                                   _content!,
                                   style: const TextStyle(
-                                    fontSize: 18,
-                                    height: 1.6,
-                                  ),
+                                      fontSize: 18, height: 1.6),
                                   textAlign: TextAlign.center,
                                 ),
                     ),

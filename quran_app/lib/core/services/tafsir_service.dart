@@ -248,4 +248,10 @@ class TafsirService {
       return null;
     }
   }
+
+  /// Provide a direct download URL for background downloads.
+  /// Returns null if a single-file export is not available.
+  String? getDownloadUrl(TafsirEdition edition) {
+    return _api.buildDownloadUrlOrNull(edition.id);
+  }
 }

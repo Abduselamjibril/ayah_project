@@ -17,6 +17,7 @@ dependencies:
   shared_preferences: ^2.2.2
   connectivity_plus: ^6.1.0
   flutter_local_notifications: ^19.5.0
+  flutter_downloader: ^1.11.8
   timezone: ^0.10.1
   http: ^1.1.0
   flutter_html: ^3.0.0

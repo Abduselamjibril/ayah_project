@@ -2,6 +2,18 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+		<!-- Allow background download/processing -->
+		<key>UIBackgroundModes</key>
+		<array>
+			<string>background-fetch</string>
+			<string>processing</string>
+		</array>
+
+		<!-- Local notifications permission description -->
+		<key>NSUserNotificationAlertStyle</key>
+		<string>alert</string>
+		<key>NSUserNotificationUsageDescription</key>
+		<string>This app uses notifications to show download progress and completion.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

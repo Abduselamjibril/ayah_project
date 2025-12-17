@@ -49,6 +49,12 @@ class TranslationApi {
     }
   }
 
+  /// Return a direct single-file export URL if your backend supports it; else null
+  String? buildDownloadUrlOrNull(int translationId) {
+    // Quran.com API does not provide single-file exports; return null to fallback
+    return null;
+  }
+
   /// Get list of all available languages for translations
   ///
   /// Returns a list of language names (e.g., ['english', 'arabic', 'french', ...])

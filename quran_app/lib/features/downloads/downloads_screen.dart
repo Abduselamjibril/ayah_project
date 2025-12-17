@@ -2,6 +2,8 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/services/notification_service.dart';
+import '../../core/services/background_download_service.dart';
 import '../../core/services/translation_service.dart';
 import '../../core/services/tafsir_service.dart';
 import '../../data/models/translation_model.dart';
@@ -108,7 +110,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
 
   Future<bool> _checkWifiPreference() async {
     final prefs = await SharedPreferences.getInstance();
-    final wifiOnly = prefs.getBool('download_wifi_only') ?? true;
+    final wifiOnly = prefs.getBool('download_wifi_only') ?? false;
 
     final connectivity = await Connectivity().checkConnectivity();
     final hasConnection = connectivity.isNotEmpty &&
@@ -121,54 +123,13 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     final onWifi = connectivity.contains(ConnectivityResult.wifi);
     final onMobile = connectivity.contains(ConnectivityResult.mobile);
 
-    if (wifiOnly && !onWifi) {
-      if (!mounted) return false;
-      final proceed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('WiFi Required'),
-          content: const Text(
-            'Downloads are limited to WiFi in settings. Connect to WiFi or override to use current connection.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Override once'),
-            ),
-          ],
-        ),
-      );
-      return proceed ?? false;
+    // If WiFi-only is enabled, block downloads when on mobile data without prompts
+    if (wifiOnly && !onWifi && onMobile) {
+      _showSnack('WiFi-only enabled. Connect to WiFi to download.');
+      return false;
     }
 
-    if (!wifiOnly && onMobile) {
-      if (!mounted) return true;
-      final proceed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Use mobile data?'),
-          content: const Text(
-            'This download may consume mobile data. Continue?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Continue'),
-            ),
-          ],
-        ),
-      );
-      return proceed ?? false;
-    }
-
+    // If WiFi-only is disabled, allow downloads without any warnings
     return true;
   }
 
@@ -184,18 +145,38 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     final canProceed = await _checkWifiPreference();
     if (!canProceed) return;
 
+    // Always initialize notifications so both foreground and background paths surface progress
+    await AppNotificationService.instance.initialize();
+    await AppNotificationService.instance.requestPermissionsIfNeeded();
+
     setState(() {
       _isDownloading[edition.id.toString()] = true;
       _downloadProgress[edition.id.toString()] = 0.0;
     });
 
+    // Use a stable notification id per item
+    final notifId = edition.id.hashCode & 0x7fffffff;
     try {
+      final useBackground =
+          await BackgroundDownloadService.instance.isBackgroundEnabled();
+      final bgUrl =
+          useBackground ? _translationService.getDownloadUrl(edition) : null;
+      final effectiveBackground = useBackground && bgUrl != null;
+      if (effectiveBackground) {
+        await BackgroundDownloadService.instance.initialize();
+        BackgroundDownloadService.registerCallback();
+        await BackgroundDownloadService.instance
+            .enqueue(url: bgUrl!, fileName: '${edition.id}.json');
+      }
       final success = await _translationService.downloadTranslation(
         edition,
         onProgress: (progress) {
           setState(() {
             _downloadProgress[edition.id.toString()] = progress;
           });
+          // Show progress in notification regardless of mode
+          AppNotificationService.instance
+              .showProgress(notifId, 'Downloading ${edition.name}', progress);
         },
       );
 
@@ -206,18 +187,25 @@ class _DownloadsScreenState extends State<DownloadsScreen>
             SnackBar(content: Text('${edition.name} downloaded successfully')),
           );
         }
+        await AppNotificationService.instance
+            .complete(notifId, 'Downloading ${edition.name}', success: true);
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Download failed. Please try again.')),
           );
         }
+        await AppNotificationService.instance
+            .complete(notifId, 'Downloading ${edition.name}', success: false);
       }
     } finally {
       setState(() {
         _isDownloading[edition.id.toString()] = false;
         _downloadProgress.remove(edition.id.toString());
       });
+      if (mounted) {
+        await AppNotificationService.instance.cancel(notifId);
+      }
     }
   }
 
@@ -226,18 +214,35 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     final canProceed = await _checkWifiPreference();
     if (!canProceed) return;
 
+    await AppNotificationService.instance.initialize();
+    await AppNotificationService.instance.requestPermissionsIfNeeded();
+
     setState(() {
       _isDownloading[edition.id.toString()] = true;
       _downloadProgress[edition.id.toString()] = 0.0;
     });
 
+    final notifId = edition.id.hashCode & 0x7fffffff;
     try {
+      final useBackground =
+          await BackgroundDownloadService.instance.isBackgroundEnabled();
+      final bgUrl =
+          useBackground ? _tafsirService.getDownloadUrl(edition) : null;
+      final effectiveBackground = useBackground && bgUrl != null;
+      if (effectiveBackground) {
+        await BackgroundDownloadService.instance.initialize();
+        BackgroundDownloadService.registerCallback();
+        await BackgroundDownloadService.instance
+            .enqueue(url: bgUrl!, fileName: '${edition.id}.json');
+      }
       final success = await _tafsirService.downloadTafsir(
         edition,
         onProgress: (progress) {
           setState(() {
             _downloadProgress[edition.id.toString()] = progress;
           });
+          AppNotificationService.instance
+              .showProgress(notifId, 'Downloading ${edition.name}', progress);
         },
       );
 
@@ -248,18 +253,25 @@ class _DownloadsScreenState extends State<DownloadsScreen>
             SnackBar(content: Text('${edition.name} downloaded successfully')),
           );
         }
+        await AppNotificationService.instance
+            .complete(notifId, 'Downloading ${edition.name}', success: true);
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Download failed. Please try again.')),
           );
         }
+        await AppNotificationService.instance
+            .complete(notifId, 'Downloading ${edition.name}', success: false);
       }
     } finally {
       setState(() {
         _isDownloading[edition.id.toString()] = false;
         _downloadProgress.remove(edition.id.toString());
       });
+      if (mounted) {
+        await AppNotificationService.instance.cancel(notifId);
+      }
     }
   }
 

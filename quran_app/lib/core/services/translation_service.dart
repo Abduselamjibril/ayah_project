@@ -70,6 +70,12 @@ class TranslationService {
     }
   }
 
+  /// Provide a direct download URL if available for background downloads.
+  /// Returns null if a single-file export is not available.
+  String? getDownloadUrl(TranslationEdition edition) {
+    return _api.buildDownloadUrlOrNull(edition.id);
+  }
+
   /// Download a complete translation edition and store it locally
   ///
   /// [edition]: Translation edition to download

@@ -116,4 +116,10 @@ class TafsirApi {
       throw Exception('Failed to download tafsir $tafsirId: $e');
     }
   }
+
+  /// Return a direct single-file export URL if available; else null
+  String? buildDownloadUrlOrNull(int tafsirId) {
+    // Quran.com API does not provide single-file exports; return null to fallback
+    return null;
+  }
 }
