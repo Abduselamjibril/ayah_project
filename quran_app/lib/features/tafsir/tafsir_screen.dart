@@ -6,7 +6,6 @@ import 'package:quran_app/core/services/tafsir_service.dart';
 import 'package:quran_app/core/services/translation_service.dart';
 import 'package:quran_app/data/models/tafsir_model.dart';
 import 'package:quran_app/data/models/translation_model.dart';
-import 'package:quran_app/features/downloads/downloads_screen.dart';
 
 class TafsirScreen extends StatefulWidget {
   final int surahNumber;
@@ -34,6 +33,17 @@ class _TafsirScreenState extends State<TafsirScreen> {
   String _activeType = 'none'; // 'translation', 'tafsir', or 'none'
   String _contentSource = 'unknown';
 
+  // Editions & download state
+  List<TafsirEdition> _tafsirEditions = [];
+  List<TranslationEdition> _translationEditions = [];
+  Set<String> _downloadedTafsirs = <String>{};
+  Set<String> _downloadedTranslations = <String>{};
+  bool _isFetchingEditions = true;
+  bool _isDownloading = false;
+  String? _downloadingType; // 'tafsir' or 'translation'
+  int? _downloadingId;
+  double _downloadProgress = 0.0; // 0..1
+
   bool get _contentHasHtml =>
       _content != null && RegExp(r'<[^>]+>').hasMatch(_content!);
 
@@ -52,7 +62,35 @@ class _TafsirScreenState extends State<TafsirScreen> {
   @override
   void initState() {
     super.initState();
-    _loadContent();
+    _initPage();
+  }
+
+  Future<void> _initPage() async {
+    await _loadEditions();
+    await _loadContent();
+  }
+
+  Future<void> _loadEditions() async {
+    setState(() => _isFetchingEditions = true);
+    try {
+      final tafsirs = await _tafsirService.getAvailableTafsirs();
+      final translations =
+          await _translationService.getAllTranslationEditions();
+      final downloadedTafsirs = await _tafsirService.getDownloadedTafsirs();
+      final downloadedTranslations =
+          await _translationService.getDownloadedTranslations();
+
+      setState(() {
+        _tafsirEditions = tafsirs;
+        _translationEditions = translations;
+        _downloadedTafsirs = downloadedTafsirs.toSet();
+        _downloadedTranslations = downloadedTranslations.toSet();
+      });
+    } catch (e) {
+      debugPrint('Error loading editions: $e');
+    } finally {
+      if (mounted) setState(() => _isFetchingEditions = false);
+    }
   }
 
   Future<void> _loadContent() async {
@@ -146,25 +184,72 @@ class _TafsirScreenState extends State<TafsirScreen> {
     }
   }
 
+  Future<void> _startDownloadTafsir(TafsirEdition edition) async {
+    if (_isDownloading) return;
+    setState(() {
+      _isDownloading = true;
+      _downloadingType = 'tafsir';
+      _downloadingId = edition.id;
+      _downloadProgress = 0.0;
+    });
+    final ok = await _tafsirService.downloadTafsir(
+      edition,
+      onProgress: (p) {
+        if (!mounted) return;
+        setState(() => _downloadProgress = p.clamp(0.0, 1.0));
+      },
+    );
+    if (ok) {
+      await _tafsirService.setSelectedTafsirId(edition.id);
+      await _loadEditions();
+      await _loadContent();
+    }
+    if (mounted) {
+      setState(() {
+        _isDownloading = false;
+        _downloadingType = null;
+        _downloadingId = null;
+        _downloadProgress = 0.0;
+      });
+    }
+  }
+
+  Future<void> _startDownloadTranslation(TranslationEdition edition) async {
+    if (_isDownloading) return;
+    setState(() {
+      _isDownloading = true;
+      _downloadingType = 'translation';
+      _downloadingId = edition.id;
+      _downloadProgress = 0.0;
+    });
+    final ok = await _translationService.downloadTranslation(
+      edition,
+      onProgress: (p) {
+        if (!mounted) return;
+        setState(() => _downloadProgress = p.clamp(0.0, 1.0));
+      },
+    );
+    if (ok) {
+      await _translationService.setSelectedTranslationId(edition.id);
+      await _loadEditions();
+      await _loadContent();
+    }
+    if (mounted) {
+      setState(() {
+        _isDownloading = false;
+        _downloadingType = null;
+        _downloadingId = null;
+        _downloadProgress = 0.0;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tafsir & Translation'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            tooltip: 'Manage Downloads',
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const DownloadsScreen()),
-              );
-              // Refresh content on return as selection might have changed
-              _loadContent();
-            },
-          ),
-        ],
+        actions: const [],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -173,6 +258,125 @@ class _TafsirScreenState extends State<TafsirScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Selection controls
+                  Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Select Editions',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          // Tafsir selector
+                          Row(
+                            children: [
+                              Expanded(
+                                child: DropdownButtonFormField<int>(
+                                  isExpanded: true,
+                                  value: _selectedTafsir?.id,
+                                  hint: const Text('Choose Tafsir'),
+                                  items: _tafsirEditions
+                                      .map((e) => DropdownMenuItem<int>(
+                                            value: e.id,
+                                            child: Text(
+                                              '${e.name}${_downloadedTafsirs.contains(e.id.toString()) ? ' (downloaded)' : ''}',
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ))
+                                      .toList(),
+                                  onChanged: (val) async {
+                                    if (val == null) return;
+                                    final chosen = _tafsirEditions
+                                        .firstWhere((e) => e.id == val);
+                                    await _tafsirService
+                                        .setSelectedTafsirId(chosen.id);
+                                    setState(() => _selectedTafsir = chosen);
+                                    _loadContent();
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              if (_selectedTafsir != null &&
+                                  !_downloadedTafsirs
+                                      .contains(_selectedTafsir!.id.toString()))
+                                _isDownloading &&
+                                        _downloadingType == 'tafsir' &&
+                                        _downloadingId == _selectedTafsir!.id
+                                    ? _DownloadProgressChip(
+                                        progress: _downloadProgress,
+                                      )
+                                    : OutlinedButton.icon(
+                                        onPressed: _isDownloading
+                                            ? null
+                                            : () => _startDownloadTafsir(
+                                                _selectedTafsir!),
+                                        icon: const Icon(Icons.download),
+                                        label: const Text('Download'),
+                                      ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          // Translation selector
+                          Row(
+                            children: [
+                              Expanded(
+                                child: DropdownButtonFormField<int>(
+                                  isExpanded: true,
+                                  value: _selectedTranslation?.id,
+                                  hint: const Text('Choose Translation'),
+                                  items: _translationEditions
+                                      .map((e) => DropdownMenuItem<int>(
+                                            value: e.id,
+                                            child: Text(
+                                              '${e.name}${_downloadedTranslations.contains(e.id.toString()) ? ' (downloaded)' : ''}',
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ))
+                                      .toList(),
+                                  onChanged: (val) async {
+                                    if (val == null) return;
+                                    final chosen = _translationEditions
+                                        .firstWhere((e) => e.id == val);
+                                    await _translationService
+                                        .setSelectedTranslationId(chosen.id);
+                                    setState(
+                                        () => _selectedTranslation = chosen);
+                                    _loadContent();
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              if (_selectedTranslation != null &&
+                                  !_downloadedTranslations.contains(
+                                      _selectedTranslation!.id.toString()))
+                                _isDownloading &&
+                                        _downloadingType == 'translation' &&
+                                        _downloadingId ==
+                                            _selectedTranslation!.id
+                                    ? _DownloadProgressChip(
+                                        progress: _downloadProgress,
+                                      )
+                                    : OutlinedButton.icon(
+                                        onPressed: _isDownloading
+                                            ? null
+                                            : () => _startDownloadTranslation(
+                                                _selectedTranslation!),
+                                        icon: const Icon(Icons.download),
+                                        label: const Text('Download'),
+                                      ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   // Header with Edition Name and Language
                   if (_activeType != 'none') ...[
                     Container(
@@ -262,6 +466,27 @@ class _TafsirScreenState extends State<TafsirScreen> {
                 ],
               ),
             ),
+    );
+  }
+}
+
+class _DownloadProgressChip extends StatelessWidget {
+  final double progress;
+  const _DownloadProgressChip({required this.progress});
+
+  @override
+  Widget build(BuildContext context) {
+    final percent = (progress * 100).clamp(0, 100).toStringAsFixed(0);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 80,
+          child: LinearProgressIndicator(value: progress),
+        ),
+        const SizedBox(width: 8),
+        Text('$percent%'),
+      ],
     );
   }
 }

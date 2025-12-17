@@ -28,10 +28,6 @@ class _DownloadsScreenState extends State<DownloadsScreen>
   List<String> _downloadedTranslations = [];
   List<String> _downloadedTafsirs = [];
 
-  // Selection State
-  int? _selectedTranslationId;
-  int? _selectedTafsirId;
-
   bool _isLoadingTranslations = true;
   bool _isLoadingTafsirs = true;
 
@@ -56,19 +52,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
       _loadAvailableTranslations(),
       _loadAvailableTafsirs(),
       _loadDownloadedEditions(),
-      _loadSelections(),
     ]);
-  }
-
-  Future<void> _loadSelections() async {
-    final transId = await _translationService.getSelectedTranslationId();
-    final tafsirId = await _tafsirService.getSelectedTafsirId();
-    if (mounted) {
-      setState(() {
-        _selectedTranslationId = transId;
-        _selectedTafsirId = tafsirId;
-      });
-    }
   }
 
   Future<void> _loadAvailableTranslations() async {
@@ -119,26 +103,6 @@ class _DownloadsScreenState extends State<DownloadsScreen>
       });
     } catch (e) {
       print('Error loading downloaded editions: $e');
-    }
-  }
-
-  Future<void> _selectTranslation(int id) async {
-    await _translationService.setSelectedTranslationId(id);
-    setState(() => _selectedTranslationId = id);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Translation selected')),
-      );
-    }
-  }
-
-  Future<void> _selectTafsir(int id) async {
-    await _tafsirService.setSelectedTafsirId(id);
-    setState(() => _selectedTafsirId = id);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tafsir selected')),
-      );
     }
   }
 
@@ -237,7 +201,6 @@ class _DownloadsScreenState extends State<DownloadsScreen>
 
       if (success) {
         await _loadDownloadedEditions();
-        await _loadSelections(); // Auto-select logic in service might have updated preference
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('${edition.name} downloaded successfully')),
@@ -280,7 +243,6 @@ class _DownloadsScreenState extends State<DownloadsScreen>
 
       if (success) {
         await _loadDownloadedEditions();
-        await _loadSelections();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('${edition.name} downloaded successfully')),
@@ -324,7 +286,6 @@ class _DownloadsScreenState extends State<DownloadsScreen>
       final success = await _translationService.deleteTranslation(identifier);
       if (success) {
         await _loadDownloadedEditions();
-        await _loadSelections();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('$name deleted')),
@@ -357,7 +318,6 @@ class _DownloadsScreenState extends State<DownloadsScreen>
       final success = await _tafsirService.deleteTafsir(identifier);
       if (success) {
         await _loadDownloadedEditions();
-        await _loadSelections();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('$name deleted')),
@@ -466,32 +426,31 @@ class _DownloadsScreenState extends State<DownloadsScreen>
                 _downloadedTranslations.contains(edition.id.toString());
             final isDownloading = _isDownloading[edition.id.toString()] == true;
             final progress = _downloadProgress[edition.id.toString()];
-            final isSelected = _selectedTranslationId == edition.id;
+            final isSelected = false; // selection managed in TafsirScreen only
+            final percent =
+                ((_downloadProgress[edition.id.toString()] ?? 0) * 100)
+                    .clamp(0, 100)
+                    .toStringAsFixed(0);
 
             return ListTile(
               title: Text(edition.name),
               subtitle: isDownloading
-                  ? LinearProgressIndicator(value: progress)
-                  : Text(isSelected
-                      ? '✓ Selected'
-                      : (isDownloaded
-                          ? 'Downloaded (Tap to select)'
-                          : 'Tap to download')),
-              onTap: isDownloaded && !isDownloading
-                  ? () => _selectTranslation(edition.id)
-                  : null,
-              trailing: isDownloading
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        LinearProgressIndicator(value: progress),
+                        const SizedBox(height: 4),
+                        Text('$percent%'),
+                      ],
                     )
+                  : Text(isDownloaded ? 'Downloaded' : 'Not downloaded'),
+              onTap: null,
+              trailing: isDownloading
+                  ? Text('$percent%')
                   : Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (isSelected)
-                          const Icon(Icons.check_circle, color: Colors.green)
-                        else if (isDownloaded)
+                        if (isDownloaded)
                           IconButton(
                             icon: const Icon(Icons.delete),
                             onPressed: () => _deleteTranslation(
@@ -573,32 +532,31 @@ class _DownloadsScreenState extends State<DownloadsScreen>
                 _downloadedTafsirs.contains(edition.id.toString());
             final isDownloading = _isDownloading[edition.id.toString()] == true;
             final progress = _downloadProgress[edition.id.toString()];
-            final isSelected = _selectedTafsirId == edition.id;
+            final isSelected = false; // selection managed in TafsirScreen only
+            final percent =
+                ((_downloadProgress[edition.id.toString()] ?? 0) * 100)
+                    .clamp(0, 100)
+                    .toStringAsFixed(0);
 
             return ListTile(
               title: Text(edition.name),
               subtitle: isDownloading
-                  ? LinearProgressIndicator(value: progress)
-                  : Text(isSelected
-                      ? '✓ Selected'
-                      : (isDownloaded
-                          ? 'Downloaded (Tap to select)'
-                          : 'Tap to download')),
-              onTap: isDownloaded && !isDownloading
-                  ? () => _selectTafsir(edition.id)
-                  : null,
-              trailing: isDownloading
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        LinearProgressIndicator(value: progress),
+                        const SizedBox(height: 4),
+                        Text('$percent%'),
+                      ],
                     )
+                  : Text(isDownloaded ? 'Downloaded' : 'Not downloaded'),
+              onTap: null,
+              trailing: isDownloading
+                  ? Text('$percent%')
                   : Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (isSelected)
-                          const Icon(Icons.check_circle, color: Colors.green)
-                        else if (isDownloaded)
+                        if (isDownloaded)
                           IconButton(
                             icon: const Icon(Icons.delete),
                             onPressed: () => _deleteTafsir(
