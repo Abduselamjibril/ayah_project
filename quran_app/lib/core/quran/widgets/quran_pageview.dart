@@ -292,9 +292,15 @@ class _PageWithNumber extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(child: child),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12, top: 8),
-            child: Text(pageNumber.toString(), style: style),
+          SafeArea(
+            top: false,
+            left: false,
+            right: false,
+            bottom: true,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12, top: 8),
+              child: Text(pageNumber.toString(), style: style),
+            ),
           ),
         ],
       ),
