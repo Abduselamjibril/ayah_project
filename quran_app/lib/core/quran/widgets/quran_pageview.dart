@@ -97,6 +97,22 @@ class _PageviewQuranState extends State<PageviewQuran> {
   bool get _ownsVerticalController => widget.verticalScrollController == null;
   bool get _isVertical => widget.scrollMode == ScrollMode.vertical;
 
+  // Compact holder for per-page header data
+  _PageHeader _emptyHeader = _PageHeader(surahName: '', juzNumber: 0);
+
+  _PageHeader _headerForPage(int pageNumber) {
+    final ranges = getPageData(pageNumber);
+    if (ranges.isEmpty) {
+      return _emptyHeader;
+    }
+    final surah = int.parse(ranges.first['surah'].toString());
+    final start = int.parse(ranges.first['start'].toString());
+    return _PageHeader(
+      surahName: getSurahName(surah),
+      juzNumber: getJuzNumber(surah, start),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -188,11 +204,14 @@ class _PageviewQuranState extends State<PageviewQuran> {
         },
         itemBuilder: (context, index) {
           final pageNumber = index + 1; // 1-based page
+          final header = _headerForPage(pageNumber);
           return _PageWithNumber(
             backgroundColor: widget.pageBackgroundColor,
             pageNumber: pageNumber,
             pageNumberTextStyle: widget.pageNumberTextStyle,
             textColorFallback: widget.textColor,
+            leftLabel: header.surahName,
+            rightLabel: header.juzNumber > 0 ? "Part ${header.juzNumber}" : '',
             child: QuranPageContent(
               pageNumber: pageNumber,
               fontSize: widget.fontSize,
@@ -228,6 +247,7 @@ class _PageviewQuranState extends State<PageviewQuran> {
         addRepaintBoundaries: true,
         itemBuilder: (context, index) {
           final pageNumber = index + 1;
+          final header = _headerForPage(pageNumber);
           final isLandscape =
               MediaQuery.of(context).orientation == Orientation.landscape;
 
@@ -240,6 +260,9 @@ class _PageviewQuranState extends State<PageviewQuran> {
                 pageNumber: pageNumber,
                 pageNumberTextStyle: widget.pageNumberTextStyle,
                 textColorFallback: widget.textColor,
+                leftLabel: header.surahName,
+                rightLabel:
+                    header.juzNumber > 0 ? "Part ${header.juzNumber}" : '',
                 child: QuranPageContent(
                   pageNumber: pageNumber,
                   fontSize: widget.fontSize,
@@ -262,18 +285,29 @@ class _PageviewQuranState extends State<PageviewQuran> {
   }
 }
 
+class _PageHeader {
+  final String surahName;
+  final int juzNumber;
+
+  const _PageHeader({required this.surahName, required this.juzNumber});
+}
+
 class _PageWithNumber extends StatelessWidget {
   final Widget child;
   final int pageNumber;
   final TextStyle? pageNumberTextStyle;
   final Color textColorFallback;
   final Color backgroundColor;
+  final String leftLabel;
+  final String rightLabel;
 
   const _PageWithNumber({
     required this.child,
     required this.pageNumber,
     required this.textColorFallback,
     required this.backgroundColor,
+    required this.leftLabel,
+    required this.rightLabel,
     this.pageNumberTextStyle,
   });
 
@@ -291,6 +325,26 @@ class _PageWithNumber extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              textDirection: TextDirection.ltr,
+              children: [
+                Text(
+                  leftLabel,
+                  overflow: TextOverflow.ellipsis,
+                  style: style,
+                  textAlign: TextAlign.left,
+                ),
+                const Spacer(),
+                Text(
+                  rightLabel,
+                  style: style,
+                ),
+              ],
+            ),
+          ),
           Expanded(child: child),
           SafeArea(
             top: false,
