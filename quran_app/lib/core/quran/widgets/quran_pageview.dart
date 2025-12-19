@@ -323,6 +323,7 @@ class _PageWithNumber extends StatelessWidget {
     return Container(
       color: backgroundColor,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Padding(
@@ -345,7 +346,7 @@ class _PageWithNumber extends StatelessWidget {
               ],
             ),
           ),
-          Expanded(child: child),
+          Flexible(fit: FlexFit.loose, child: child),
           SafeArea(
             top: false,
             left: false,
