@@ -220,8 +220,9 @@ class _TafsirScreenState extends State<TafsirScreen> {
     final lastLangKey =
         isTafsir ? 'picker_last_lang_tafsir' : 'picker_last_lang_translation';
     String selectedLanguage = prefs.getString(lastLangKey) ?? languages.first;
-    if (!languages.contains(selectedLanguage))
+    if (!languages.contains(selectedLanguage)) {
       selectedLanguage = languages.first;
+    }
 
     final currentSelectedId =
         isTafsir ? _selectedTafsir?.id : _selectedTranslation?.id;
@@ -350,9 +351,10 @@ class _TafsirScreenState extends State<TafsirScreen> {
                                               _selectedTafsir ??
                                               _tafsirEditions.first,
                                         );
-                                        if (mounted)
+                                        if (mounted) {
                                           setState(
                                               () => _selectedTafsir = chosen);
+                                        }
                                       } else {
                                         await _translationService
                                             .setSelectedTranslationId(ed.id);
@@ -363,9 +365,10 @@ class _TafsirScreenState extends State<TafsirScreen> {
                                               _selectedTranslation ??
                                               _translationEditions.first,
                                         );
-                                        if (mounted)
+                                        if (mounted) {
                                           setState(() =>
                                               _selectedTranslation = chosen);
+                                        }
                                       }
                                       await _loadContent();
                                       if (mounted) Navigator.of(ctx).pop();
@@ -443,7 +446,7 @@ class _TafsirScreenState extends State<TafsirScreen> {
                               Expanded(
                                 child: DropdownButtonFormField<int>(
                                   isExpanded: true,
-                                  value: _selectedTafsir?.id,
+                                  initialValue: _selectedTafsir?.id,
                                   hint: const Text('Choose Tafsir'),
                                   items: _tafsirEditions
                                       .map((e) => DropdownMenuItem<int>(
@@ -491,7 +494,7 @@ class _TafsirScreenState extends State<TafsirScreen> {
                               Expanded(
                                 child: DropdownButtonFormField<int>(
                                   isExpanded: true,
-                                  value: _selectedTranslation?.id,
+                                  initialValue: _selectedTranslation?.id,
                                   hint: const Text('Choose Translation'),
                                   items: _translationEditions
                                       .map((e) => DropdownMenuItem<int>(
@@ -599,7 +602,7 @@ class _TafsirScreenState extends State<TafsirScreen> {
                                   style: {
                                     'body': Style(
                                       fontSize: FontSize(18),
-                                      lineHeight: LineHeight(1.6),
+                                      lineHeight: const LineHeight(1.6),
                                       textAlign: TextAlign.justify,
                                     ),
                                   },

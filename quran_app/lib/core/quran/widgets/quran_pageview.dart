@@ -41,6 +41,9 @@ class PageviewQuran extends StatefulWidget {
   /// Background color for the whole page container.
   final Color pageBackgroundColor;
 
+  /// Optional style for the page number shown under each page.
+  final TextStyle? pageNumberTextStyle;
+
   /// Optional callback to get background color for individual verses.
   /// Returns a Color for the verse, or null for no background color.
   /// Useful for highlighting selected verses.
@@ -68,6 +71,7 @@ class PageviewQuran extends StatefulWidget {
     this.h = 1,
     this.textColor = const Color(0xFF000000),
     this.pageBackgroundColor = const Color(0xFFFFFFFF),
+    this.pageNumberTextStyle,
     this.verseBackgroundColor,
     this.onLongPress,
     this.onLongPressUp,
@@ -118,8 +122,9 @@ class _PageviewQuranState extends State<PageviewQuran> {
   }
 
   void _handleVerticalScroll() {
-    if (!_isVertical || _viewportHeight == null || _viewportHeight! <= 0)
+    if (!_isVertical || _viewportHeight == null || _viewportHeight! <= 0) {
       return;
+    }
 
     final scrollOffset = _verticalController.offset;
 
@@ -134,8 +139,9 @@ class _PageviewQuranState extends State<PageviewQuran> {
   }
 
   void _jumpToPage(int page) {
-    if (!_isVertical || _viewportHeight == null || _viewportHeight! <= 0)
+    if (!_isVertical || _viewportHeight == null || _viewportHeight! <= 0) {
       return;
+    }
 
     if (page >= 1 && page <= totalPagesCount) {
       final offset = (page - 1) * _viewportHeight!;
@@ -182,17 +188,23 @@ class _PageviewQuranState extends State<PageviewQuran> {
         },
         itemBuilder: (context, index) {
           final pageNumber = index + 1; // 1-based page
-          return QuranPageContent(
+          return _PageWithNumber(
+            backgroundColor: widget.pageBackgroundColor,
             pageNumber: pageNumber,
-            fontSize: widget.fontSize,
-            textColor: widget.textColor,
-            verseBackgroundColor: widget.verseBackgroundColor,
-            onLongPress: widget.onLongPress,
-            onLongPressUp: widget.onLongPressUp,
-            onLongPressCancel: widget.onLongPressCancel,
-            onLongPressStart: widget.onLongPressStart,
-            sp: widget.sp,
-            h: widget.h,
+            pageNumberTextStyle: widget.pageNumberTextStyle,
+            textColorFallback: widget.textColor,
+            child: QuranPageContent(
+              pageNumber: pageNumber,
+              fontSize: widget.fontSize,
+              textColor: widget.textColor,
+              verseBackgroundColor: widget.verseBackgroundColor,
+              onLongPress: widget.onLongPress,
+              onLongPressUp: widget.onLongPressUp,
+              onLongPressCancel: widget.onLongPressCancel,
+              onLongPressStart: widget.onLongPressStart,
+              sp: widget.sp,
+              h: widget.h,
+            ),
           );
         },
       ),
@@ -223,22 +235,68 @@ class _PageviewQuranState extends State<PageviewQuran> {
             height: isLandscape ? null : viewportHeight,
             // Wrap each page in RepaintBoundary for better performance
             child: RepaintBoundary(
-              child: QuranPageContent(
+              child: _PageWithNumber(
+                backgroundColor: widget.pageBackgroundColor,
                 pageNumber: pageNumber,
-                fontSize: widget.fontSize,
-                textColor: widget.textColor,
-                verseBackgroundColor: widget.verseBackgroundColor,
-                onLongPress: widget.onLongPress,
-                onLongPressUp: widget.onLongPressUp,
-                onLongPressCancel: widget.onLongPressCancel,
-                onLongPressStart: widget.onLongPressStart,
-                sp: widget.sp,
-                h: widget.h,
-                allowInternalScroll: false,
+                pageNumberTextStyle: widget.pageNumberTextStyle,
+                textColorFallback: widget.textColor,
+                child: QuranPageContent(
+                  pageNumber: pageNumber,
+                  fontSize: widget.fontSize,
+                  textColor: widget.textColor,
+                  verseBackgroundColor: widget.verseBackgroundColor,
+                  onLongPress: widget.onLongPress,
+                  onLongPressUp: widget.onLongPressUp,
+                  onLongPressCancel: widget.onLongPressCancel,
+                  onLongPressStart: widget.onLongPressStart,
+                  sp: widget.sp,
+                  h: widget.h,
+                  allowInternalScroll: false,
+                ),
               ),
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _PageWithNumber extends StatelessWidget {
+  final Widget child;
+  final int pageNumber;
+  final TextStyle? pageNumberTextStyle;
+  final Color textColorFallback;
+  final Color backgroundColor;
+
+  const _PageWithNumber({
+    required this.child,
+    required this.pageNumber,
+    required this.textColorFallback,
+    required this.backgroundColor,
+    this.pageNumberTextStyle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final style = pageNumberTextStyle ??
+        TextStyle(
+          color: textColorFallback.withOpacity(0.6),
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        );
+
+    return Container(
+      color: backgroundColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(child: child),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12, top: 8),
+            child: Text(pageNumber.toString(), style: style),
+          ),
+        ],
       ),
     );
   }

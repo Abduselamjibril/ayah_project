@@ -78,7 +78,7 @@ class BackgroundDownloadService {
     // Ensure notifications are initialized in isolate
     await AppNotificationService.instance.initialize();
     await AppNotificationService.instance.requestPermissionsIfNeeded();
-    final title = 'Download';
+    const title = 'Download';
     if (status == 2) {
       await AppNotificationService.instance
           .showProgress(id.hashCode & 0x7fffffff, title, progress / 100.0);

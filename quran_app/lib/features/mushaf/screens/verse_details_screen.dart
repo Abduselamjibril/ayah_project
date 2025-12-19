@@ -254,8 +254,9 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen> {
   }
 
   Widget _buildTranslationText() {
-    if (_selectedTranslationId == null)
+    if (_selectedTranslationId == null) {
       return const Text('Select a translation');
+    }
 
     final translation = _allTranslations.firstWhere(
       (t) => t['edition_identifier'] == _selectedTranslationId,

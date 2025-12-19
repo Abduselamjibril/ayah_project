@@ -200,7 +200,7 @@ class TranslationApi {
     return languageNames.entries
         .firstWhere(
           (entry) => entry.value == lowerName,
-          orElse: () => MapEntry('', ''),
+          orElse: () => const MapEntry('', ''),
         )
         .key;
   }

@@ -166,7 +166,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
         await BackgroundDownloadService.instance.initialize();
         BackgroundDownloadService.registerCallback();
         await BackgroundDownloadService.instance
-            .enqueue(url: bgUrl!, fileName: '${edition.id}.json');
+            .enqueue(url: bgUrl, fileName: '${edition.id}.json');
       }
       final success = await _translationService.downloadTranslation(
         edition,
@@ -233,7 +233,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
         await BackgroundDownloadService.instance.initialize();
         BackgroundDownloadService.registerCallback();
         await BackgroundDownloadService.instance
-            .enqueue(url: bgUrl!, fileName: '${edition.id}.json');
+            .enqueue(url: bgUrl, fileName: '${edition.id}.json');
       }
       final success = await _tafsirService.downloadTafsir(
         edition,
@@ -438,7 +438,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
                 _downloadedTranslations.contains(edition.id.toString());
             final isDownloading = _isDownloading[edition.id.toString()] == true;
             final progress = _downloadProgress[edition.id.toString()];
-            final isSelected = false; // selection managed in TafsirScreen only
+            const isSelected = false; // selection managed in TafsirScreen only
             final percent =
                 ((_downloadProgress[edition.id.toString()] ?? 0) * 100)
                     .clamp(0, 100)
@@ -544,7 +544,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
                 _downloadedTafsirs.contains(edition.id.toString());
             final isDownloading = _isDownloading[edition.id.toString()] == true;
             final progress = _downloadProgress[edition.id.toString()];
-            final isSelected = false; // selection managed in TafsirScreen only
+            const isSelected = false; // selection managed in TafsirScreen only
             final percent =
                 ((_downloadProgress[edition.id.toString()] ?? 0) * 100)
                     .clamp(0, 100)
