@@ -19,11 +19,13 @@ class VerticalMushafView extends StatefulWidget {
 
 class _VerticalMushafViewState extends State<VerticalMushafView> {
   int _lastPage = 1;
+  double? _sliderValue;
 
   @override
   void initState() {
     super.initState();
     _lastPage = widget.controller.currentPage;
+    _sliderValue = _lastPage.toDouble();
     widget.controller.addListener(_onControllerChanged);
   }
 
@@ -36,6 +38,8 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   void _onControllerChanged() {
     if (widget.controller.currentPage != _lastPage) {
       _lastPage = widget.controller.currentPage;
+      // Release slider to follow controller updates
+      _sliderValue = null;
       final viewportHeight = MediaQuery.of(context).size.height;
       final offset = (_lastPage - 1) * viewportHeight;
       widget.scrollController.animateTo(
@@ -88,31 +92,56 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
 
   Widget _buildPageIndicator() {
     return Positioned(
-      bottom: 16,
+      bottom: 32,
       left: 0,
       right: 0,
       child: ListenableBuilder(
         listenable: widget.controller,
         builder: (context, child) {
-          return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildNavigationButton(
-                  context,
-                  Icons.arrow_back,
-                  () => _scrollToPage(widget.controller.currentPage - 1),
-                  widget.controller.currentPage > 1,
+          final current =
+              (_sliderValue ?? widget.controller.currentPage.toDouble())
+                  .clamp(1.0, 604.0);
+          return Center(
+            child: Material(
+              color: Theme.of(context).colorScheme.surface.withOpacity(0.95),
+              elevation: 6,
+              borderRadius: BorderRadius.circular(24),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: SizedBox(
+                  width: 280,
+                  child: Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        showValueIndicator: ShowValueIndicator.always,
+                        trackHeight: 4,
+                      ),
+                      child: Slider(
+                        min: 1,
+                        max: 604,
+                        divisions: 603,
+                        value: current,
+                        label: current.round().toString(),
+                        onChanged: (value) {
+                          setState(() {
+                            _sliderValue = value;
+                          });
+                        },
+                        onChangeEnd: (value) {
+                          final page = value.round();
+                          setState(() {
+                            _sliderValue = null;
+                          });
+                          _scrollToPage(page);
+                          widget.controller.setPage(page);
+                        },
+                      ),
+                    ),
+                  ),
                 ),
-                _buildPageNumber(),
-                _buildNavigationButton(
-                  context,
-                  Icons.arrow_forward,
-                  () => _scrollToPage(widget.controller.currentPage + 1),
-                  widget.controller.currentPage < 604,
-                ),
-              ],
+              ),
             ),
           );
         },
@@ -132,38 +161,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     );
   }
 
-  Widget _buildNavigationButton(
-    BuildContext context,
-    IconData icon,
-    VoidCallback onPressed,
-    bool enabled,
-  ) {
-    return IconButton(
-      icon: Icon(icon, color: Theme.of(context).colorScheme.onPrimary),
-      onPressed: enabled ? onPressed : null,
-      style: IconButton.styleFrom(
-        backgroundColor: enabled ? Theme.of(context).primaryColor : Colors.grey,
-        shape: const CircleBorder(),
-      ),
-    );
-  }
-
-  Widget _buildPageNumber() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        'Page ${widget.controller.currentPage} of 604',
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.onSurface,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
+  // Navigation buttons and page number removed in favor of slider
 
   void _showVerseOptions(BuildContext context, int surah, int verse) {
     final isBookmarked = widget.controller.isBookmarked(surah, verse);
