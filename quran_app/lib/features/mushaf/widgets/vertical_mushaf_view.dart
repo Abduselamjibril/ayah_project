@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/quran/widgets/quran_pageview.dart';
+import '../../../core/quran/qcf_quran.dart';
 import '../controller/mushaf_controller.dart';
 import '../screens/verse_details_screen.dart';
 
@@ -98,38 +99,73 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
       child: ListenableBuilder(
         listenable: widget.controller,
         builder: (context, child) {
-          final current =
+          final currentDouble =
               (_sliderValue ?? widget.controller.currentPage.toDouble())
                   .clamp(1.0, 604.0);
+          final currentPage = currentDouble.round();
+          final surahName = _surahNameForPage(currentPage);
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface.withOpacity(0.9),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Slider(
-              min: 1,
-              max: 604,
-              divisions: 603,
-              value: current,
-              onChanged: (value) {
-                setState(() {
-                  _sliderValue = value;
-                });
-              },
-              onChangeEnd: (value) {
-                final page = value.round();
-                setState(() {
-                  _sliderValue = null;
-                });
-                _scrollToPage(page);
-                widget.controller.setPage(page);
-              },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  surahName,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Page ${currentPage.toString().padLeft(2, '0')}',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Slider(
+                  min: 1,
+                  max: 604,
+                  divisions: 603,
+                  value: currentDouble,
+                  onChanged: (value) {
+                    setState(() {
+                      _sliderValue = value;
+                    });
+                  },
+                  onChangeEnd: (value) {
+                    final page = value.round();
+                    setState(() {
+                      _sliderValue = null;
+                    });
+                    _scrollToPage(page);
+                    widget.controller.setPage(page);
+                  },
+                ),
+              ],
             ),
           );
         },
       ),
     );
+  }
+
+  String _surahNameForPage(int page) {
+    try {
+      final pd = getPageData(page);
+      if (pd.isEmpty) return '';
+      final first = pd[0];
+      final surahNum = int.parse(first['surah'].toString());
+      return getSurahName(surahNum);
+    } catch (e) {
+      return '';
+    }
   }
 
   void _scrollToPage(int page) {
