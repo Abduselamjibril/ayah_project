@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/quran/widgets/quran_pageview.dart';
 import '../../../core/quran/qcf_quran.dart';
@@ -7,11 +8,13 @@ import '../screens/verse_details_screen.dart';
 class VerticalMushafView extends StatefulWidget {
   final MushafController controller;
   final ScrollController scrollController;
+  final ValueChanged<bool>? onOverlayVisibilityChanged;
 
   const VerticalMushafView({
     super.key,
     required this.controller,
     required this.scrollController,
+    this.onOverlayVisibilityChanged,
   });
 
   @override
@@ -24,6 +27,8 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   bool _isPlaying = false;
   String _audioName = 'Select audio';
   final Map<int, String> _surahNameCache = {};
+  bool _overlayVisible = true;
+  Timer? _autoHideTimer;
 
   @override
   void initState() {
@@ -31,11 +36,14 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     _lastPage = widget.controller.currentPage;
     _sliderValue = _lastPage.toDouble();
     widget.controller.addListener(_onControllerChanged);
+    _scheduleAutoHide();
+    widget.onOverlayVisibilityChanged?.call(true);
   }
 
   @override
   void dispose() {
     widget.controller.removeListener(_onControllerChanged);
+    _autoHideTimer?.cancel();
     super.dispose();
   }
 
@@ -69,25 +77,29 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        PageviewQuran(
-          initialPageNumber: widget.controller.currentPage,
-          scrollMode: ScrollMode.vertical,
-          verticalScrollController: widget.scrollController,
-          onPageChanged: (page) {
-            _lastPage = page;
-            widget.controller.setPage(page);
-          },
-          textColor: Theme.of(context).colorScheme.onSurface,
-          pageBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          verseBackgroundColor: _getVerseBackgroundColor,
-          onLongPress: (surah, verse) =>
-              _showVerseOptions(context, surah, verse),
-          onLongPressStart: (surah, verse, details) =>
-              widget.controller.setHighlightedVerse(surah, verse),
-          onLongPressCancel: (surah, verse) =>
-              widget.controller.clearHighlight(),
-          sp: 1.0,
-          h: 1.0,
+        GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: _toggleOverlay,
+          child: PageviewQuran(
+            initialPageNumber: widget.controller.currentPage,
+            scrollMode: ScrollMode.vertical,
+            verticalScrollController: widget.scrollController,
+            onPageChanged: (page) {
+              _lastPage = page;
+              widget.controller.setPage(page);
+            },
+            textColor: Theme.of(context).colorScheme.onSurface,
+            pageBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            verseBackgroundColor: _getVerseBackgroundColor,
+            onLongPress: (surah, verse) =>
+                _showVerseOptions(context, surah, verse),
+            onLongPressStart: (surah, verse, details) =>
+                widget.controller.setHighlightedVerse(surah, verse),
+            onLongPressCancel: (surah, verse) =>
+                widget.controller.clearHighlight(),
+            sp: 1.0,
+            h: 1.0,
+          ),
         ),
         _buildPageIndicator(),
       ],
@@ -106,6 +118,9 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   }
 
   Widget _buildPageIndicator() {
+    if (!_overlayVisible) {
+      return const SizedBox.shrink();
+    }
     return Positioned(
       bottom: 24,
       left: 0,
@@ -187,8 +202,10 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                         value: currentDouble,
                         onChanged: (value) {
                           setState(() {
+                            _overlayVisible = true;
                             _sliderValue = value;
                           });
+                          _scheduleAutoHide();
                         },
                         onChangeEnd: (value) {
                           final page = value.round();
@@ -197,6 +214,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                           });
                           _scrollToPage(page);
                           widget.controller.setPage(page);
+                          _scheduleAutoHide();
                         },
                       ),
                     ),
@@ -256,11 +274,13 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
       _isPlaying = !_isPlaying;
     });
     // TODO: integrate with real audio playback
+    _showOverlay();
   }
 
   void _openAudioPicker() {
     // TODO: navigate to audio selection screen in future
     debugPrint('Open audio picker');
+    _showOverlay();
   }
 
   String _surahNameForPage(int page) {
@@ -296,6 +316,46 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
       );
     } catch (_) {
       // Avoid crashing if the position is not yet ready
+    }
+  }
+
+  void _scheduleAutoHide() {
+    _autoHideTimer?.cancel();
+    _autoHideTimer = Timer(const Duration(seconds: 10), () {
+      if (!mounted) return;
+      setState(() {
+        _overlayVisible = false;
+      });
+      widget.onOverlayVisibilityChanged?.call(false);
+    });
+  }
+
+  void _showOverlay() {
+    if (!_overlayVisible) {
+      setState(() {
+        _overlayVisible = true;
+      });
+      widget.onOverlayVisibilityChanged?.call(true);
+    }
+    _scheduleAutoHide();
+  }
+
+  void _hideOverlay() {
+    if (_overlayVisible) {
+      setState(() {
+        _overlayVisible = false;
+      });
+      widget.onOverlayVisibilityChanged?.call(false);
+    }
+    _autoHideTimer?.cancel();
+    _autoHideTimer = null;
+  }
+
+  void _toggleOverlay() {
+    if (_overlayVisible) {
+      _hideOverlay();
+    } else {
+      _showOverlay();
     }
   }
 

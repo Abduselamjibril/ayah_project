@@ -16,6 +16,7 @@ class MushafScreen extends StatefulWidget {
 class _MushafScreenState extends State<MushafScreen> {
   final MushafController _controller = MushafController();
   final ScrollController _scrollController = ScrollController();
+  bool _appBarVisible = true;
 
   @override
   void dispose() {
@@ -27,7 +28,7 @@ class _MushafScreenState extends State<MushafScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: _buildAppBar(context),
+      appBar: _buildAnimatedAppBar(context),
       drawer: SurahDrawer(
         onSurahSelected: _jumpToSurah,
         controller: _controller,
@@ -55,12 +56,34 @@ class _MushafScreenState extends State<MushafScreen> {
     );
   }
 
+  PreferredSizeWidget _buildAnimatedAppBar(BuildContext context) {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(kToolbarHeight),
+      child: ClipRect(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          height: _appBarVisible ? kToolbarHeight : 0,
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 200),
+            opacity: _appBarVisible ? 1 : 0,
+            child: _buildAppBar(context),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildMushafView() {
     return _controller.scrollMode == ScrollMode.horizontal
-        ? HorizontalMushafView(controller: _controller)
+        ? HorizontalMushafView(
+            controller: _controller,
+            onOverlayVisibilityChanged: _onOverlayVisibilityChanged,
+          )
         : VerticalMushafView(
             controller: _controller,
             scrollController: _scrollController,
+            onOverlayVisibilityChanged: _onOverlayVisibilityChanged,
           );
   }
 
@@ -68,5 +91,12 @@ class _MushafScreenState extends State<MushafScreen> {
     _controller.setSurah(surah);
     final pageNumber = getPageNumber(surah, 1);
     _controller.setPage(pageNumber);
+  }
+
+  void _onOverlayVisibilityChanged(bool visible) {
+    if (_appBarVisible == visible) return;
+    setState(() {
+      _appBarVisible = visible;
+    });
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/quran/widgets/quran_pageview.dart';
 import '../../../core/quran/qcf_quran.dart';
@@ -6,8 +7,13 @@ import '../screens/verse_details_screen.dart';
 
 class HorizontalMushafView extends StatefulWidget {
   final MushafController controller;
+  final ValueChanged<bool>? onOverlayVisibilityChanged;
 
-  const HorizontalMushafView({super.key, required this.controller});
+  const HorizontalMushafView({
+    super.key,
+    required this.controller,
+    this.onOverlayVisibilityChanged,
+  });
 
   @override
   State<HorizontalMushafView> createState() => _HorizontalMushafViewState();
@@ -19,6 +25,8 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   bool _isPlaying = false;
   String _audioName = 'Select audio';
   final Map<int, String> _surahNameCache = {};
+  bool _overlayVisible = true;
+  Timer? _autoHideTimer;
 
   @override
   void initState() {
@@ -27,12 +35,15 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
         PageController(initialPage: widget.controller.currentPage - 1);
     _sliderValue = widget.controller.currentPage.toDouble();
     widget.controller.addListener(_onControllerChanged);
+    _scheduleAutoHide();
+    widget.onOverlayVisibilityChanged?.call(true);
   }
 
   @override
   void dispose() {
     widget.controller.removeListener(_onControllerChanged);
     _pageController.dispose();
+    _autoHideTimer?.cancel();
     super.dispose();
   }
 
@@ -55,22 +66,26 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        Directionality(
-          textDirection: TextDirection.rtl,
-          child: PageviewQuran(
-            controller: _pageController,
-            initialPageNumber: widget.controller.currentPage,
-            scrollMode: ScrollMode.horizontal,
-            onPageChanged: widget.controller.setPage,
-            textColor: Theme.of(context).colorScheme.onSurface,
-            pageBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            verseBackgroundColor: _getVerseBackgroundColor,
-            onLongPress: (surah, verse) =>
-                _showVerseOptions(context, surah, verse),
-            onLongPressStart: (surah, verse, details) =>
-                widget.controller.setHighlightedVerse(surah, verse),
-            onLongPressCancel: (surah, verse) =>
-                widget.controller.clearHighlight(),
+        GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: _toggleOverlay,
+          child: Directionality(
+            textDirection: TextDirection.rtl,
+            child: PageviewQuran(
+              controller: _pageController,
+              initialPageNumber: widget.controller.currentPage,
+              scrollMode: ScrollMode.horizontal,
+              onPageChanged: widget.controller.setPage,
+              textColor: Theme.of(context).colorScheme.onSurface,
+              pageBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              verseBackgroundColor: _getVerseBackgroundColor,
+              onLongPress: (surah, verse) =>
+                  _showVerseOptions(context, surah, verse),
+              onLongPressStart: (surah, verse, details) =>
+                  widget.controller.setHighlightedVerse(surah, verse),
+              onLongPressCancel: (surah, verse) =>
+                  widget.controller.clearHighlight(),
+            ),
           ),
         ),
         _buildPageOverlay(),
@@ -90,6 +105,9 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   }
 
   Widget _buildPageOverlay() {
+    if (!_overlayVisible) {
+      return const SizedBox.shrink();
+    }
     return Positioned(
       bottom: 40,
       left: 0,
@@ -175,8 +193,10 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                         value: currentDouble,
                         onChanged: (value) {
                           setState(() {
+                            _overlayVisible = true;
                             _sliderValue = value;
                           });
+                          _scheduleAutoHide();
                         },
                         onChangeEnd: (value) {
                           final page = value.round();
@@ -184,6 +204,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                             _sliderValue = null;
                           });
                           _navigateToPage(page);
+                          _scheduleAutoHide();
                         },
                       ),
                     ),
@@ -243,11 +264,13 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
       _isPlaying = !_isPlaying;
     });
     // TODO: integrate with real audio playback
+    _showOverlay();
   }
 
   void _openAudioPicker() {
     // TODO: navigate to audio selection screen in future
     debugPrint('Open audio picker');
+    _showOverlay();
   }
 
   String _surahNameForPage(int page) {
@@ -272,6 +295,46 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   void _navigateToPage(int page) {
     if (page >= 1 && page <= 604) {
       widget.controller.setPage(page);
+    }
+  }
+
+  void _scheduleAutoHide() {
+    _autoHideTimer?.cancel();
+    _autoHideTimer = Timer(const Duration(seconds: 10), () {
+      if (!mounted) return;
+      setState(() {
+        _overlayVisible = false;
+      });
+      widget.onOverlayVisibilityChanged?.call(false);
+    });
+  }
+
+  void _showOverlay() {
+    if (!_overlayVisible) {
+      setState(() {
+        _overlayVisible = true;
+      });
+      widget.onOverlayVisibilityChanged?.call(true);
+    }
+    _scheduleAutoHide();
+  }
+
+  void _hideOverlay() {
+    if (_overlayVisible) {
+      setState(() {
+        _overlayVisible = false;
+      });
+      widget.onOverlayVisibilityChanged?.call(false);
+    }
+    _autoHideTimer?.cancel();
+    _autoHideTimer = null;
+  }
+
+  void _toggleOverlay() {
+    if (_overlayVisible) {
+      _hideOverlay();
+    } else {
+      _showOverlay();
     }
   }
 
