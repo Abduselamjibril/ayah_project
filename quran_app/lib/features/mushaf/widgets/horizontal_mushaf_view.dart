@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../core/quran/widgets/quran_pageview.dart';
 import '../../../core/quran/qcf_quran.dart';
@@ -69,23 +70,35 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
         GestureDetector(
           behavior: HitTestBehavior.translucent,
           onTap: _toggleOverlay,
-          child: Directionality(
-            textDirection: TextDirection.rtl,
-            child: PageviewQuran(
-              controller: _pageController,
-              initialPageNumber: widget.controller.currentPage,
-              scrollMode: ScrollMode.horizontal,
-              onPageChanged: widget.controller.setPage,
-              textColor: Theme.of(context).colorScheme.onSurface,
-              pageBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
-              verseBackgroundColor: _getVerseBackgroundColor,
-              onLongPress: (surah, verse) =>
-                  _showVerseOptions(context, surah, verse),
-              onLongPressStart: (surah, verse, details) =>
-                  widget.controller.setHighlightedVerse(surah, verse),
-              onLongPressCancel: (surah, verse) =>
-                  widget.controller.clearHighlight(),
-            ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final maxWidth = min(constraints.maxWidth, 900.0);
+              return Center(
+                child: SizedBox(
+                  width: maxWidth,
+                  height: constraints.maxHeight,
+                  child: Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: PageviewQuran(
+                      controller: _pageController,
+                      initialPageNumber: widget.controller.currentPage,
+                      scrollMode: ScrollMode.horizontal,
+                      onPageChanged: widget.controller.setPage,
+                      textColor: Theme.of(context).colorScheme.onSurface,
+                      pageBackgroundColor:
+                          Theme.of(context).scaffoldBackgroundColor,
+                      verseBackgroundColor: _getVerseBackgroundColor,
+                      onLongPress: (surah, verse) =>
+                          _showVerseOptions(context, surah, verse),
+                      onLongPressStart: (surah, verse, details) =>
+                          widget.controller.setHighlightedVerse(surah, verse),
+                      onLongPressCancel: (surah, verse) =>
+                          widget.controller.clearHighlight(),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
         _buildPageOverlay(),

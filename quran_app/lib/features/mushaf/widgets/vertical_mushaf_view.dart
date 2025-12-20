@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../core/quran/widgets/quran_pageview.dart';
 import '../../../core/quran/qcf_quran.dart';
@@ -80,25 +81,37 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
         GestureDetector(
           behavior: HitTestBehavior.translucent,
           onTap: _toggleOverlay,
-          child: PageviewQuran(
-            initialPageNumber: widget.controller.currentPage,
-            scrollMode: ScrollMode.vertical,
-            verticalScrollController: widget.scrollController,
-            onPageChanged: (page) {
-              _lastPage = page;
-              widget.controller.setPage(page);
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final maxWidth = min(constraints.maxWidth, 900.0);
+              return Center(
+                child: SizedBox(
+                  width: maxWidth,
+                  height: constraints.maxHeight,
+                  child: PageviewQuran(
+                    initialPageNumber: widget.controller.currentPage,
+                    scrollMode: ScrollMode.vertical,
+                    verticalScrollController: widget.scrollController,
+                    onPageChanged: (page) {
+                      _lastPage = page;
+                      widget.controller.setPage(page);
+                    },
+                    textColor: Theme.of(context).colorScheme.onSurface,
+                    pageBackgroundColor:
+                        Theme.of(context).scaffoldBackgroundColor,
+                    verseBackgroundColor: _getVerseBackgroundColor,
+                    onLongPress: (surah, verse) =>
+                        _showVerseOptions(context, surah, verse),
+                    onLongPressStart: (surah, verse, details) =>
+                        widget.controller.setHighlightedVerse(surah, verse),
+                    onLongPressCancel: (surah, verse) =>
+                        widget.controller.clearHighlight(),
+                    sp: 1.0,
+                    h: 1.0,
+                  ),
+                ),
+              );
             },
-            textColor: Theme.of(context).colorScheme.onSurface,
-            pageBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            verseBackgroundColor: _getVerseBackgroundColor,
-            onLongPress: (surah, verse) =>
-                _showVerseOptions(context, surah, verse),
-            onLongPressStart: (surah, verse, details) =>
-                widget.controller.setHighlightedVerse(surah, verse),
-            onLongPressCancel: (surah, verse) =>
-                widget.controller.clearHighlight(),
-            sp: 1.0,
-            h: 1.0,
           ),
         ),
         _buildPageIndicator(),
