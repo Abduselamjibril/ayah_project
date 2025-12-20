@@ -73,27 +73,32 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final maxWidth = min(constraints.maxWidth, 900.0);
+              final topMargin =
+                  MediaQuery.of(context).padding.top + kToolbarHeight + 8;
               return Center(
-                child: SizedBox(
-                  width: maxWidth,
-                  height: constraints.maxHeight,
-                  child: Directionality(
-                    textDirection: TextDirection.rtl,
-                    child: PageviewQuran(
-                      controller: _pageController,
-                      initialPageNumber: widget.controller.currentPage,
-                      scrollMode: ScrollMode.horizontal,
-                      onPageChanged: widget.controller.setPage,
-                      textColor: Theme.of(context).colorScheme.onSurface,
-                      pageBackgroundColor:
-                          Theme.of(context).scaffoldBackgroundColor,
-                      verseBackgroundColor: _getVerseBackgroundColor,
-                      onLongPress: (surah, verse) =>
-                          _showVerseOptions(context, surah, verse),
-                      onLongPressStart: (surah, verse, details) =>
-                          widget.controller.setHighlightedVerse(surah, verse),
-                      onLongPressCancel: (surah, verse) =>
-                          widget.controller.clearHighlight(),
+                child: Padding(
+                  padding: EdgeInsets.only(top: topMargin),
+                  child: SizedBox(
+                    width: maxWidth,
+                    height: constraints.maxHeight - topMargin,
+                    child: Directionality(
+                      textDirection: TextDirection.rtl,
+                      child: PageviewQuran(
+                        controller: _pageController,
+                        initialPageNumber: widget.controller.currentPage,
+                        scrollMode: ScrollMode.horizontal,
+                        onPageChanged: widget.controller.setPage,
+                        textColor: Theme.of(context).colorScheme.onSurface,
+                        pageBackgroundColor:
+                            Theme.of(context).scaffoldBackgroundColor,
+                        verseBackgroundColor: _getVerseBackgroundColor,
+                        onLongPress: (surah, verse) =>
+                            _showVerseOptions(context, surah, verse),
+                        onLongPressStart: (surah, verse, details) =>
+                            widget.controller.setHighlightedVerse(surah, verse),
+                        onLongPressCancel: (surah, verse) =>
+                            widget.controller.clearHighlight(),
+                      ),
                     ),
                   ),
                 ),

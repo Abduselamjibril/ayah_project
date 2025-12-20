@@ -84,30 +84,35 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final maxWidth = min(constraints.maxWidth, 900.0);
+              final topMargin =
+                  MediaQuery.of(context).padding.top + kToolbarHeight + 8;
               return Center(
-                child: SizedBox(
-                  width: maxWidth,
-                  height: constraints.maxHeight,
-                  child: PageviewQuran(
-                    initialPageNumber: widget.controller.currentPage,
-                    scrollMode: ScrollMode.vertical,
-                    verticalScrollController: widget.scrollController,
-                    onPageChanged: (page) {
-                      _lastPage = page;
-                      widget.controller.setPage(page);
-                    },
-                    textColor: Theme.of(context).colorScheme.onSurface,
-                    pageBackgroundColor:
-                        Theme.of(context).scaffoldBackgroundColor,
-                    verseBackgroundColor: _getVerseBackgroundColor,
-                    onLongPress: (surah, verse) =>
-                        _showVerseOptions(context, surah, verse),
-                    onLongPressStart: (surah, verse, details) =>
-                        widget.controller.setHighlightedVerse(surah, verse),
-                    onLongPressCancel: (surah, verse) =>
-                        widget.controller.clearHighlight(),
-                    sp: 1.0,
-                    h: 1.0,
+                child: Padding(
+                  padding: EdgeInsets.only(top: topMargin),
+                  child: SizedBox(
+                    width: maxWidth,
+                    height: constraints.maxHeight - topMargin,
+                    child: PageviewQuran(
+                      initialPageNumber: widget.controller.currentPage,
+                      scrollMode: ScrollMode.vertical,
+                      verticalScrollController: widget.scrollController,
+                      onPageChanged: (page) {
+                        _lastPage = page;
+                        widget.controller.setPage(page);
+                      },
+                      textColor: Theme.of(context).colorScheme.onSurface,
+                      pageBackgroundColor:
+                          Theme.of(context).scaffoldBackgroundColor,
+                      verseBackgroundColor: _getVerseBackgroundColor,
+                      onLongPress: (surah, verse) =>
+                          _showVerseOptions(context, surah, verse),
+                      onLongPressStart: (surah, verse, details) =>
+                          widget.controller.setHighlightedVerse(surah, verse),
+                      onLongPressCancel: (surah, verse) =>
+                          widget.controller.clearHighlight(),
+                      sp: 1.0,
+                      h: 1.0,
+                    ),
                   ),
                 ),
               );
