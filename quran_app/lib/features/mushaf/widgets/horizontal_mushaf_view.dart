@@ -85,7 +85,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
 
   Widget _buildPageIndicator() {
     return Positioned(
-      bottom: 32,
+      bottom: 16,
       left: 0,
       right: 0,
       child: ListenableBuilder(
@@ -94,46 +94,29 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
           final current =
               (_sliderValue ?? widget.controller.currentPage.toDouble())
                   .clamp(1.0, 604.0);
-          return Center(
-            child: Material(
-              color: Theme.of(context).colorScheme.surface.withOpacity(0.95),
-              elevation: 6,
-              borderRadius: BorderRadius.circular(24),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: SizedBox(
-                  width: 280,
-                  child: Directionality(
-                    textDirection: TextDirection.rtl,
-                    child: SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        showValueIndicator: ShowValueIndicator.always,
-                        trackHeight: 4,
-                      ),
-                      child: Slider(
-                        min: 1,
-                        max: 604,
-                        divisions: 603,
-                        value: current,
-                        label: current.round().toString(),
-                        onChanged: (value) {
-                          setState(() {
-                            _sliderValue = value;
-                          });
-                        },
-                        onChangeEnd: (value) {
-                          final page = value.round();
-                          setState(() {
-                            _sliderValue = null;
-                          });
-                          _navigateToPage(page);
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface.withOpacity(0.9),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Slider(
+              min: 1,
+              max: 604,
+              divisions: 603,
+              value: current,
+              onChanged: (value) {
+                setState(() {
+                  _sliderValue = value;
+                });
+              },
+              onChangeEnd: (value) {
+                final page = value.round();
+                setState(() {
+                  _sliderValue = null;
+                });
+                _navigateToPage(page);
+              },
             ),
           );
         },

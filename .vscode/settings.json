@@ -1,4 +1,5 @@
 {
   "dart.flutterSdkPath": ".fvm/versions/3.38.0",
-  "java.configuration.updateBuildConfiguration": "automatic"
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "cmake.sourceDirectory": "B:/Documents/TechnoSophia-Solutions/TS projcts/ayah_project/quran_app/linux"
 }

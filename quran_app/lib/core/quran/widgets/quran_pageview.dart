@@ -98,7 +98,8 @@ class _PageviewQuranState extends State<PageviewQuran> {
   bool get _isVertical => widget.scrollMode == ScrollMode.vertical;
 
   // Compact holder for per-page header data
-  _PageHeader _emptyHeader = _PageHeader(surahName: '', juzNumber: 0);
+  final _PageHeader _emptyHeader =
+      const _PageHeader(surahName: '', juzNumber: 0);
 
   _PageHeader _headerForPage(int pageNumber) {
     final ranges = getPageData(pageNumber);

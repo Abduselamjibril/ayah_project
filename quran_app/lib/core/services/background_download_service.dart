@@ -1,5 +1,4 @@
 // lib/core/services/background_download_service.dart
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:shared_preferences/shared_preferences.dart';
