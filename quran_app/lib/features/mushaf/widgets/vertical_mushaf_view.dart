@@ -21,6 +21,8 @@ class VerticalMushafView extends StatefulWidget {
 class _VerticalMushafViewState extends State<VerticalMushafView> {
   int _lastPage = 1;
   double? _sliderValue;
+  bool _isPlaying = false;
+  String _audioName = 'Select audio';
 
   @override
   void initState() {
@@ -151,6 +153,8 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                     : const SizedBox.shrink(),
               ),
               const SizedBox(height: 8),
+              _buildAudioPlayerCard(),
+              const SizedBox(height: 8),
               Card(
                 elevation: 16,
                 color: Theme.of(context).colorScheme.surface.withOpacity(0.95),
@@ -189,6 +193,59 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
         },
       ),
     );
+  }
+
+  Widget _buildAudioPlayerCard() {
+    return Card(
+      elevation: 12,
+      color: Theme.of(context).colorScheme.surface.withOpacity(0.95),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        child: Directionality(
+          textDirection: TextDirection.rtl,
+          child: Row(
+            children: [
+              IconButton(
+                icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
+                onPressed: _togglePlayPause,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _audioName,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.menu),
+                onPressed: _openAudioPicker,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _togglePlayPause() {
+    setState(() {
+      _isPlaying = !_isPlaying;
+    });
+    // TODO: integrate with real audio playback
+  }
+
+  void _openAudioPicker() {
+    // TODO: navigate to audio selection screen in future
+    debugPrint('Open audio picker');
   }
 
   String _surahNameForPage(int page) {

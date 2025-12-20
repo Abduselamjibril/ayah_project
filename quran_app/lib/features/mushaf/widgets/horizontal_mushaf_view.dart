@@ -16,6 +16,8 @@ class HorizontalMushafView extends StatefulWidget {
 class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   late PageController _pageController;
   double? _sliderValue;
+  bool _isPlaying = false;
+  String _audioName = 'Select audio';
 
   @override
   void initState() {
@@ -64,14 +66,13 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
             verseBackgroundColor: _getVerseBackgroundColor,
             onLongPress: (surah, verse) =>
                 _showVerseOptions(context, surah, verse),
-            onLongPressStart: (surah, verse, details) => widget.controller
-                .setHighlightedVerse(surah,
-                    verse), // CHANGED: onLongPressDown → onLongPressStart
+            onLongPressStart: (surah, verse, details) =>
+                widget.controller.setHighlightedVerse(surah, verse),
             onLongPressCancel: (surah, verse) =>
                 widget.controller.clearHighlight(),
           ),
         ),
-        _buildPageIndicator(),
+        _buildPageOverlay(),
       ],
     );
   }
@@ -87,7 +88,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     return null;
   }
 
-  Widget _buildPageIndicator() {
+  Widget _buildPageOverlay() {
     return Positioned(
       bottom: 24,
       left: 0,
@@ -101,6 +102,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
           final currentPage = currentDouble.round();
           final surahName = _surahNameForPage(currentPage);
           final isSliding = _sliderValue != null;
+
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -121,9 +123,11 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                               horizontal: 16, vertical: 10),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
                                 surahName,
+                                textAlign: TextAlign.right,
                                 style: TextStyle(
                                   color:
                                       Theme.of(context).colorScheme.onSurface,
@@ -134,6 +138,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                               const SizedBox(height: 4),
                               Text(
                                 'Page ${currentPage.toString().padLeft(2, '0')}',
+                                textAlign: TextAlign.right,
                                 style: TextStyle(
                                   color:
                                       Theme.of(context).colorScheme.onSurface,
@@ -146,6 +151,8 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                       )
                     : const SizedBox.shrink(),
               ),
+              const SizedBox(height: 8),
+              _buildAudioPlayerCard(),
               const SizedBox(height: 8),
               Card(
                 elevation: 16,
@@ -184,6 +191,59 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
         },
       ),
     );
+  }
+
+  Widget _buildAudioPlayerCard() {
+    return Card(
+      elevation: 12,
+      color: Theme.of(context).colorScheme.surface.withOpacity(0.95),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        child: Directionality(
+          textDirection: TextDirection.rtl,
+          child: Row(
+            children: [
+              IconButton(
+                icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
+                onPressed: _togglePlayPause,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _audioName,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.menu),
+                onPressed: _openAudioPicker,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _togglePlayPause() {
+    setState(() {
+      _isPlaying = !_isPlaying;
+    });
+    // TODO: integrate with real audio playback
+  }
+
+  void _openAudioPicker() {
+    // TODO: navigate to audio selection screen in future
+    debugPrint('Open audio picker');
   }
 
   String _surahNameForPage(int page) {
