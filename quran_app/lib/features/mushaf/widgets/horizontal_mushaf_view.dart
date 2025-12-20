@@ -18,6 +18,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   double? _sliderValue;
   bool _isPlaying = false;
   String _audioName = 'Select audio';
+  final Map<int, String> _surahNameCache = {};
 
   @override
   void initState() {
@@ -90,7 +91,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
 
   Widget _buildPageOverlay() {
     return Positioned(
-      bottom: 24,
+      bottom: 40,
       left: 0,
       right: 0,
       child: ListenableBuilder(
@@ -103,90 +104,93 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
           final surahName = _surahNameForPage(currentPage);
           final isSliding = _sliderValue != null;
 
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: isSliding
-                    ? Card(
-                        elevation: 12,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surface
-                            .withOpacity(0.95),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                surahName,
-                                textAlign: TextAlign.right,
-                                style: TextStyle(
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Page ${currentPage.toString().padLeft(2, '0')}',
-                                textAlign: TextAlign.right,
-                                style: TextStyle(
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+          return RepaintBoundary(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: isSliding
+                      ? Card(
+                          elevation: 12,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surface
+                              .withOpacity(0.95),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-              ),
-              const SizedBox(height: 8),
-              _buildAudioPlayerCard(),
-              const SizedBox(height: 8),
-              Card(
-                elevation: 16,
-                color: Theme.of(context).colorScheme.surface.withOpacity(0.95),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  surahName,
+                                  textAlign: TextAlign.right,
+                                  style: TextStyle(
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Page ${currentPage.toString().padLeft(2, '0')}',
+                                  textAlign: TextAlign.right,
+                                  style: TextStyle(
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : const SizedBox.shrink(),
                 ),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  child: Directionality(
-                    textDirection: TextDirection.rtl,
-                    child: Slider(
-                      min: 1,
-                      max: 604,
-                      divisions: 603,
-                      value: currentDouble,
-                      onChanged: (value) {
-                        setState(() {
-                          _sliderValue = value;
-                        });
-                      },
-                      onChangeEnd: (value) {
-                        final page = value.round();
-                        setState(() {
-                          _sliderValue = null;
-                        });
-                        _navigateToPage(page);
-                      },
+                const SizedBox(height: 8),
+                _buildAudioPlayerCard(),
+                const SizedBox(height: 4),
+                Card(
+                  elevation: 16,
+                  color:
+                      Theme.of(context).colorScheme.surface.withOpacity(0.95),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    child: Directionality(
+                      textDirection: TextDirection.rtl,
+                      child: Slider(
+                        min: 1,
+                        max: 604,
+                        divisions: 603,
+                        value: currentDouble,
+                        onChanged: (value) {
+                          setState(() {
+                            _sliderValue = value;
+                          });
+                        },
+                        onChangeEnd: (value) {
+                          final page = value.round();
+                          setState(() {
+                            _sliderValue = null;
+                          });
+                          _navigateToPage(page);
+                        },
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),
@@ -247,12 +251,17 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   }
 
   String _surahNameForPage(int page) {
+    // Memoize to avoid recomputation during rapid slider updates
+    final cached = _surahNameCache[page];
+    if (cached != null) return cached;
     try {
       final pd = getPageData(page);
       if (pd.isEmpty) return '';
       final first = pd[0];
       final surahNum = int.parse(first['surah'].toString());
-      return getSurahName(surahNum);
+      final name = getSurahName(surahNum);
+      _surahNameCache[page] = name;
+      return name;
     } catch (e) {
       return '';
     }
