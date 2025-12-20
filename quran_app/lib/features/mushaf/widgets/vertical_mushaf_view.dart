@@ -93,7 +93,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
 
   Widget _buildPageIndicator() {
     return Positioned(
-      bottom: 16,
+      bottom: 24,
       left: 0,
       right: 0,
       child: ListenableBuilder(
@@ -160,24 +160,27 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                 child: Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  child: Slider(
-                    min: 1,
-                    max: 604,
-                    divisions: 603,
-                    value: currentDouble,
-                    onChanged: (value) {
-                      setState(() {
-                        _sliderValue = value;
-                      });
-                    },
-                    onChangeEnd: (value) {
-                      final page = value.round();
-                      setState(() {
-                        _sliderValue = null;
-                      });
-                      _scrollToPage(page);
-                      widget.controller.setPage(page);
-                    },
+                  child: Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: Slider(
+                      min: 1,
+                      max: 604,
+                      divisions: 603,
+                      value: currentDouble,
+                      onChanged: (value) {
+                        setState(() {
+                          _sliderValue = value;
+                        });
+                      },
+                      onChangeEnd: (value) {
+                        final page = value.round();
+                        setState(() {
+                          _sliderValue = null;
+                        });
+                        _scrollToPage(page);
+                        widget.controller.setPage(page);
+                      },
+                    ),
                   ),
                 ),
               ),

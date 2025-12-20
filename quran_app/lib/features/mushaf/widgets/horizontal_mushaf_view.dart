@@ -52,21 +52,24 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        PageviewQuran(
-          controller: _pageController,
-          initialPageNumber: widget.controller.currentPage,
-          scrollMode: ScrollMode.horizontal,
-          onPageChanged: widget.controller.setPage,
-          textColor: Theme.of(context).colorScheme.onSurface,
-          pageBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          verseBackgroundColor: _getVerseBackgroundColor,
-          onLongPress: (surah, verse) =>
-              _showVerseOptions(context, surah, verse),
-          onLongPressStart: (surah, verse, details) => widget.controller
-              .setHighlightedVerse(
-                  surah, verse), // CHANGED: onLongPressDown → onLongPressStart
-          onLongPressCancel: (surah, verse) =>
-              widget.controller.clearHighlight(),
+        Directionality(
+          textDirection: TextDirection.rtl,
+          child: PageviewQuran(
+            controller: _pageController,
+            initialPageNumber: widget.controller.currentPage,
+            scrollMode: ScrollMode.horizontal,
+            onPageChanged: widget.controller.setPage,
+            textColor: Theme.of(context).colorScheme.onSurface,
+            pageBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            verseBackgroundColor: _getVerseBackgroundColor,
+            onLongPress: (surah, verse) =>
+                _showVerseOptions(context, surah, verse),
+            onLongPressStart: (surah, verse, details) => widget.controller
+                .setHighlightedVerse(surah,
+                    verse), // CHANGED: onLongPressDown → onLongPressStart
+            onLongPressCancel: (surah, verse) =>
+                widget.controller.clearHighlight(),
+          ),
         ),
         _buildPageIndicator(),
       ],
@@ -86,7 +89,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
 
   Widget _buildPageIndicator() {
     return Positioned(
-      bottom: 16,
+      bottom: 24,
       left: 0,
       right: 0,
       child: ListenableBuilder(
@@ -153,23 +156,26 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                 child: Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  child: Slider(
-                    min: 1,
-                    max: 604,
-                    divisions: 603,
-                    value: currentDouble,
-                    onChanged: (value) {
-                      setState(() {
-                        _sliderValue = value;
-                      });
-                    },
-                    onChangeEnd: (value) {
-                      final page = value.round();
-                      setState(() {
-                        _sliderValue = null;
-                      });
-                      _navigateToPage(page);
-                    },
+                  child: Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: Slider(
+                      min: 1,
+                      max: 604,
+                      divisions: 603,
+                      value: currentDouble,
+                      onChanged: (value) {
+                        setState(() {
+                          _sliderValue = value;
+                        });
+                      },
+                      onChangeEnd: (value) {
+                        final page = value.round();
+                        setState(() {
+                          _sliderValue = null;
+                        });
+                        _navigateToPage(page);
+                      },
+                    ),
                   ),
                 ),
               ),
