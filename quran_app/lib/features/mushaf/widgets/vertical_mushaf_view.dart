@@ -23,6 +23,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   double? _sliderValue;
   bool _isPlaying = false;
   String _audioName = 'Select audio';
+  final Map<int, String> _surahNameCache = {};
 
   @override
   void initState() {
@@ -41,15 +42,26 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   void _onControllerChanged() {
     if (widget.controller.currentPage != _lastPage) {
       _lastPage = widget.controller.currentPage;
-      // Release slider to follow controller updates
-      _sliderValue = null;
-      final viewportHeight = MediaQuery.of(context).size.height;
-      final offset = (_lastPage - 1) * viewportHeight;
-      widget.scrollController.animateTo(
-        offset,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+      _sliderValue = null; // release slider to follow controller updates
+
+      if (!widget.scrollController.hasClients) return;
+      final position = widget.scrollController.position;
+      final viewportHeight = position.viewportDimension;
+      final rawOffset = (_lastPage - 1) * viewportHeight;
+      final target = rawOffset
+          .clamp(position.minScrollExtent, position.maxScrollExtent)
+          .toDouble();
+      if ((position.pixels - target).abs() > 1.0) {
+        try {
+          widget.scrollController.animateTo(
+            target,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        } catch (_) {
+          // Ignore transient issues while scroll metrics stabilize
+        }
+      }
     }
   }
 
@@ -107,88 +119,91 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
           final currentPage = currentDouble.round();
           final surahName = _surahNameForPage(currentPage);
           final isSliding = _sliderValue != null;
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: isSliding
-                    ? Card(
-                        elevation: 12,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surface
-                            .withOpacity(0.95),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                surahName,
-                                style: TextStyle(
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Page ${currentPage.toString().padLeft(2, '0')}',
-                                style: TextStyle(
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+          return RepaintBoundary(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: isSliding
+                      ? Card(
+                          elevation: 12,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surface
+                              .withOpacity(0.95),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-              ),
-              const SizedBox(height: 8),
-              _buildAudioPlayerCard(),
-              const SizedBox(height: 8),
-              Card(
-                elevation: 16,
-                color: Theme.of(context).colorScheme.surface.withOpacity(0.95),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  surahName,
+                                  style: TextStyle(
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Page ${currentPage.toString().padLeft(2, '0')}',
+                                  style: TextStyle(
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : const SizedBox.shrink(),
                 ),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  child: Directionality(
-                    textDirection: TextDirection.rtl,
-                    child: Slider(
-                      min: 1,
-                      max: 604,
-                      divisions: 603,
-                      value: currentDouble,
-                      onChanged: (value) {
-                        setState(() {
-                          _sliderValue = value;
-                        });
-                      },
-                      onChangeEnd: (value) {
-                        final page = value.round();
-                        setState(() {
-                          _sliderValue = null;
-                        });
-                        _scrollToPage(page);
-                        widget.controller.setPage(page);
-                      },
+                const SizedBox(height: 8),
+                _buildAudioPlayerCard(),
+                const SizedBox(height: 8),
+                Card(
+                  elevation: 16,
+                  color:
+                      Theme.of(context).colorScheme.surface.withOpacity(0.95),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    child: Directionality(
+                      textDirection: TextDirection.rtl,
+                      child: Slider(
+                        min: 1,
+                        max: 604,
+                        divisions: 603,
+                        value: currentDouble,
+                        onChanged: (value) {
+                          setState(() {
+                            _sliderValue = value;
+                          });
+                        },
+                        onChangeEnd: (value) {
+                          final page = value.round();
+                          setState(() {
+                            _sliderValue = null;
+                          });
+                          _scrollToPage(page);
+                          widget.controller.setPage(page);
+                        },
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),
@@ -249,12 +264,16 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   }
 
   String _surahNameForPage(int page) {
+    final cached = _surahNameCache[page];
+    if (cached != null) return cached;
     try {
       final pd = getPageData(page);
       if (pd.isEmpty) return '';
       final first = pd[0];
       final surahNum = int.parse(first['surah'].toString());
-      return getSurahName(surahNum);
+      final name = getSurahName(surahNum);
+      _surahNameCache[page] = name;
+      return name;
     } catch (e) {
       return '';
     }
@@ -262,14 +281,22 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
 
   void _scrollToPage(int page) {
     if (page < 1 || page > 604) return;
-
-    final viewportHeight = MediaQuery.of(context).size.height;
-    final offset = (page - 1) * viewportHeight;
-    widget.scrollController.animateTo(
-      offset,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
+    if (!widget.scrollController.hasClients) return;
+    final position = widget.scrollController.position;
+    final viewportHeight = position.viewportDimension;
+    final rawOffset = (page - 1) * viewportHeight;
+    final target = rawOffset
+        .clamp(position.minScrollExtent, position.maxScrollExtent)
+        .toDouble();
+    try {
+      widget.scrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } catch (_) {
+      // Avoid crashing if the position is not yet ready
+    }
   }
 
   // Navigation buttons and page number removed in favor of slider
