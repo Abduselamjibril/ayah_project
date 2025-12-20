@@ -97,51 +97,83 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                   .clamp(1.0, 604.0);
           final currentPage = currentDouble.round();
           final surahName = _surahNameForPage(currentPage);
-          return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface.withOpacity(0.9),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  surahName,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+          final isSliding = _sliderValue != null;
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: isSliding
+                    ? Card(
+                        elevation: 12,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surface
+                            .withOpacity(0.95),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                surahName,
+                                style: TextStyle(
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Page ${currentPage.toString().padLeft(2, '0')}',
+                                style: TextStyle(
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+              const SizedBox(height: 8),
+              Card(
+                elevation: 16,
+                color: Theme.of(context).colorScheme.surface.withOpacity(0.95),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: Slider(
+                    min: 1,
+                    max: 604,
+                    divisions: 603,
+                    value: currentDouble,
+                    onChanged: (value) {
+                      setState(() {
+                        _sliderValue = value;
+                      });
+                    },
+                    onChangeEnd: (value) {
+                      final page = value.round();
+                      setState(() {
+                        _sliderValue = null;
+                      });
+                      _navigateToPage(page);
+                    },
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Page ${currentPage.toString().padLeft(2, '0')}',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Slider(
-                  min: 1,
-                  max: 604,
-                  divisions: 603,
-                  value: currentDouble,
-                  onChanged: (value) {
-                    setState(() {
-                      _sliderValue = value;
-                    });
-                  },
-                  onChangeEnd: (value) {
-                    final page = value.round();
-                    setState(() {
-                      _sliderValue = null;
-                    });
-                    _navigateToPage(page);
-                  },
-                ),
-              ],
-            ),
+              ),
+            ],
           );
         },
       ),
