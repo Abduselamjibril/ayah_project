@@ -49,6 +49,10 @@ class PageviewQuran extends StatefulWidget {
   /// Useful for highlighting selected verses.
   final Color? Function(int surahNumber, int verseNumber)? verseBackgroundColor;
 
+  /// Optional builder to render a small widget after each verse (e.g. note icon).
+  final Widget? Function(int surahNumber, int verseNumber)?
+      verseTrailingBuilder;
+
   /// Long-press callbacks that include the pressed verse info.
   final void Function(int surahNumber, int verseNumber)? onLongPress;
   final void Function(int surahNumber, int verseNumber)? onLongPressUp;
@@ -73,6 +77,7 @@ class PageviewQuran extends StatefulWidget {
     this.pageBackgroundColor = const Color(0xFFFFFFFF),
     this.pageNumberTextStyle,
     this.verseBackgroundColor,
+    this.verseTrailingBuilder,
     this.onLongPress,
     this.onLongPressUp,
     this.onLongPressCancel,
@@ -218,6 +223,7 @@ class _PageviewQuranState extends State<PageviewQuran> {
               fontSize: widget.fontSize,
               textColor: widget.textColor,
               verseBackgroundColor: widget.verseBackgroundColor,
+              verseTrailingBuilder: widget.verseTrailingBuilder,
               onLongPress: widget.onLongPress,
               onLongPressUp: widget.onLongPressUp,
               onLongPressCancel: widget.onLongPressCancel,
@@ -269,6 +275,7 @@ class _PageviewQuranState extends State<PageviewQuran> {
                   fontSize: widget.fontSize,
                   textColor: widget.textColor,
                   verseBackgroundColor: widget.verseBackgroundColor,
+                  verseTrailingBuilder: widget.verseTrailingBuilder,
                   onLongPress: widget.onLongPress,
                   onLongPressUp: widget.onLongPressUp,
                   onLongPressCancel: widget.onLongPressCancel,
@@ -372,6 +379,8 @@ class QuranPageContent extends StatefulWidget {
   final void Function(int surahNumber, int verseNumber)? onLongPress;
   final void Function(int surahNumber, int verseNumber)? onLongPressUp;
   final void Function(int surahNumber, int verseNumber)? onLongPressCancel;
+  final Widget? Function(int surahNumber, int verseNumber)?
+      verseTrailingBuilder;
 
   //sp (adding 1.sp to get the ratio of screen size for responsive font design)
   final double sp;
@@ -393,6 +402,7 @@ class QuranPageContent extends StatefulWidget {
     required this.fontSize,
     required this.textColor,
     this.verseBackgroundColor,
+    this.verseTrailingBuilder,
     required this.onLongPress,
     required this.onLongPressUp,
     required this.onLongPressCancel,
@@ -505,6 +515,15 @@ class _QuranPageContentState extends State<QuranPageContent>
                   backgroundColor: verseBgColor,
                 ),
               ),
+              if (widget.verseTrailingBuilder != null)
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: widget.verseTrailingBuilder!(surah, v) ??
+                        const SizedBox.shrink(),
+                  ),
+                ),
             ],
           ),
         );

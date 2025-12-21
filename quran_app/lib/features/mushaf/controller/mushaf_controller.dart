@@ -7,7 +7,6 @@ class MushafController extends ChangeNotifier {
   ScrollMode _scrollMode = ScrollMode.horizontal;
   int _currentPage = 1;
   int _currentSurah = 1;
-  final Set<String> _bookmarkedVerses = {};
   int? _highlightedSurah;
   int? _highlightedVerse;
 
@@ -21,7 +20,6 @@ class MushafController extends ChangeNotifier {
   ScrollMode get scrollMode => _scrollMode;
   int get currentPage => _currentPage;
   int get currentSurah => _currentSurah;
-  Set<String> get bookmarkedVerses => _bookmarkedVerses;
   int? get highlightedSurah => _highlightedSurah;
   int? get highlightedVerse => _highlightedVerse;
 
@@ -47,20 +45,6 @@ class MushafController extends ChangeNotifier {
     }
   }
 
-  void toggleBookmark(int surah, int verse) {
-    final verseKey = _getVerseKey(surah, verse);
-    if (_bookmarkedVerses.contains(verseKey)) {
-      _bookmarkedVerses.remove(verseKey);
-    } else {
-      _bookmarkedVerses.add(verseKey);
-    }
-    notifyListeners();
-  }
-
-  bool isBookmarked(int surah, int verse) {
-    return _bookmarkedVerses.contains(_getVerseKey(surah, verse));
-  }
-
   void setHighlightedVerse(int? surah, int? verse) {
     _highlightedSurah = surah;
     _highlightedVerse = verse;
@@ -73,8 +57,6 @@ class MushafController extends ChangeNotifier {
     notifyListeners();
   }
 
-  String _getVerseKey(int surah, int verse) => '$surah:$verse';
-
   void _handleSettingsChanged() {
     final nextMode = _settings.scrollMode;
     if (nextMode != _scrollMode) {
@@ -86,7 +68,6 @@ class MushafController extends ChangeNotifier {
   @override
   void dispose() {
     _settings.removeListener(_handleSettingsChanged);
-    _bookmarkedVerses.clear();
     super.dispose();
   }
 }
