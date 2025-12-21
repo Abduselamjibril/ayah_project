@@ -6,6 +6,7 @@ import 'package:quran_app/core/database/init_database.dart';
 import 'package:quran_app/core/services/mushaf_settings_service.dart';
 import 'package:quran_app/core/services/theme_service.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'core/services/audio_notification_service.dart';
 
 Future<void> main() async {
   // Ensure Flutter widgets are initialized
@@ -19,6 +20,9 @@ Future<void> main() async {
 
   // Initialize mushaf settings (scroll mode, etc.)
   await MushafSettingsService().initialize();
+
+  // Initialize audio notification handling
+  await AudioNotificationService.instance.init();
 
   // Keep the screen awake while the app is open
   await WakelockPlus.enable();

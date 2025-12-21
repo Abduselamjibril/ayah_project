@@ -3,6 +3,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import '../../data/sources/remote/audio_api.dart';
 import 'audio_service.dart';
+import 'audio_notification_service.dart';
 
 /// Thin wrapper around audioplayers for verse playback.
 class AudioPlayerService {
@@ -26,11 +27,26 @@ class AudioPlayerService {
       isPlaying.value = state == PlayerState.playing;
       if (state == PlayerState.stopped) {
         _hasSource = false;
+        AudioNotificationService.instance.cancel();
       }
     });
     _player.onPlayerComplete.listen((_) {
       isPlaying.value = false;
       _hasSource = false;
+      AudioNotificationService.instance.cancel();
+    });
+
+    // Keep the notification in sync with play/pause changes
+    isPlaying.addListener(() {
+      final playing = isPlaying.value;
+      final label = currentLabel.value;
+      if (_hasSource) {
+        AudioNotificationService.instance.showNowPlaying(
+          title: label,
+          reciterName: _recitationName,
+          isPlaying: playing,
+        );
+      }
     });
   }
 
@@ -87,21 +103,37 @@ class AudioPlayerService {
     _hasSource = true;
     await _player.stop();
     await _player.play(UrlSource(file.url));
+    await AudioNotificationService.instance.showNowPlaying(
+      title: currentLabel.value,
+      reciterName: reciterLabel,
+      isPlaying: true,
+    );
   }
 
   Future<void> pause() async {
     await _player.pause();
+    await AudioNotificationService.instance.showNowPlaying(
+      title: currentLabel.value,
+      reciterName: _recitationName,
+      isPlaying: false,
+    );
   }
 
   Future<void> resume() async {
     if (!_hasSource) throw Exception('No audio loaded');
     await _player.resume();
+    await AudioNotificationService.instance.showNowPlaying(
+      title: currentLabel.value,
+      reciterName: _recitationName,
+      isPlaying: true,
+    );
   }
 
   Future<void> stop() async {
     _hasSource = false;
     isPlaying.value = false;
     await _player.stop();
+    await AudioNotificationService.instance.cancel();
   }
 
   /// Play a verse, preferring a locally downloaded file if present.
@@ -122,6 +154,11 @@ class AudioPlayerService {
       _hasSource = true;
       await _player.stop();
       await _player.play(DeviceFileSource(local.path));
+      await AudioNotificationService.instance.showNowPlaying(
+        title: currentLabel.value,
+        reciterName: reciterLabel,
+        isPlaying: true,
+      );
       return;
     }
     await playAyah(
