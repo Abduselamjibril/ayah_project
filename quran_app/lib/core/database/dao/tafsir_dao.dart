@@ -1,5 +1,6 @@
 // lib/core/database/dao/tafsir_dao.dart
 import 'package:sqflite/sqflite.dart';
+import 'package:quran_app/core/utils/logger.dart';
 
 class TafsirDao {
   final Database database;
@@ -15,7 +16,7 @@ class TafsirDao {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
     } catch (e) {
-      print('Error inserting tafsir: $e');
+      Logger.error('Error inserting tafsir', e);
       rethrow;
     }
   }

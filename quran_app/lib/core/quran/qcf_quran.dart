@@ -183,29 +183,31 @@ String getVerseEndSymbol(int verseNumber, {bool arabicNumeral = true}) {
   return '\u06dd$arabicNumeric';
 }
 
+Map<String, dynamic>? _quranTextIndex;
+
+void _initQuranTextIndex() {
+  if (_quranTextIndex != null) return;
+  _quranTextIndex = {
+    for (var item in quranText)
+      "${item['surah_number']}:${item['verse_number']}": item
+  };
+}
+
 String getVerseQCF(
   int surahNumber,
   int verseNumber, {
   bool verseEndSymbol = true,
 }) {
-  String verse = '';
-  for (var i in quranText) {
-    if (i['surah_number'] == surahNumber && i['verse_number'] == verseNumber) {
-      verse = (verseEndSymbol
-          ? i['qcfData'].toString()
-          : i['qcfData'].toString().substring(
-                0,
-                i['qcfData'].toString().length - 1,
-              ));
-      break;
-    }
-  }
+  _initQuranTextIndex();
+  final key = "$surahNumber:$verseNumber";
+  final item = _quranTextIndex![key];
 
-  if (verse == '') {
+  if (item == null) {
     throw "No verse found with given surahNumber and verseNumber.";
   }
 
-  return verse;
+  final qcfData = item['qcfData'].toString();
+  return verseEndSymbol ? qcfData : qcfData.substring(0, qcfData.length - 1);
 }
 
 String getVerseNumberQCF(
@@ -213,21 +215,16 @@ String getVerseNumberQCF(
   int verseNumber, {
   bool verseEndSymbol = true,
 }) {
-  String lastCharacter = '';
-  for (var i in quranText) {
-    if (i['surah_number'] == surahNumber && i['verse_number'] == verseNumber) {
-      lastCharacter = i['qcfData'].toString().substring(
-            i['qcfData'].toString().length - 1,
-          );
-      break;
-    }
-  }
+  _initQuranTextIndex();
+  final key = "$surahNumber:$verseNumber";
+  final item = _quranTextIndex![key];
 
-  if (lastCharacter == '') {
+  if (item == null) {
     throw "No verse found with given surahNumber and verseNumber.";
   }
 
-  return lastCharacter;
+  final qcfData = item['qcfData'].toString();
+  return qcfData.substring(qcfData.length - 1);
 }
 
 Map searchWords(String words) {

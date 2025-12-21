@@ -228,6 +228,8 @@ class _TafsirScreenState extends State<TafsirScreen> {
         isTafsir ? _selectedTafsir?.id : _selectedTranslation?.id;
     String filter = '';
 
+    if (!mounted) return;
+
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -371,7 +373,7 @@ class _TafsirScreenState extends State<TafsirScreen> {
                                         }
                                       }
                                       await _loadContent();
-                                      if (mounted) Navigator.of(ctx).pop();
+                                      if (ctx.mounted) Navigator.of(ctx).pop();
                                     },
                                   ),
                                 );

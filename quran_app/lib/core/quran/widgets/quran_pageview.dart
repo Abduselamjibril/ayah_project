@@ -316,7 +316,7 @@ class _PageWithNumber extends StatelessWidget {
   Widget build(BuildContext context) {
     final style = pageNumberTextStyle ??
         TextStyle(
-          color: textColorFallback.withOpacity(0.6),
+          color: textColorFallback.withValues(alpha: 0.6),
           fontSize: 14,
           fontWeight: FontWeight.w500,
         );
@@ -418,12 +418,24 @@ class _QuranPageContentState extends State<QuranPageContent>
     final ranges = getPageData(widget.pageNumber);
     final pageFont = "QCF_P${widget.pageNumber.toString().padLeft(3, '0')}";
     final baseFontSize = getFontSize(widget.pageNumber, context) / widget.sp;
+    final mediaQuery = MediaQuery.of(context);
+    final isLandscape = mediaQuery.orientation == Orientation.landscape;
+    final screenType = getScreenType(context);
+    final isLargeScreen = screenType == ScreenType.large;
+
+    final headerFontSize = isLandscape
+        ? (isLargeScreen ? 50.0 : 35.0) / widget.sp
+        : (isLargeScreen ? 13.2 : 24.0) / widget.sp;
+
+    final bsmlFontSize = isLandscape
+        ? (isLargeScreen ? 45.0 : 30.0) / widget.sp
+        : (isLargeScreen ? 13.2 : 18.0) / widget.sp;
 
     final verseSpans = <InlineSpan>[];
     if (widget.pageNumber == 2 || widget.pageNumber == 1) {
       verseSpans.add(
         WidgetSpan(
-          child: SizedBox(height: MediaQuery.of(context).size.height * .000001),
+          child: SizedBox(height: mediaQuery.size.height * .000001),
         ),
       );
     }
@@ -442,14 +454,7 @@ class _QuranPageContentState extends State<QuranPageContent>
                   text: " ﱁ  ﱂﱃﱄ\n",
                   style: TextStyle(
                     fontFamily: "QCF_P001",
-                    fontSize: MediaQuery.of(context).orientation ==
-                            Orientation.landscape
-                        ? getScreenType(context) == ScreenType.large
-                            ? 50 / widget.sp // Tablet landscape
-                            : 35 / widget.sp // Phone landscape
-                        : getScreenType(context) == ScreenType.large
-                            ? 13.2 / widget.sp
-                            : 24 / widget.sp,
+                    fontSize: headerFontSize,
                     color: widget.textColor,
                   ),
                 ),
@@ -460,14 +465,7 @@ class _QuranPageContentState extends State<QuranPageContent>
                   text: "齃𧻓𥳐龎\n",
                   style: TextStyle(
                     fontFamily: "QCF_BSML",
-                    fontSize: MediaQuery.of(context).orientation ==
-                            Orientation.landscape
-                        ? getScreenType(context) == ScreenType.large
-                            ? 45 / widget.sp // Tablet landscape
-                            : 30 / widget.sp // Phone landscape
-                        : getScreenType(context) == ScreenType.large
-                            ? 13.2 / widget.sp
-                            : 18 / widget.sp,
+                    fontSize: bsmlFontSize,
                     color: widget.textColor,
                   ),
                 ),
@@ -485,12 +483,14 @@ class _QuranPageContentState extends State<QuranPageContent>
             (LongPressEndDetails d) => widget.onLongPressCancel?.call(surah, v);
 
         final verseBgColor = widget.verseBackgroundColor?.call(surah, v);
+        final verseText = getVerseQCF(surah, v, verseEndSymbol: false);
+        final text = v == ranges[0]['start']
+            ? "${verseText.substring(0, 1)}\u200A${verseText.substring(1)}"
+            : verseText;
 
         verseSpans.add(
           TextSpan(
-            text: v == ranges[0]['start']
-                ? "${getVerseQCF(surah, v, verseEndSymbol: false).substring(0, 1)}\u200A${getVerseQCF(surah, v, verseEndSymbol: false).substring(1, getVerseQCF(surah, v, verseEndSymbol: false).length)}"
-                : getVerseQCF(surah, v, verseEndSymbol: false),
+            text: text,
             recognizer: spanRecognizer,
             style: verseBgColor != null
                 ? TextStyle(backgroundColor: verseBgColor)
@@ -513,14 +513,10 @@ class _QuranPageContentState extends State<QuranPageContent>
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final screenType = getScreenType(context);
-        final isLandscape =
-            MediaQuery.of(context).orientation == Orientation.landscape;
-        final isTablet = screenType == ScreenType.large;
         final useFitWidth = isLandscape;
 
         // Use contain for tablets to fill screen, scaleDown for others to avoid overflow
-        final fitMode = isTablet ? BoxFit.contain : BoxFit.scaleDown;
+        final fitMode = isLargeScreen ? BoxFit.contain : BoxFit.scaleDown;
 
         final content = Container(
           padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
@@ -544,10 +540,9 @@ class _QuranPageContentState extends State<QuranPageContent>
                   color: widget.textColor,
                   height: (widget.pageNumber == 1 || widget.pageNumber == 2)
                       ? 2.2
-                      : MediaQuery.of(context).systemGestureInsets.left > 0 ==
-                              false
+                      : mediaQuery.systemGestureInsets.left > 0 == false
                           ? 2.2
-                          : MediaQuery.of(context).viewPadding.top > 0
+                          : mediaQuery.viewPadding.top > 0
                               ? 2.2
                               : 2.2,
                 ),

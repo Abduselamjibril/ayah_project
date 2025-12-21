@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../../core/services/translation_service.dart';
 import '../../core/services/tafsir_service.dart';
+import '../../core/services/audio_service.dart';
 
 class StorageManagementPage extends StatefulWidget {
   const StorageManagementPage({super.key});
@@ -13,11 +14,14 @@ class StorageManagementPage extends StatefulWidget {
 class _StorageManagementPageState extends State<StorageManagementPage> {
   final TranslationService _translationService = TranslationService.instance;
   final TafsirService _tafsirService = TafsirService.instance;
+  final AudioService _audioService = AudioService.instance;
 
   List<String> _downloadedTranslations = [];
   List<String> _downloadedTafsirs = [];
+  List<String> _downloadedRecitations = [];
   Map<String, String> _translationNames = {};
   Map<String, String> _tafsirNames = {};
+  Map<String, String> _recitationNames = {};
   bool _loading = true;
 
   @override
@@ -29,6 +33,9 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
   Future<void> _load() async {
     final translations = await _translationService.getDownloadedTranslations();
     final tafsirs = await _tafsirService.getDownloadedTafsirs();
+    await _audioService.initialize();
+    final recitationIds = await _audioService.getDownloadedRecitationIds();
+    final recitations = await _audioService.getAvailableRecitations();
 
     // Fetch metadata to map ids to names
     final allTranslationEditions =
@@ -41,12 +48,17 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     final tafsirNames = <String, String>{
       for (final e in allTafsirEditions) e.id.toString(): e.name
     };
+    final recitationNames = <String, String>{
+      for (final r in recitations) r.id.toString(): r.reciterName
+    };
 
     setState(() {
       _downloadedTranslations = translations;
       _downloadedTafsirs = tafsirs;
+      _downloadedRecitations = recitationIds.map((e) => e.toString()).toList();
       _translationNames = translationNames;
       _tafsirNames = tafsirNames;
+      _recitationNames = recitationNames;
       _loading = false;
     });
   }
@@ -107,6 +119,34 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     );
   }
 
+  Future<void> _bulkDeleteAudios() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete All Audio'),
+        content: const Text(
+            'Are you sure you want to delete all downloaded audio recitations?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    for (final id in List.of(_downloadedRecitations)) {
+      await _audioService.deleteRecitation(int.parse(id));
+    }
+    await _load();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('All audio deleted')),
+    );
+  }
+
   // Placeholder size getters. Implement real size calculation in services if available.
   Future<String> _getTranslationSize(String id) async {
     // TODO: Return actual size on disk per translation id
@@ -116,6 +156,23 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
   Future<String> _getTafsirSize(String id) async {
     // TODO: Return actual size on disk per tafsir id
     return '—';
+  }
+
+  Future<String> _getAudioSize(String id) async {
+    final bytes = await _audioService.getRecitationSizeBytes(int.parse(id));
+    return _formatBytes(bytes);
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes <= 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    double value = bytes.toDouble();
+    int unitIndex = 0;
+    while (value >= 1024 && unitIndex < units.length - 1) {
+      value /= 1024;
+      unitIndex++;
+    }
+    return '${value.toStringAsFixed(value >= 10 || value == value.floorToDouble() ? 0 : 1)} ${units[unitIndex]}';
   }
 
   @override
@@ -131,6 +188,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                 _buildCategory(
                   title: 'Translations',
                   items: _downloadedTranslations,
+                  nameForId: (id) => _translationNames[id] ?? 'ID: $id',
                   onBulkDelete: _bulkDeleteTranslations,
                   itemSizeGetter: _getTranslationSize,
                   onDeleteItem: (id) async {
@@ -141,10 +199,22 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                 _buildCategory(
                   title: 'Tafsir',
                   items: _downloadedTafsirs,
+                  nameForId: (id) => _tafsirNames[id] ?? 'ID: $id',
                   onBulkDelete: _bulkDeleteTafsirs,
                   itemSizeGetter: _getTafsirSize,
                   onDeleteItem: (id) async {
                     await _tafsirService.deleteTafsir(id);
+                    await _load();
+                  },
+                ),
+                _buildCategory(
+                  title: 'Audio',
+                  items: _downloadedRecitations,
+                  nameForId: (id) => _recitationNames[id] ?? 'Recitation $id',
+                  onBulkDelete: _bulkDeleteAudios,
+                  itemSizeGetter: _getAudioSize,
+                  onDeleteItem: (id) async {
+                    await _audioService.deleteRecitation(int.parse(id));
                     await _load();
                   },
                 ),
@@ -156,6 +226,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
   Widget _buildCategory({
     required String title,
     required List<String> items,
+    required String Function(String id) nameForId,
     required VoidCallback onBulkDelete,
     required Future<String> Function(String id) itemSizeGetter,
     required Future<void> Function(String id) onDeleteItem,
@@ -194,9 +265,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                 separatorBuilder: (_, __) => const Divider(height: 1),
                 itemBuilder: (context, index) {
                   final id = items[index];
-                  final displayName = title == 'Translations'
-                      ? (_translationNames[id] ?? 'ID: $id')
-                      : (_tafsirNames[id] ?? 'ID: $id');
+                  final displayName = nameForId(id);
                   return FutureBuilder<String>(
                     future: itemSizeGetter(id),
                     builder: (context, snapshot) {

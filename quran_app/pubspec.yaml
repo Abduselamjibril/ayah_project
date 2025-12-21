@@ -20,6 +20,7 @@ dependencies:
   flutter_downloader: ^1.11.8
   timezone: ^0.10.1
   http: ^1.1.0
+  audioplayers: ^6.0.0
   flutter_html: ^3.0.0
   html_unescape: ^2.0.0
 

@@ -3,6 +3,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../core/quran/widgets/quran_pageview.dart';
 import '../../../core/quran/qcf_quran.dart';
+import '../../../core/services/audio_player_service.dart';
+import '../../downloads/audio_surah_list_page.dart';
+import 'package:quran_app/core/services/audio_service.dart';
+import 'package:quran_app/data/models/audio_model.dart';
 import '../controller/mushaf_controller.dart';
 import '../screens/verse_details_screen.dart';
 
@@ -25,9 +29,15 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   double? _sliderValue;
   bool _isPlaying = false;
   String _audioName = 'Select audio';
+  late final AudioPlayerService _audioPlayer;
+  late final VoidCallback _playerStateListener;
+  late final VoidCallback _labelListener;
+  AudioRecitation? _selectedRecitation;
   final Map<int, String> _surahNameCache = {};
   bool _overlayVisible = true;
   Timer? _autoHideTimer;
+  bool _isSequentialMode = false;
+  int _sequenceToken = 0;
 
   @override
   void initState() {
@@ -35,6 +45,23 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     _pageController =
         PageController(initialPage: widget.controller.currentPage - 1);
     _sliderValue = widget.controller.currentPage.toDouble();
+    _audioPlayer = AudioPlayerService.instance;
+    _isPlaying = _audioPlayer.isPlaying.value;
+    _audioName = _audioPlayer.currentLabel.value;
+    _playerStateListener = () {
+      if (!mounted) return;
+      setState(() {
+        _isPlaying = _audioPlayer.isPlaying.value;
+      });
+    };
+    _labelListener = () {
+      if (!mounted) return;
+      setState(() {
+        _audioName = _audioPlayer.currentLabel.value;
+      });
+    };
+    _audioPlayer.isPlaying.addListener(_playerStateListener);
+    _audioPlayer.currentLabel.addListener(_labelListener);
     widget.controller.addListener(_onControllerChanged);
     _scheduleAutoHide();
     widget.onOverlayVisibilityChanged?.call(true);
@@ -42,6 +69,8 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
 
   @override
   void dispose() {
+    _audioPlayer.isPlaying.removeListener(_playerStateListener);
+    _audioPlayer.currentLabel.removeListener(_labelListener);
     widget.controller.removeListener(_onControllerChanged);
     _pageController.dispose();
     _autoHideTimer?.cancel();
@@ -113,11 +142,11 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
 
   Color? _getVerseBackgroundColor(int surah, int verse) {
     if (widget.controller.isBookmarked(surah, verse)) {
-      return Colors.yellow.withOpacity(0.3);
+      return Colors.yellow.withValues(alpha: 0.3);
     }
     if (widget.controller.highlightedSurah == surah &&
         widget.controller.highlightedVerse == verse) {
-      return Colors.blue.withOpacity(0.2);
+      return Colors.blue.withValues(alpha: 0.2);
     }
     return null;
   }
@@ -152,7 +181,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                           color: Theme.of(context)
                               .colorScheme
                               .surface
-                              .withOpacity(0.95),
+                              .withValues(alpha: 0.95),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -277,18 +306,264 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     );
   }
 
-  void _togglePlayPause() {
-    setState(() {
-      _isPlaying = !_isPlaying;
-    });
-    // TODO: integrate with real audio playback
+  Future<void> _togglePlayPause() async {
     _showOverlay();
+    final recitation = await _ensureReciterSelected();
+    if (recitation == null) return;
+    if (_audioPlayer.isPlaying.value) {
+      await _audioPlayer.pause();
+      return;
+    }
+    if (_isSequentialMode && _audioPlayer.hasSource) {
+      await _audioPlayer.resume();
+      return;
+    }
+    await _cancelSequence();
+    // Decide what to play: highlighted verse or current surah
+    final hs = widget.controller.highlightedSurah;
+    final hv = widget.controller.highlightedVerse;
+    if (hs != null && hv != null) {
+      try {
+        await _audioPlayer.playAyahPreferLocal(
+          surah: hs,
+          ayah: hv,
+          surahName: getSurahName(hs),
+          reciterName: recitation.reciterName,
+        );
+        return;
+      } catch (_) {
+        // fallthrough to surah logic
+      }
+    }
+    // No verse selected: attempt local surah; if not downloaded, navigate to downloads
+    final recitationId = recitation.id;
+    await AudioService.instance.initialize();
+    final currentPage = widget.controller.currentPage;
+    final pd = getPageData(currentPage);
+    int surah = 1;
+    if (pd.isNotEmpty) {
+      surah = int.tryParse(pd.first['surah'].toString()) ?? 1;
+    }
+    final surahLabel = getSurahName(surah);
+    final hasLocal =
+        await AudioService.instance.isSurahDownloaded(recitationId, surah);
+    if (!hasLocal) {
+      _navigateToDownloadSurah(recitationId);
+      return;
+    }
+    try {
+      _startSurahSequence(
+        surah: surah,
+        surahLabel: surahLabel,
+        reciterName: recitation.reciterName,
+      );
+    } catch (e) {
+      _showSnack('Audio failed to start: $e');
+    }
   }
 
-  void _openAudioPicker() {
-    // TODO: navigate to audio selection screen in future
-    debugPrint('Open audio picker');
+  void _showSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  void _openAudioPicker() async {
     _showOverlay();
+    final recitation = await _ensureReciterSelected();
+    if (recitation == null) return;
+    final recitationId = recitation.id;
+    await AudioService.instance.initialize();
+    final downloaded =
+        await AudioService.instance.getDownloadedSurahs(recitationId);
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        final maxHeight = min(MediaQuery.of(context).size.height * 0.7, 520.0);
+        return SafeArea(
+          child: SizedBox(
+            height: maxHeight,
+            child: Column(
+              mainAxisSize: MainAxisSize.max,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.all(12.0),
+                  child: Text('Downloaded Audios',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                Expanded(
+                  child: downloaded.isEmpty
+                      ? const Center(child: Text('No downloaded surahs'))
+                      : ListView.builder(
+                          itemCount: downloaded.length,
+                          itemBuilder: (context, index) {
+                            final s = downloaded[index];
+                            final n = int.tryParse(s) ?? 0;
+                            final name = getSurahName(n);
+                            return ListTile(
+                              title: Text('${s.padLeft(3, '0')} - $name'),
+                              subtitle: Text(_audioPlayer.recitationName),
+                              trailing: const Icon(Icons.play_arrow),
+                              onTap: () async {
+                                Navigator.pop(context);
+                                await _cancelSequence();
+                                _startSurahSequence(
+                                  surah: n,
+                                  surahLabel: name,
+                                  reciterName: _audioPlayer.recitationName,
+                                );
+                              },
+                            );
+                          },
+                        ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.switch_account),
+                  title: const Text('Change Reciter'),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    _selectedRecitation = null;
+                    final recitation =
+                        await _ensureReciterSelected(force: true);
+                    if (!mounted) return;
+                    if (recitation != null) {
+                      _openAudioPicker();
+                    }
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.download),
+                  title: const Text('Open Audio Downloads'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _navigateToDownloadSurah(recitationId);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _cancelSequence() async {
+    _isSequentialMode = false;
+    _sequenceToken++;
+    widget.controller.clearHighlight();
+    await _audioPlayer.stop();
+  }
+
+  void _startSurahSequence({
+    required int surah,
+    required String surahLabel,
+    required String reciterName,
+  }) {
+    final token = ++_sequenceToken;
+    _isSequentialMode = true;
+    Future.microtask(() => _runSurahSequence(
+          token: token,
+          surah: surah,
+          surahLabel: surahLabel,
+          reciterName: reciterName,
+        ));
+  }
+
+  Future<void> _runSurahSequence({
+    required int token,
+    required int surah,
+    required String surahLabel,
+    required String reciterName,
+  }) async {
+    await _audioPlayer.stop();
+    final totalAyat = getVerseCount(surah);
+    for (var ayah = 1; ayah <= totalAyat; ayah++) {
+      if (!mounted || token != _sequenceToken) break;
+      widget.controller.setHighlightedVerse(surah, ayah);
+      try {
+        await _audioPlayer.playAyahPreferLocal(
+          surah: surah,
+          ayah: ayah,
+          surahName: surahLabel,
+          reciterName: reciterName,
+        );
+      } catch (_) {
+        break;
+      }
+      await _audioPlayer.waitForCompleteOrStop();
+      if (token != _sequenceToken) {
+        await _audioPlayer.stop();
+        break;
+      }
+    }
+    if (!mounted) return;
+    if (token == _sequenceToken) {
+      _isSequentialMode = false;
+      widget.controller.clearHighlight();
+    }
+  }
+
+  Future<void> _navigateToDownloadSurah(int recitationId) async {
+    // Build minimal recitation model; alternatively fetch full list and find matching
+    final recitation = AudioRecitation(
+        id: recitationId,
+        reciterName:
+            _selectedRecitation?.reciterName ?? _audioPlayer.recitationName);
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+          builder: (_) => AudioSurahListPage(recitation: recitation)),
+    );
+  }
+
+  Future<AudioRecitation?> _ensureReciterSelected({bool force = false}) async {
+    if (!force && _selectedRecitation != null) return _selectedRecitation;
+    await AudioService.instance.initialize();
+    final recitations = await AudioService.instance.getAvailableRecitations();
+    if (!mounted) return null;
+    final chosen = await showModalBottomSheet<AudioRecitation>(
+      context: context,
+      builder: (context) {
+        final maxHeight = min(MediaQuery.of(context).size.height * 0.7, 520.0);
+        return SafeArea(
+          child: SizedBox(
+            height: maxHeight,
+            child: Column(
+              mainAxisSize: MainAxisSize.max,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.all(12.0),
+                  child: Text('Choose Reciter',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: recitations.length,
+                    itemBuilder: (context, index) {
+                      final r = recitations[index];
+                      return ListTile(
+                        title: Text(r.reciterName),
+                        subtitle: r.style != null ? Text(r.style!) : null,
+                        onTap: () => Navigator.pop(context, r),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (chosen != null) {
+      _selectedRecitation = chosen;
+      _audioPlayer.setRecitationInfo(id: chosen.id, name: chosen.reciterName);
+    }
+    return _selectedRecitation;
   }
 
   String _surahNameForPage(int page) {
@@ -432,9 +707,23 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     );
   }
 
-  void _playAudio(int surah, int verse) {
-    // TODO: Implement audio playback
-    print('Playing audio for Surah $surah, Verse $verse');
+  Future<void> _playAudio(int surah, int verse) async {
+    _showOverlay();
+    final recitation = await _ensureReciterSelected();
+    if (recitation == null) return;
+    try {
+      await _audioPlayer.playAyahPreferLocal(
+        surah: surah,
+        ayah: verse,
+        surahName: getSurahName(surah),
+        reciterName: recitation.reciterName,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Audio not available for this verse')),
+      );
+    }
   }
 
   void _viewTafsir(BuildContext context, int surah, int verse) {

@@ -3,14 +3,16 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/notification_service.dart';
-import '../../core/services/background_download_service.dart';
 import '../../core/services/translation_service.dart';
 import '../../core/services/tafsir_service.dart';
+import '../../core/services/audio_service.dart';
 import '../../data/models/translation_model.dart';
 import '../../data/models/tafsir_model.dart';
+import '../../data/models/audio_model.dart';
 import '../../core/utils/language_utils.dart';
 import '../../data/sources/remote/translation_api.dart';
 import 'download_settings_page.dart';
+import 'audio_surah_list_page.dart';
 
 class DownloadsScreen extends StatefulWidget {
   const DownloadsScreen({super.key});
@@ -24,14 +26,19 @@ class _DownloadsScreenState extends State<DownloadsScreen>
   late TabController _tabController;
   final TranslationService _translationService = TranslationService.instance;
   final TafsirService _tafsirService = TafsirService.instance;
+  final AudioService _audioService = AudioService.instance;
 
   List<TranslationEdition> _availableTranslations = [];
   List<TafsirEdition> _availableTafsirs = [];
+  List<AudioRecitation> _availableRecitations = [];
   List<String> _downloadedTranslations = [];
   List<String> _downloadedTafsirs = [];
+  final Map<int, List<String>> _downloadedAudioSurahs =
+      {}; // recitationId -> [surahNumbers]
 
   bool _isLoadingTranslations = true;
   bool _isLoadingTafsirs = true;
+  bool _isLoadingAudio = true;
 
   final Map<String, double> _downloadProgress = {};
   final Map<String, bool> _isDownloading = {};
@@ -39,7 +46,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _loadData();
   }
 
@@ -50,10 +57,17 @@ class _DownloadsScreenState extends State<DownloadsScreen>
   }
 
   Future<void> _loadData() async {
+    // Load metadata first, then fetch downloaded assets that depend on it.
     await Future.wait([
       _loadAvailableTranslations(),
       _loadAvailableTafsirs(),
+    ]);
+
+    await _loadAvailableRecitations();
+
+    await Future.wait([
       _loadDownloadedEditions(),
+      _loadDownloadedAudio(),
     ]);
   }
 
@@ -94,6 +108,23 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     }
   }
 
+  Future<void> _loadAvailableRecitations() async {
+    setState(() => _isLoadingAudio = true);
+    try {
+      await _audioService.initialize();
+      final recitations = await _audioService.getAvailableRecitations();
+      setState(() {
+        _availableRecitations = recitations;
+        _isLoadingAudio = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingAudio = false);
+      if (mounted) {
+        _showSnack('Error loading audio recitations: $e');
+      }
+    }
+  }
+
   Future<void> _loadDownloadedEditions() async {
     try {
       final translations =
@@ -105,6 +136,20 @@ class _DownloadsScreenState extends State<DownloadsScreen>
       });
     } catch (e) {
       print('Error loading downloaded editions: $e');
+    }
+  }
+
+  Future<void> _loadDownloadedAudio() async {
+    try {
+      _downloadedAudioSurahs.clear();
+      if (_availableRecitations.isEmpty) return;
+      for (final r in _availableRecitations) {
+        final surahs = await _audioService.getDownloadedSurahs(r.id);
+        _downloadedAudioSurahs[r.id] = surahs;
+      }
+      if (mounted) setState(() {});
+    } catch (e) {
+      // non-fatal
     }
   }
 
@@ -145,7 +190,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     final canProceed = await _checkWifiPreference();
     if (!canProceed) return;
 
-    // Always initialize notifications so both foreground and background paths surface progress
+    // Initialize notifications so progress stays visible while the app is active
     await AppNotificationService.instance.initialize();
     await AppNotificationService.instance.requestPermissionsIfNeeded();
 
@@ -157,17 +202,6 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     // Use a stable notification id per item
     final notifId = edition.id.hashCode & 0x7fffffff;
     try {
-      final useBackground =
-          await BackgroundDownloadService.instance.isBackgroundEnabled();
-      final bgUrl =
-          useBackground ? _translationService.getDownloadUrl(edition) : null;
-      final effectiveBackground = useBackground && bgUrl != null;
-      if (effectiveBackground) {
-        await BackgroundDownloadService.instance.initialize();
-        BackgroundDownloadService.registerCallback();
-        await BackgroundDownloadService.instance
-            .enqueue(url: bgUrl, fileName: '${edition.id}.json');
-      }
       final success = await _translationService.downloadTranslation(
         edition,
         onProgress: (progress) {
@@ -224,17 +258,6 @@ class _DownloadsScreenState extends State<DownloadsScreen>
 
     final notifId = edition.id.hashCode & 0x7fffffff;
     try {
-      final useBackground =
-          await BackgroundDownloadService.instance.isBackgroundEnabled();
-      final bgUrl =
-          useBackground ? _tafsirService.getDownloadUrl(edition) : null;
-      final effectiveBackground = useBackground && bgUrl != null;
-      if (effectiveBackground) {
-        await BackgroundDownloadService.instance.initialize();
-        BackgroundDownloadService.registerCallback();
-        await BackgroundDownloadService.instance
-            .enqueue(url: bgUrl, fileName: '${edition.id}.json');
-      }
       final success = await _tafsirService.downloadTafsir(
         edition,
         onProgress: (progress) {
@@ -363,6 +386,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
           tabs: const [
             Tab(text: 'Translations'),
             Tab(text: 'Tafsir'),
+            Tab(text: 'Audio'),
           ],
         ),
       ),
@@ -371,6 +395,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
         children: [
           _buildTranslationsTab(),
           _buildTafsirsTab(),
+          _buildAudioTab(),
         ],
       ),
     );
@@ -583,6 +608,63 @@ class _DownloadsScreenState extends State<DownloadsScreen>
                     ),
             );
           }).toList(),
+        );
+      },
+    );
+  }
+
+  // Removed old per-surah picker in favor of dedicated page
+
+  Widget _buildAudioTab() {
+    if (_isLoadingAudio) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_availableRecitations.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('Unable to load audio recitations'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadAvailableRecitations,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: _availableRecitations.length,
+      itemBuilder: (context, index) {
+        final r = _availableRecitations[index];
+        final keyPrefix = '${r.id}-';
+        final isAnyDownloading = _isDownloading.entries
+            .any((e) => e.key.startsWith(keyPrefix) && e.value == true);
+        final downloadedSurahs = _downloadedAudioSurahs[r.id] ?? [];
+        return ListTile(
+          title: Text(r.reciterName),
+          subtitle: Text('Downloaded surahs: ${downloadedSurahs.join(', ')}'),
+          trailing: isAnyDownloading
+              ? SizedBox(
+                  width: 100,
+                  child: LinearProgressIndicator(
+                    value: _downloadProgress.entries
+                        .where((e) => e.key.startsWith(keyPrefix))
+                        .map((e) => e.value)
+                        .fold<double>(0.0, (a, b) => b),
+                  ),
+                )
+              : const Icon(Icons.chevron_right),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AudioSurahListPage(recitation: r),
+              ),
+            );
+          },
         );
       },
     );

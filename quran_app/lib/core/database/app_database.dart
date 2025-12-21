@@ -1,4 +1,5 @@
 // lib/core/database/app_database.dart
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -92,7 +93,7 @@ class AppDatabase {
       )
     ''');
 
-    print('Database tables created successfully');
+    debugPrint('Database tables created successfully');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -102,7 +103,7 @@ class AppDatabase {
       await _addColumnIfNotExists(
           db, 'translations', 'edition_identifier', 'TEXT');
       await _addColumnIfNotExists(db, 'tafsir', 'edition_identifier', 'TEXT');
-      print('Database upgraded to version 2');
+      debugPrint('Database upgraded to version 2');
     }
   }
 
@@ -122,13 +123,13 @@ class AppDatabase {
         await db.execute(
           'ALTER TABLE $tableName ADD COLUMN $columnName $columnType',
         );
-        print('Added column $columnName to table $tableName');
+        debugPrint('Added column $columnName to table $tableName');
       } else {
-        print(
+        debugPrint(
             'Column $columnName already exists in table $tableName, skipping');
       }
     } catch (e) {
-      print('Error adding column $columnName to $tableName: $e');
+      debugPrint('Error adding column $columnName to $tableName: $e');
       rethrow;
     }
   }

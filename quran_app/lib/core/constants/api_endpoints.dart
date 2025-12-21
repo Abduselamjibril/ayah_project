@@ -20,4 +20,12 @@ class ApiEndpoints {
 
   // Chapter info
   static const String chapters = '/chapters';
+
+  // Audio recitations endpoints
+  static const String recitations = '/resources/recitations';
+  // Changed to use the verse-by-verse endpoint
+  static String recitationsBySurah(int recitationId, int chapterNumber) =>
+      '/recitations/$recitationId/by_chapter/$chapterNumber';
+  static String recitationsByAyah(int recitationId, int surah, int ayah) =>
+      '/recitations/$recitationId/by_ayah/$surah:$ayah';
 }
