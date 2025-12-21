@@ -27,6 +27,7 @@ class HorizontalMushafView extends StatefulWidget {
 class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   late PageController _pageController;
   double? _sliderValue;
+  bool _isSliderActive = false;
   bool _isPlaying = false;
   String _audioName = 'Select audio';
   late final AudioPlayerService _audioPlayer;
@@ -84,6 +85,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     if (_pageController.page?.round() != targetPage) {
       // Release slider to follow controller updates
       _sliderValue = null;
+      _isSliderActive = false;
       _pageController.animateToPage(
         targetPage,
         duration: const Duration(milliseconds: 300),
@@ -162,12 +164,13 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
       child: ListenableBuilder(
         listenable: widget.controller,
         builder: (context, child) {
-          final currentDouble =
-              (_sliderValue ?? widget.controller.currentPage.toDouble())
-                  .clamp(1.0, 604.0);
+          final currentDouble = ((_isSliderActive && _sliderValue != null)
+                  ? _sliderValue!
+                  : widget.controller.currentPage.toDouble())
+              .clamp(1.0, 604.0);
           final currentPage = currentDouble.round();
           final surahName = _surahNameForPage(currentPage);
-          final isSliding = _sliderValue != null;
+          final isSliding = _isSliderActive;
 
           return RepaintBoundary(
             child: Column(
@@ -238,6 +241,14 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                         max: 604,
                         divisions: 603,
                         value: currentDouble,
+                        onChangeStart: (value) {
+                          setState(() {
+                            _isSliderActive = true;
+                            _sliderValue = value;
+                            _overlayVisible = true;
+                          });
+                          _scheduleAutoHide();
+                        },
                         onChanged: (value) {
                           setState(() {
                             _overlayVisible = true;
@@ -248,6 +259,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                         onChangeEnd: (value) {
                           final page = value.round();
                           setState(() {
+                            _isSliderActive = false;
                             _sliderValue = null;
                           });
                           _navigateToPage(page);

@@ -29,6 +29,7 @@ class VerticalMushafView extends StatefulWidget {
 class _VerticalMushafViewState extends State<VerticalMushafView> {
   int _lastPage = 1;
   double? _sliderValue;
+  bool _isSliderActive = false;
   bool _isPlaying = false;
   String _audioName = 'Select audio';
   late final AudioPlayerService _audioPlayer;
@@ -100,6 +101,9 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
           // Ignore transient issues while scroll metrics stabilize
         }
       }
+      // Ensure slider follows controller when page changes externally
+      _isSliderActive = false;
+      _sliderValue = null;
     }
   }
 
@@ -175,12 +179,13 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
       child: ListenableBuilder(
         listenable: widget.controller,
         builder: (context, child) {
-          final currentDouble =
-              (_sliderValue ?? widget.controller.currentPage.toDouble())
-                  .clamp(1.0, 604.0);
+          final currentDouble = ((_isSliderActive && _sliderValue != null)
+                  ? _sliderValue!
+                  : widget.controller.currentPage.toDouble())
+              .clamp(1.0, 604.0);
           final currentPage = currentDouble.round();
           final surahName = _surahNameForPage(currentPage);
-          final isSliding = _sliderValue != null;
+          final isSliding = _isSliderActive;
           return RepaintBoundary(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -247,6 +252,14 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                         max: 604,
                         divisions: 603,
                         value: currentDouble,
+                        onChangeStart: (value) {
+                          setState(() {
+                            _isSliderActive = true;
+                            _sliderValue = value;
+                            _overlayVisible = true;
+                          });
+                          _scheduleAutoHide();
+                        },
                         onChanged: (value) {
                           setState(() {
                             _overlayVisible = true;
@@ -257,6 +270,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                         onChangeEnd: (value) {
                           final page = value.round();
                           setState(() {
+                            _isSliderActive = false;
                             _sliderValue = null;
                           });
                           _scrollToPage(page);
