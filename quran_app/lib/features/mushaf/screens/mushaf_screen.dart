@@ -14,6 +14,7 @@ class MushafScreen extends StatefulWidget {
 }
 
 class _MushafScreenState extends State<MushafScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final MushafController _controller = MushafController();
   final ScrollController _scrollController = ScrollController();
   bool _appBarVisible = true;
@@ -28,46 +29,72 @@ class _MushafScreenState extends State<MushafScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: _buildAnimatedAppBar(context),
+      key: _scaffoldKey,
       drawer: SurahDrawer(
         onSurahSelected: _jumpToSurah,
         controller: _controller,
       ),
-      body: ListenableBuilder(
-        listenable: _controller,
-        builder: (context, _) => _buildMushafView(),
+      body: Stack(
+        children: [
+          ListenableBuilder(
+            listenable: _controller,
+            builder: (context, _) => _buildMushafView(),
+          ),
+          _buildFloatingAppBar(context),
+        ],
       ),
     );
   }
 
-  AppBar _buildAppBar(BuildContext context) {
-    return AppBar(
-      title: const Text('Al-Quran'),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.settings),
-          tooltip: 'Settings',
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const SettingsScreen()),
-          ),
-        ),
-      ],
-    );
-  }
-
-  PreferredSizeWidget _buildAnimatedAppBar(BuildContext context) {
-    return PreferredSize(
-      preferredSize: const Size.fromHeight(kToolbarHeight),
-      child: ClipRect(
-        child: AnimatedContainer(
+  Widget _buildFloatingAppBar(BuildContext context) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: IgnorePointer(
+        ignoring: !_appBarVisible,
+        child: AnimatedOpacity(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeInOut,
-          height: _appBarVisible ? kToolbarHeight : 0,
-          child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 200),
-            opacity: _appBarVisible ? 1 : 0,
-            child: _buildAppBar(context),
+          opacity: _appBarVisible ? 1 : 0,
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Material(
+                elevation: 10,
+                borderRadius: BorderRadius.circular(16),
+                color: Theme.of(context).colorScheme.surface.withOpacity(0.95),
+                child: SizedBox(
+                  height: kToolbarHeight,
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.menu),
+                        tooltip: 'Surahs',
+                        onPressed: () =>
+                            _scaffoldKey.currentState?.openDrawer(),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Al-Quran',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.settings),
+                        tooltip: 'Settings',
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const SettingsScreen()),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),
