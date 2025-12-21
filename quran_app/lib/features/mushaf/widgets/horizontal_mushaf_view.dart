@@ -13,11 +13,13 @@ import '../screens/verse_details_screen.dart';
 class HorizontalMushafView extends StatefulWidget {
   final MushafController controller;
   final ValueChanged<bool>? onOverlayVisibilityChanged;
+  final VoidCallback? onDragDown;
 
   const HorizontalMushafView({
     super.key,
     required this.controller,
     this.onOverlayVisibilityChanged,
+    this.onDragDown,
   });
 
   @override
@@ -101,6 +103,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
         GestureDetector(
           behavior: HitTestBehavior.translucent,
           onTap: _toggleOverlay,
+          onVerticalDragUpdate: _handleVerticalDrag,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final maxWidth = min(constraints.maxWidth, 900.0);
@@ -639,6 +642,14 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     if (_overlayVisible) {
       _hideOverlay();
     } else {
+      _showOverlay();
+    }
+  }
+
+  void _handleVerticalDrag(DragUpdateDetails details) {
+    final delta = details.primaryDelta;
+    if (delta != null && delta > 8) {
+      widget.onDragDown?.call();
       _showOverlay();
     }
   }
