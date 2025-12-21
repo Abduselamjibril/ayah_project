@@ -148,8 +148,6 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                             Theme.of(context).scaffoldBackgroundColor,
                         verseBackgroundColor: (s, v) =>
                             _getVerseBackgroundColor(bookmarkState, s, v),
-                        verseTrailingBuilder: (s, v) =>
-                            _noteIndicator(context, bookmarkState, s, v),
                         onLongPress: (surah, verse) => _showVerseOptions(
                             context, bookmarkState, surah, verse),
                         onLongPressStart: (surah, verse, details) =>
@@ -174,28 +172,11 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     if (state.isBookmarked(surah, verse)) {
       return Colors.yellow.withValues(alpha: 0.25);
     }
-    if (state.hasNote(surah, verse)) {
-      return Colors.orange.withValues(alpha: 0.15);
-    }
     if (widget.controller.highlightedSurah == surah &&
         widget.controller.highlightedVerse == verse) {
       return Colors.blue.withValues(alpha: 0.2);
     }
     return null;
-  }
-
-  Widget? _noteIndicator(
-    BuildContext context,
-    BookmarkNotesNotifier state,
-    int surah,
-    int verse,
-  ) {
-    if (!state.hasNote(surah, verse)) return null;
-    return Icon(
-      Icons.edit_note,
-      size: 14,
-      color: Theme.of(context).colorScheme.primary,
-    );
   }
 
   Widget _buildPageOverlay() {
