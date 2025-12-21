@@ -27,45 +27,61 @@ class AudioApi {
     }
   }
 
-  /// Get audio files for a specific chapter for a given recitation
+  /// Get audio files for a specific chapter for a given recitation.
+  /// Handles pagination to ensure all verses are fetched.
   /// API endpoint: GET /recitations/{id}/by_chapter/{chapterNumber}
   Future<List<AudioVerseFile>> getAudioByChapter(
     int recitationId,
-    int chapterNumber,
-  ) async {
+    int chapterNumber, {
+    int perPage = 200,
+  }) async {
     try {
-      final uri = Uri.parse(
-          '${ApiEndpoints.baseUrl}${ApiEndpoints.recitationsBySurah(recitationId, chapterNumber)}');
-      final response = await http.get(uri).timeout(_timeout);
+      final result = <AudioVerseFile>[];
+      var page = 1;
+      var totalPages = 1;
 
-      if (response.statusCode == 200) {
+      do {
+        final uri = Uri.parse(
+            '${ApiEndpoints.baseUrl}${ApiEndpoints.recitationsBySurah(recitationId, chapterNumber)}?page=$page&per_page=$perPage');
+        final response = await http.get(uri).timeout(_timeout);
+
+        if (response.statusCode != 200) {
+          throw Exception('HTTP ${response.statusCode}: ${response.body}');
+        }
+
         final data = json.decode(response.body);
-        // Quran.com v4 returns either a single 'audio_file' or a list 'audio_files'
-        final result = <AudioVerseFile>[];
+        // Pagination metadata (if present)
+        final pagination = data['pagination'] as Map<String, dynamic>?;
+        if (pagination != null) {
+          totalPages = (pagination['total_pages'] as int?) ?? totalPages;
+        }
+
         if (data['audio_files'] is List) {
           final list = data['audio_files'] as List;
-          result.addAll(list.map((e) {
+          for (final e in list) {
             final item = AudioVerseFile.fromJson(e as Map<String, dynamic>);
-            // Fix relative URLs for verse-by-verse audio
             if (!item.url.startsWith('http')) {
-              return AudioVerseFile(
+              result.add(AudioVerseFile(
                 surahNumber: item.surahNumber,
                 ayahNumber: item.ayahNumber,
                 url: 'https://verses.quran.com/${item.url}',
                 verseKey: item.verseKey,
                 chapterId: item.chapterId,
                 format: item.format,
-              );
+              ));
+            } else {
+              result.add(item);
             }
-            return item;
-          }));
+          }
         } else if (data['audio_file'] is Map) {
           result.add(AudioVerseFile.fromJson(
               data['audio_file'] as Map<String, dynamic>));
         }
-        return result;
-      }
-      throw Exception('HTTP ${response.statusCode}: ${response.body}');
+
+        page++;
+      } while (page <= totalPages);
+
+      return result;
     } catch (e) {
       throw Exception(
           'Failed to fetch audio for recitation $recitationId, chapter $chapterNumber: $e');

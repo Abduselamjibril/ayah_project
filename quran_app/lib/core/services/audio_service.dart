@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:quran_app/data/models/audio_model.dart';
 import 'package:quran_app/data/sources/remote/audio_api.dart';
+import '../quran/qcf_quran.dart';
 
 typedef ProgressFn = void Function(double progress);
 
@@ -41,8 +42,19 @@ class AudioService {
   Future<bool> isSurahDownloaded(int recitationId, int surahNumber) async {
     final dir = await _surahDir(recitationId, surahNumber);
     if (!await dir.exists()) return false;
-    final files = await dir.list().toList();
-    return files.any((e) => e is File && e.path.endsWith('.mp3'));
+
+    final totalVerses = getVerseCount(surahNumber);
+    final files = (await dir.list().toList()).whereType<File>().toList();
+
+    // Ensure every ayah has a corresponding file (any audio extension)
+    for (var ayah = 1; ayah <= totalVerses; ayah++) {
+      final prefix = '${surahNumber}_$ayah.';
+      final hasFile = files.any(
+          (f) => f.path.split(Platform.pathSeparator).last.startsWith(prefix));
+      if (!hasFile) return false;
+    }
+
+    return true;
   }
 
   Future<List<String>> getDownloadedSurahs(int recitationId) async {
@@ -50,9 +62,19 @@ class AudioService {
     if (!await base.exists()) return [];
     final entries = await base.list().toList();
     final surahDirs = entries.whereType<Directory>().toList();
-    return surahDirs
-        .map((d) => d.path.split(Platform.pathSeparator).last)
-        .toList();
+
+    final valid = <String>[];
+    for (final d in surahDirs) {
+      final name = d.path.split(Platform.pathSeparator).last;
+      final sNum = int.tryParse(name);
+      if (sNum != null) {
+        // Verify it is fully downloaded
+        if (await isSurahDownloaded(recitationId, sNum)) {
+          valid.add(name);
+        }
+      }
+    }
+    return valid;
   }
 
   /// Returns the local verse-level audio file if present (e.g. '1_1.mp3').
@@ -61,14 +83,14 @@ class AudioService {
     final dir = await _surahDir(recitationId, surahNumber);
     if (!await dir.exists()) return null;
     final target = File(
-        '${dir.path}${Platform.pathSeparator}${surahNumber}_${ayahNumber}.mp3');
+        '${dir.path}${Platform.pathSeparator}${surahNumber}_$ayahNumber.mp3');
     if (await target.exists()) return target;
     // Some downloads may include format variations
     final files = await dir.list().toList();
     for (final e in files) {
       if (e is File) {
         final name = e.path.split(Platform.pathSeparator).last;
-        if (name == '${surahNumber}_${ayahNumber}.mp3') {
+        if (name == '${surahNumber}_$ayahNumber.mp3') {
           return e;
         }
       }
@@ -117,50 +139,69 @@ class AudioService {
       final files = await _api.getAudioByChapter(recitation.id, surahNumber);
       if (files.isEmpty) return false;
 
+      // Build a map ayah -> file to ensure we have all verses and correct naming.
+      final totalVerses = getVerseCount(surahNumber);
+      final verseMap = <int, AudioVerseFile>{};
+      for (final f in files) {
+        var ayahNum = f.ayahNumber;
+        if (ayahNum <= 0) {
+          ayahNum = _ayahFromKey(f.verseKey) ?? 0;
+        }
+        if (ayahNum > 0 && ayahNum <= totalVerses) {
+          verseMap[ayahNum] = f;
+        }
+      }
+
+      // If any verse is missing from the API payload, treat as failure.
+      if (verseMap.length < totalVerses) {
+        return false;
+      }
+
       final targetDir = await _surahDir(recitation.id, surahNumber);
       if (!await targetDir.exists()) {
         await targetDir.create(recursive: true);
       }
 
       int completed = 0;
-      int successCount = 0;
-      final total = files.length;
-      for (final f in files) {
+      for (var ayah = 1; ayah <= totalVerses; ayah++) {
+        final f = verseMap[ayah];
+        if (f == null || f.url.isEmpty) {
+          return false;
+        }
+
         final ext = (f.format ?? 'mp3').toLowerCase();
-        final baseName = (f.verseKey.isNotEmpty)
-            ? f.verseKey.replaceAll(':', '_')
-            : 'surah_${surahNumber.toString().padLeft(3, '0')}';
-        final fileName = '$baseName.$ext';
+        final fileName = '${surahNumber}_$ayah.$ext';
         final outPath =
             File('${targetDir.path}${Platform.pathSeparator}$fileName');
         if (await outPath.exists()) {
           completed++;
-          onProgress?.call(completed / total);
+          onProgress?.call(completed / totalVerses);
           continue;
         }
-        if (f.url.isEmpty) {
-          // Skip if URL missing
-          completed++;
-          onProgress?.call(completed / total);
-          continue;
-        }
+
         final resp = await http.get(Uri.parse(f.url));
         if (resp.statusCode == 200) {
           await outPath.writeAsBytes(resp.bodyBytes);
-          successCount++;
         } else {
-          // Continue on individual failures
+          return false;
         }
+
         completed++;
-        onProgress?.call(completed / total);
-        // Throttle a bit to be gentle
+        onProgress?.call(completed / totalVerses);
         await Future.delayed(const Duration(milliseconds: 50));
       }
 
-      return successCount > 0;
+      return await isSurahDownloaded(recitation.id, surahNumber);
     } catch (e) {
       return false;
     }
+  }
+
+  int? _ayahFromKey(String key) {
+    if (key.isEmpty) return null;
+    final parts = key.split(':');
+    if (parts.length != 2) return null;
+    return int.tryParse(parts[1]);
   }
 
   // Paths
