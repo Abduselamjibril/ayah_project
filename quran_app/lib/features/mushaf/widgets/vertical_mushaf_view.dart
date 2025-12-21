@@ -41,6 +41,9 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   Timer? _autoHideTimer;
   bool _isSequentialMode = false;
   int _sequenceToken = 0;
+  Timer? _autoScrollTimer;
+  bool _isAutoScrolling = false;
+  double _autoScrollSpeed = 60.0; // pixels per second
 
   @override
   void initState() {
@@ -74,6 +77,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     _audioPlayer.isPlaying.removeListener(_playerStateListener);
     _audioPlayer.currentLabel.removeListener(_labelListener);
     widget.controller.removeListener(_onControllerChanged);
+    _stopAutoScroll();
     _autoHideTimer?.cancel();
     super.dispose();
   }
@@ -247,36 +251,66 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     child: Directionality(
                       textDirection: TextDirection.rtl,
-                      child: Slider(
-                        min: 1,
-                        max: 604,
-                        divisions: 603,
-                        value: currentDouble,
-                        onChangeStart: (value) {
-                          setState(() {
-                            _isSliderActive = true;
-                            _sliderValue = value;
-                            _overlayVisible = true;
-                          });
-                          _scheduleAutoHide();
-                        },
-                        onChanged: (value) {
-                          setState(() {
-                            _overlayVisible = true;
-                            _sliderValue = value;
-                          });
-                          _scheduleAutoHide();
-                        },
-                        onChangeEnd: (value) {
-                          final page = value.round();
-                          setState(() {
-                            _isSliderActive = false;
-                            _sliderValue = null;
-                          });
-                          _scrollToPage(page);
-                          widget.controller.setPage(page);
-                          _scheduleAutoHide();
-                        },
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Slider(
+                              min: 1,
+                              max: 604,
+                              divisions: 603,
+                              value: currentDouble,
+                              onChangeStart: (value) {
+                                _stopAutoScroll();
+                                setState(() {
+                                  _isSliderActive = true;
+                                  _sliderValue = value;
+                                  _overlayVisible = true;
+                                });
+                                _scheduleAutoHide();
+                              },
+                              onChanged: (value) {
+                                setState(() {
+                                  _overlayVisible = true;
+                                  _sliderValue = value;
+                                });
+                                _scheduleAutoHide();
+                              },
+                              onChangeEnd: (value) {
+                                _stopAutoScroll();
+                                final page = value.round();
+                                setState(() {
+                                  _isSliderActive = false;
+                                  _sliderValue = null;
+                                });
+                                _scrollToPage(page);
+                                widget.controller.setPage(page);
+                                _scheduleAutoHide();
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          IconButton(
+                            tooltip:
+                                'Auto-scroll (tap to start/stop, long press to set speed)',
+                            icon: const Icon(Icons.arrow_upward),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(_isAutoScrolling ? 1.0 : 0.4),
+                            onPressed: () {
+                              setState(() {
+                                _overlayVisible = true;
+                              });
+                              if (_isAutoScrolling) {
+                                _stopAutoScroll();
+                              } else {
+                                _startAutoScroll();
+                              }
+                              _scheduleAutoHide();
+                            },
+                            onLongPress: _showAutoScrollSpeedSheet,
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -622,6 +656,96 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     } catch (_) {
       // Avoid crashing if the position is not yet ready
     }
+  }
+
+  void _startAutoScroll() {
+    if (_isAutoScrolling) return;
+    if (!widget.scrollController.hasClients) return;
+    setState(() {
+      _isAutoScrolling = true;
+    });
+    const tick = Duration(milliseconds: 16);
+    _autoScrollTimer = Timer.periodic(tick, (timer) {
+      if (!mounted || !widget.scrollController.hasClients) {
+        _stopAutoScroll();
+        return;
+      }
+      final position = widget.scrollController.position;
+      final max = position.maxScrollExtent;
+      final min = position.minScrollExtent;
+      final delta = _autoScrollSpeed * (tick.inMilliseconds / 1000);
+      final next = (position.pixels + delta).clamp(min, max);
+
+      if ((next - position.pixels).abs() < 0.5 && position.pixels >= max) {
+        _stopAutoScroll();
+        return;
+      }
+
+      try {
+        widget.scrollController.jumpTo(next);
+        if (next >= max) {
+          _stopAutoScroll();
+        }
+      } catch (_) {
+        _stopAutoScroll();
+      }
+    });
+  }
+
+  void _stopAutoScroll() {
+    if (!_isAutoScrolling && _autoScrollTimer == null) return;
+    _autoScrollTimer?.cancel();
+    _autoScrollTimer = null;
+    if (mounted) {
+      setState(() {
+        _isAutoScrolling = false;
+      });
+    } else {
+      _isAutoScrolling = false;
+    }
+  }
+
+  void _showAutoScrollSpeedSheet() {
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        double tempSpeed = _autoScrollSpeed;
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Auto-scroll speed',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 12),
+                    Slider(
+                      min: 20,
+                      max: 250,
+                      divisions: 230,
+                      label: '${tempSpeed.toStringAsFixed(0)} px/s',
+                      value: tempSpeed,
+                      onChanged: (value) {
+                        setSheetState(() => tempSpeed = value);
+                        setState(() => _autoScrollSpeed = value);
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    Text('${tempSpeed.toStringAsFixed(0)} pixels/second'),
+                    const SizedBox(height: 12),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   void _scheduleAutoHide() {
