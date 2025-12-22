@@ -41,10 +41,17 @@ class PageviewQuran extends StatefulWidget {
   /// Background color for the whole page container.
   final Color pageBackgroundColor;
 
+  /// Optional style for the page number shown under each page.
+  final TextStyle? pageNumberTextStyle;
+
   /// Optional callback to get background color for individual verses.
   /// Returns a Color for the verse, or null for no background color.
   /// Useful for highlighting selected verses.
   final Color? Function(int surahNumber, int verseNumber)? verseBackgroundColor;
+
+  /// Optional builder to render a small widget after each verse (e.g. note icon).
+  final Widget? Function(int surahNumber, int verseNumber)?
+      verseTrailingBuilder;
 
   /// Long-press callbacks that include the pressed verse info.
   final void Function(int surahNumber, int verseNumber)? onLongPress;
@@ -68,7 +75,9 @@ class PageviewQuran extends StatefulWidget {
     this.h = 1,
     this.textColor = const Color(0xFF000000),
     this.pageBackgroundColor = const Color(0xFFFFFFFF),
+    this.pageNumberTextStyle,
     this.verseBackgroundColor,
+    this.verseTrailingBuilder,
     this.onLongPress,
     this.onLongPressUp,
     this.onLongPressCancel,
@@ -92,6 +101,23 @@ class _PageviewQuranState extends State<PageviewQuran> {
   bool get _ownsController => widget.controller == null;
   bool get _ownsVerticalController => widget.verticalScrollController == null;
   bool get _isVertical => widget.scrollMode == ScrollMode.vertical;
+
+  // Compact holder for per-page header data
+  final _PageHeader _emptyHeader =
+      const _PageHeader(surahName: '', juzNumber: 0);
+
+  _PageHeader _headerForPage(int pageNumber) {
+    final ranges = getPageData(pageNumber);
+    if (ranges.isEmpty) {
+      return _emptyHeader;
+    }
+    final surah = int.parse(ranges.first['surah'].toString());
+    final start = int.parse(ranges.first['start'].toString());
+    return _PageHeader(
+      surahName: getSurahName(surah),
+      juzNumber: getJuzNumber(surah, start),
+    );
+  }
 
   @override
   void initState() {
@@ -118,8 +144,9 @@ class _PageviewQuranState extends State<PageviewQuran> {
   }
 
   void _handleVerticalScroll() {
-    if (!_isVertical || _viewportHeight == null || _viewportHeight! <= 0)
+    if (!_isVertical || _viewportHeight == null || _viewportHeight! <= 0) {
       return;
+    }
 
     final scrollOffset = _verticalController.offset;
 
@@ -134,8 +161,9 @@ class _PageviewQuranState extends State<PageviewQuran> {
   }
 
   void _jumpToPage(int page) {
-    if (!_isVertical || _viewportHeight == null || _viewportHeight! <= 0)
+    if (!_isVertical || _viewportHeight == null || _viewportHeight! <= 0) {
       return;
+    }
 
     if (page >= 1 && page <= totalPagesCount) {
       final offset = (page - 1) * _viewportHeight!;
@@ -182,17 +210,27 @@ class _PageviewQuranState extends State<PageviewQuran> {
         },
         itemBuilder: (context, index) {
           final pageNumber = index + 1; // 1-based page
-          return QuranPageContent(
+          final header = _headerForPage(pageNumber);
+          return _PageWithNumber(
+            backgroundColor: widget.pageBackgroundColor,
             pageNumber: pageNumber,
-            fontSize: widget.fontSize,
-            textColor: widget.textColor,
-            verseBackgroundColor: widget.verseBackgroundColor,
-            onLongPress: widget.onLongPress,
-            onLongPressUp: widget.onLongPressUp,
-            onLongPressCancel: widget.onLongPressCancel,
-            onLongPressStart: widget.onLongPressStart,
-            sp: widget.sp,
-            h: widget.h,
+            pageNumberTextStyle: widget.pageNumberTextStyle,
+            textColorFallback: widget.textColor,
+            leftLabel: header.surahName,
+            rightLabel: header.juzNumber > 0 ? "Part ${header.juzNumber}" : '',
+            child: QuranPageContent(
+              pageNumber: pageNumber,
+              fontSize: widget.fontSize,
+              textColor: widget.textColor,
+              verseBackgroundColor: widget.verseBackgroundColor,
+              verseTrailingBuilder: widget.verseTrailingBuilder,
+              onLongPress: widget.onLongPress,
+              onLongPressUp: widget.onLongPressUp,
+              onLongPressCancel: widget.onLongPressCancel,
+              onLongPressStart: widget.onLongPressStart,
+              sp: widget.sp,
+              h: widget.h,
+            ),
           );
         },
       ),
@@ -216,6 +254,7 @@ class _PageviewQuranState extends State<PageviewQuran> {
         addRepaintBoundaries: true,
         itemBuilder: (context, index) {
           final pageNumber = index + 1;
+          final header = _headerForPage(pageNumber);
           final isLandscape =
               MediaQuery.of(context).orientation == Orientation.landscape;
 
@@ -223,22 +262,110 @@ class _PageviewQuranState extends State<PageviewQuran> {
             height: isLandscape ? null : viewportHeight,
             // Wrap each page in RepaintBoundary for better performance
             child: RepaintBoundary(
-              child: QuranPageContent(
+              child: _PageWithNumber(
+                backgroundColor: widget.pageBackgroundColor,
                 pageNumber: pageNumber,
-                fontSize: widget.fontSize,
-                textColor: widget.textColor,
-                verseBackgroundColor: widget.verseBackgroundColor,
-                onLongPress: widget.onLongPress,
-                onLongPressUp: widget.onLongPressUp,
-                onLongPressCancel: widget.onLongPressCancel,
-                onLongPressStart: widget.onLongPressStart,
-                sp: widget.sp,
-                h: widget.h,
-                allowInternalScroll: false,
+                pageNumberTextStyle: widget.pageNumberTextStyle,
+                textColorFallback: widget.textColor,
+                leftLabel: header.surahName,
+                rightLabel:
+                    header.juzNumber > 0 ? "Part ${header.juzNumber}" : '',
+                child: QuranPageContent(
+                  pageNumber: pageNumber,
+                  fontSize: widget.fontSize,
+                  textColor: widget.textColor,
+                  verseBackgroundColor: widget.verseBackgroundColor,
+                  verseTrailingBuilder: widget.verseTrailingBuilder,
+                  onLongPress: widget.onLongPress,
+                  onLongPressUp: widget.onLongPressUp,
+                  onLongPressCancel: widget.onLongPressCancel,
+                  onLongPressStart: widget.onLongPressStart,
+                  sp: widget.sp,
+                  h: widget.h,
+                  allowInternalScroll: false,
+                ),
               ),
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _PageHeader {
+  final String surahName;
+  final int juzNumber;
+
+  const _PageHeader({required this.surahName, required this.juzNumber});
+}
+
+class _PageWithNumber extends StatelessWidget {
+  final Widget child;
+  final int pageNumber;
+  final TextStyle? pageNumberTextStyle;
+  final Color textColorFallback;
+  final Color backgroundColor;
+  final String leftLabel;
+  final String rightLabel;
+
+  const _PageWithNumber({
+    required this.child,
+    required this.pageNumber,
+    required this.textColorFallback,
+    required this.backgroundColor,
+    required this.leftLabel,
+    required this.rightLabel,
+    this.pageNumberTextStyle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final style = pageNumberTextStyle ??
+        TextStyle(
+          color: textColorFallback.withValues(alpha: 0.6),
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        );
+
+    return Container(
+      color: backgroundColor,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              textDirection: TextDirection.ltr,
+              children: [
+                Text(
+                  leftLabel,
+                  overflow: TextOverflow.ellipsis,
+                  style: style,
+                  textAlign: TextAlign.left,
+                ),
+                const Spacer(),
+                Text(
+                  rightLabel,
+                  style: style,
+                ),
+              ],
+            ),
+          ),
+          Flexible(fit: FlexFit.loose, child: child),
+          SafeArea(
+            top: false,
+            left: false,
+            right: false,
+            bottom: true,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12, top: 8),
+              child: Text(pageNumber.toString(), style: style),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -252,6 +379,8 @@ class QuranPageContent extends StatefulWidget {
   final void Function(int surahNumber, int verseNumber)? onLongPress;
   final void Function(int surahNumber, int verseNumber)? onLongPressUp;
   final void Function(int surahNumber, int verseNumber)? onLongPressCancel;
+  final Widget? Function(int surahNumber, int verseNumber)?
+      verseTrailingBuilder;
 
   //sp (adding 1.sp to get the ratio of screen size for responsive font design)
   final double sp;
@@ -273,6 +402,7 @@ class QuranPageContent extends StatefulWidget {
     required this.fontSize,
     required this.textColor,
     this.verseBackgroundColor,
+    this.verseTrailingBuilder,
     required this.onLongPress,
     required this.onLongPressUp,
     required this.onLongPressCancel,
@@ -298,12 +428,24 @@ class _QuranPageContentState extends State<QuranPageContent>
     final ranges = getPageData(widget.pageNumber);
     final pageFont = "QCF_P${widget.pageNumber.toString().padLeft(3, '0')}";
     final baseFontSize = getFontSize(widget.pageNumber, context) / widget.sp;
+    final mediaQuery = MediaQuery.of(context);
+    final isLandscape = mediaQuery.orientation == Orientation.landscape;
+    final screenType = getScreenType(context);
+    final isLargeScreen = screenType == ScreenType.large;
+
+    final headerFontSize = isLandscape
+        ? (isLargeScreen ? 50.0 : 35.0) / widget.sp
+        : (isLargeScreen ? 13.2 : 24.0) / widget.sp;
+
+    final bsmlFontSize = isLandscape
+        ? (isLargeScreen ? 45.0 : 30.0) / widget.sp
+        : (isLargeScreen ? 13.2 : 18.0) / widget.sp;
 
     final verseSpans = <InlineSpan>[];
     if (widget.pageNumber == 2 || widget.pageNumber == 1) {
       verseSpans.add(
         WidgetSpan(
-          child: SizedBox(height: MediaQuery.of(context).size.height * .000001),
+          child: SizedBox(height: mediaQuery.size.height * .000001),
         ),
       );
     }
@@ -322,14 +464,7 @@ class _QuranPageContentState extends State<QuranPageContent>
                   text: " ﱁ  ﱂﱃﱄ\n",
                   style: TextStyle(
                     fontFamily: "QCF_P001",
-                    fontSize: MediaQuery.of(context).orientation ==
-                            Orientation.landscape
-                        ? getScreenType(context) == ScreenType.large
-                            ? 50 / widget.sp // Tablet landscape
-                            : 35 / widget.sp // Phone landscape
-                        : getScreenType(context) == ScreenType.large
-                            ? 13.2 / widget.sp
-                            : 24 / widget.sp,
+                    fontSize: headerFontSize,
                     color: widget.textColor,
                   ),
                 ),
@@ -340,14 +475,7 @@ class _QuranPageContentState extends State<QuranPageContent>
                   text: "齃𧻓𥳐龎\n",
                   style: TextStyle(
                     fontFamily: "QCF_BSML",
-                    fontSize: MediaQuery.of(context).orientation ==
-                            Orientation.landscape
-                        ? getScreenType(context) == ScreenType.large
-                            ? 45 / widget.sp // Tablet landscape
-                            : 30 / widget.sp // Phone landscape
-                        : getScreenType(context) == ScreenType.large
-                            ? 13.2 / widget.sp
-                            : 18 / widget.sp,
+                    fontSize: bsmlFontSize,
                     color: widget.textColor,
                   ),
                 ),
@@ -365,12 +493,14 @@ class _QuranPageContentState extends State<QuranPageContent>
             (LongPressEndDetails d) => widget.onLongPressCancel?.call(surah, v);
 
         final verseBgColor = widget.verseBackgroundColor?.call(surah, v);
+        final verseText = getVerseQCF(surah, v, verseEndSymbol: false);
+        final text = v == ranges[0]['start']
+            ? "${verseText.substring(0, 1)}\u200A${verseText.substring(1)}"
+            : verseText;
 
         verseSpans.add(
           TextSpan(
-            text: v == ranges[0]['start']
-                ? "${getVerseQCF(surah, v, verseEndSymbol: false).substring(0, 1)}\u200A${getVerseQCF(surah, v, verseEndSymbol: false).substring(1, getVerseQCF(surah, v, verseEndSymbol: false).length)}"
-                : getVerseQCF(surah, v, verseEndSymbol: false),
+            text: text,
             recognizer: spanRecognizer,
             style: verseBgColor != null
                 ? TextStyle(backgroundColor: verseBgColor)
@@ -385,6 +515,15 @@ class _QuranPageContentState extends State<QuranPageContent>
                   backgroundColor: verseBgColor,
                 ),
               ),
+              if (widget.verseTrailingBuilder != null)
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: widget.verseTrailingBuilder!(surah, v) ??
+                        const SizedBox.shrink(),
+                  ),
+                ),
             ],
           ),
         );
@@ -393,14 +532,10 @@ class _QuranPageContentState extends State<QuranPageContent>
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final screenType = getScreenType(context);
-        final isLandscape =
-            MediaQuery.of(context).orientation == Orientation.landscape;
-        final isTablet = screenType == ScreenType.large;
         final useFitWidth = isLandscape;
 
         // Use contain for tablets to fill screen, scaleDown for others to avoid overflow
-        final fitMode = isTablet ? BoxFit.contain : BoxFit.scaleDown;
+        final fitMode = isLargeScreen ? BoxFit.contain : BoxFit.scaleDown;
 
         final content = Container(
           padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
@@ -424,10 +559,9 @@ class _QuranPageContentState extends State<QuranPageContent>
                   color: widget.textColor,
                   height: (widget.pageNumber == 1 || widget.pageNumber == 2)
                       ? 2.2
-                      : MediaQuery.of(context).systemGestureInsets.left > 0 ==
-                              false
+                      : mediaQuery.systemGestureInsets.left > 0 == false
                           ? 2.2
-                          : MediaQuery.of(context).viewPadding.top > 0
+                          : mediaQuery.viewPadding.top > 0
                               ? 2.2
                               : 2.2,
                 ),

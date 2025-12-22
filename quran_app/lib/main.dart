@@ -1,10 +1,14 @@
 // main.dart
 import 'package:flutter/material.dart';
-
+import 'package:provider/provider.dart';
 import 'package:quran_app/app/router.dart';
 import 'package:quran_app/core/database/init_database.dart';
 import 'package:quran_app/core/services/mushaf_settings_service.dart';
 import 'package:quran_app/core/services/theme_service.dart';
+import 'package:quran_app/core/services/home_widget_service.dart';
+import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
+import 'core/services/audio_notification_service.dart';
 
 Future<void> main() async {
   // Ensure Flutter widgets are initialized
@@ -19,8 +23,33 @@ Future<void> main() async {
   // Initialize mushaf settings (scroll mode, etc.)
   await MushafSettingsService().initialize();
 
+  // Initialize audio notification handling
+  await AudioNotificationService.instance.init();
+
+  // Keep home widget in sync with local database
+  await HomeWidgetService.instance.initializeBackgroundSync();
+
+  // Keep the screen awake while the app is open
+  await WakelockPlus.enable();
+
   // Run the app
-  runApp(const MyApp());
+  runApp(const AppBootstrap());
+}
+
+class AppBootstrap extends StatelessWidget {
+  const AppBootstrap({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => BookmarkNotesNotifier()..initialize(),
+        ),
+      ],
+      child: const MyApp(),
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {

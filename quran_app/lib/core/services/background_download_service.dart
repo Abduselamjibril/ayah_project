@@ -1,5 +1,4 @@
 // lib/core/services/background_download_service.dart
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -78,7 +77,7 @@ class BackgroundDownloadService {
     // Ensure notifications are initialized in isolate
     await AppNotificationService.instance.initialize();
     await AppNotificationService.instance.requestPermissionsIfNeeded();
-    final title = 'Download';
+    const title = 'Download';
     if (status == 2) {
       await AppNotificationService.instance
           .showProgress(id.hashCode & 0x7fffffff, title, progress / 100.0);

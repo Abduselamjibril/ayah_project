@@ -269,14 +269,18 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
   }
 
   ConnectivityResult _choosePrimaryConnection(List<ConnectivityResult> list) {
-    if (list.any((e) => e == ConnectivityResult.wifi))
+    if (list.any((e) => e == ConnectivityResult.wifi)) {
       return ConnectivityResult.wifi;
-    if (list.any((e) => e == ConnectivityResult.ethernet))
+    }
+    if (list.any((e) => e == ConnectivityResult.ethernet)) {
       return ConnectivityResult.ethernet;
-    if (list.any((e) => e == ConnectivityResult.vpn))
+    }
+    if (list.any((e) => e == ConnectivityResult.vpn)) {
       return ConnectivityResult.vpn;
-    if (list.any((e) => e == ConnectivityResult.mobile))
+    }
+    if (list.any((e) => e == ConnectivityResult.mobile)) {
       return ConnectivityResult.mobile;
+    }
     return ConnectivityResult.none;
   }
 }

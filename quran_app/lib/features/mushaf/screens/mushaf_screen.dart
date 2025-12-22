@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:quran_app/core/quran/qcf_quran.dart';
 import '../../settings/settings_screen.dart';
@@ -5,6 +6,8 @@ import '../controller/mushaf_controller.dart';
 import '../widgets/horizontal_mushaf_view.dart';
 import '../widgets/surah_drawer.dart';
 import '../widgets/vertical_mushaf_view.dart';
+import 'package:quran_app/data/repositories/search_repository.dart';
+import 'package:quran_app/features/search/search_screen.dart';
 
 class MushafScreen extends StatefulWidget {
   const MushafScreen({super.key});
@@ -14,53 +17,159 @@ class MushafScreen extends StatefulWidget {
 }
 
 class _MushafScreenState extends State<MushafScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final MushafController _controller = MushafController();
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  bool _appBarVisible = true;
+  bool _isSearchMode = false;
+  final List<String> _suggestions = [];
+  Timer? _suggestionDebounce;
 
   @override
   void dispose() {
     _scrollController.dispose();
     _controller.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    _suggestionDebounce?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: _buildAppBar(context),
+      key: _scaffoldKey,
       drawer: SurahDrawer(
         onSurahSelected: _jumpToSurah,
         controller: _controller,
       ),
-      body: ListenableBuilder(
-        listenable: _controller,
-        builder: (context, _) => _buildMushafView(),
+      body: Stack(
+        children: [
+          ListenableBuilder(
+            listenable: _controller,
+            builder: (context, _) => _buildMushafView(),
+          ),
+          _buildFloatingAppBar(context),
+          if (_isSearchMode) _buildSuggestionOverlay(),
+        ],
       ),
     );
   }
 
-  AppBar _buildAppBar(BuildContext context) {
-    return AppBar(
-      title: const Text('Al-Quran'),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.settings),
-          tooltip: 'Settings',
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const SettingsScreen()),
+  Widget _buildFloatingAppBar(BuildContext context) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: IgnorePointer(
+        ignoring: !_appBarVisible,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          opacity: _appBarVisible ? 1 : 0,
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Material(
+                elevation: 10,
+                borderRadius: BorderRadius.circular(16),
+                color: Theme.of(context).colorScheme.surface.withOpacity(0.95),
+                child: SizedBox(
+                  height: kToolbarHeight,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    switchInCurve: Curves.easeInOut,
+                    switchOutCurve: Curves.easeInOut,
+                    child: _isSearchMode
+                        ? Row(
+                            key: const ValueKey('search-mode'),
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.arrow_back),
+                                tooltip: 'Back',
+                                onPressed: _exitSearchMode,
+                              ),
+                              Expanded(
+                                child: TextField(
+                                  controller: _searchController,
+                                  focusNode: _searchFocusNode,
+                                  textInputAction: TextInputAction.search,
+                                  decoration: const InputDecoration(
+                                    hintText: 'Search verses or keywords',
+                                    border: InputBorder.none,
+                                  ),
+                                  onChanged: _onSearchChanged,
+                                  onSubmitted: _onSearchSubmitted,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.tune),
+                                tooltip: 'Advanced search',
+                                onPressed: _openAdvancedSearch,
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close),
+                                tooltip: 'Close search',
+                                onPressed: _exitSearchMode,
+                              ),
+                            ],
+                          )
+                        : Row(
+                            key: const ValueKey('default-mode'),
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.menu),
+                                tooltip: 'Surahs',
+                                onPressed: () =>
+                                    _scaffoldKey.currentState?.openDrawer(),
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Al-Quran',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              const Spacer(),
+                              IconButton(
+                                icon: const Icon(Icons.search),
+                                tooltip: 'Search',
+                                onPressed: _enterSearchMode,
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.settings),
+                                tooltip: 'Settings',
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) =>
+                                          const SettingsScreen()),
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
-      ],
+      ),
     );
   }
 
   Widget _buildMushafView() {
     return _controller.scrollMode == ScrollMode.horizontal
-        ? HorizontalMushafView(controller: _controller)
+        ? HorizontalMushafView(
+            controller: _controller,
+            onOverlayVisibilityChanged: _onOverlayVisibilityChanged,
+            onDragDown: _enterSearchModeFromGesture,
+          )
         : VerticalMushafView(
             controller: _controller,
             scrollController: _scrollController,
+            onOverlayVisibilityChanged: _onOverlayVisibilityChanged,
           );
   }
 
@@ -68,5 +177,176 @@ class _MushafScreenState extends State<MushafScreen> {
     _controller.setSurah(surah);
     final pageNumber = getPageNumber(surah, 1);
     _controller.setPage(pageNumber);
+  }
+
+  void _onOverlayVisibilityChanged(bool visible) {
+    if (_appBarVisible == visible) return;
+    setState(() {
+      _appBarVisible = visible;
+    });
+  }
+
+  void _enterSearchMode() {
+    setState(() {
+      _isSearchMode = true;
+      _appBarVisible = true;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _searchFocusNode.requestFocus();
+      }
+    });
+  }
+
+  void _enterSearchModeFromGesture() {
+    if (_controller.scrollMode != ScrollMode.horizontal) return;
+    _enterSearchMode();
+  }
+
+  void _exitSearchMode() {
+    setState(() {
+      _isSearchMode = false;
+      _suggestions.clear();
+    });
+    _searchFocusNode.unfocus();
+  }
+
+  void _onSearchSubmitted(String query) {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
+      _exitSearchMode();
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SearchScreen(
+          query: trimmed,
+          filters: const SearchFilters(),
+        ),
+      ),
+    );
+  }
+
+  void _openAdvancedSearch() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        final queryController =
+            TextEditingController(text: _searchController.text);
+        final surahController = TextEditingController();
+        final verseRangeController = TextEditingController();
+
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Advanced Search',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: queryController,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Keyword',
+                  hintText: 'Type a word or phrase',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: surahController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Surah (optional)',
+                  hintText: 'e.g. 1 - 114',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: verseRangeController,
+                decoration: const InputDecoration(
+                  labelText: 'Verse range (optional)',
+                  hintText: 'e.g. 1-7',
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () {
+                      _searchController.text = queryController.text;
+                      Navigator.pop(context);
+                      _onSearchSubmitted(queryController.text);
+                    },
+                    child: const Text('Apply'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _onSearchChanged(String value) {
+    _suggestionDebounce?.cancel();
+    _suggestionDebounce = Timer(const Duration(milliseconds: 250), () async {
+      final list = await SearchRepository.instance.suggestions(value);
+      if (!mounted) return;
+      setState(() {
+        _suggestions
+          ..clear()
+          ..addAll(list);
+      });
+    });
+  }
+
+  Widget _buildSuggestionOverlay() {
+    if (_suggestions.isEmpty) return const SizedBox.shrink();
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + kToolbarHeight + 12,
+      left: 12,
+      right: 12,
+      child: Material(
+        elevation: 8,
+        borderRadius: BorderRadius.circular(12),
+        color: Theme.of(context).colorScheme.surface,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 240),
+          child: ListView.separated(
+            shrinkWrap: true,
+            itemBuilder: (context, index) {
+              final s = _suggestions[index];
+              return ListTile(
+                title: Text(s, maxLines: 2, overflow: TextOverflow.ellipsis),
+                onTap: () {
+                  _searchController.text = s;
+                  _onSearchSubmitted(s);
+                },
+              );
+            },
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemCount: _suggestions.length,
+          ),
+        ),
+      ),
+    );
   }
 }
