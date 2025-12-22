@@ -50,16 +50,34 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen> {
         ),
       ]);
 
+      // Load persisted selections and validate against current lists
+      final savedTranslationInt =
+          await _translationService.getSelectedTranslationId();
+      final savedTafsirInt = await _tafsirService.getSelectedTafsirId();
+
+      String? savedTranslationId =
+          savedTranslationInt != null ? savedTranslationInt.toString() : null;
+      String? savedTafsirId =
+          savedTafsirInt != null ? savedTafsirInt.toString() : null;
+
+      final hasSavedTranslation = savedTranslationId != null &&
+          translations
+              .any((t) => t['edition_identifier'] == savedTranslationId);
+      final hasSavedTafsir = savedTafsirId != null &&
+          tafsirs.any((t) => t['edition_identifier'] == savedTafsirId);
+
       setState(() {
         _allTranslations = translations;
         _allTafsirs = tafsirs;
 
-        // Auto-select first available
-        _selectedTranslationId = translations.isNotEmpty
-            ? translations.first['edition_identifier']
-            : null;
-        _selectedTafsirId =
-            tafsirs.isNotEmpty ? tafsirs.first['edition_identifier'] : null;
+        _selectedTranslationId = hasSavedTranslation
+            ? savedTranslationId
+            : (translations.isNotEmpty
+                ? translations.first['edition_identifier']
+                : null);
+        _selectedTafsirId = hasSavedTafsir
+            ? savedTafsirId
+            : (tafsirs.isNotEmpty ? tafsirs.first['edition_identifier'] : null);
 
         _isLoading = false;
       });
@@ -153,7 +171,15 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen> {
               title: 'Translation',
               items: _allTranslations,
               selectedId: _selectedTranslationId,
-              onSelected: (id) => setState(() => _selectedTranslationId = id),
+              onSelected: (id) async {
+                setState(() => _selectedTranslationId = id);
+                if (id != null) {
+                  final intId = int.tryParse(id);
+                  if (intId != null) {
+                    await _translationService.setSelectedTranslationId(intId);
+                  }
+                }
+              },
             ),
             const SizedBox(height: 12),
             _allTranslations.isEmpty
@@ -177,7 +203,15 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen> {
               title: 'Tafsir (Interpretation)',
               items: _allTafsirs,
               selectedId: _selectedTafsirId,
-              onSelected: (id) => setState(() => _selectedTafsirId = id),
+              onSelected: (id) async {
+                setState(() => _selectedTafsirId = id);
+                if (id != null) {
+                  final intId = int.tryParse(id);
+                  if (intId != null) {
+                    await _tafsirService.setSelectedTafsirId(intId);
+                  }
+                }
+              },
             ),
             const SizedBox(height: 12),
             _allTafsirs.isEmpty
@@ -206,22 +240,48 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen> {
     required String? selectedId,
     required Function(String?) onSelected,
   }) {
+    final dropdownItems = items.map((item) {
+      final editionId = item['edition_identifier'] as String?;
+      final language = (item['language'] as String? ?? '').trim();
+      final displayName =
+          (item['translator'] ?? item['scholar'] ?? 'Unknown').toString();
+      final label = [
+        if (language.isNotEmpty) language,
+        displayName,
+      ].join(' — ');
+      return DropdownMenuItem<String>(
+        value: editionId,
+        child: Text(
+          label,
+          overflow: TextOverflow.ellipsis,
+        ),
+      );
+    }).toList();
+
+    final valueInList = dropdownItems.any((d) => d.value == selectedId);
+
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        _buildSectionTitle(title),
-        if (items.isNotEmpty)
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
-            onSelected: onSelected,
-            itemBuilder: (context) => items.map((item) {
-              final editionId = item['edition_identifier'] as String?;
-              final name = item['translator'] ?? item['scholar'] ?? 'Unknown';
-              return PopupMenuItem<String>(
-                value: editionId,
-                child: Text(name),
-              );
-            }).toList(),
+        Expanded(
+          flex: 1,
+          child: Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: _buildSectionTitle(title),
+          ),
+        ),
+        if (dropdownItems.isNotEmpty)
+          Expanded(
+            flex: 2,
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                isExpanded: true,
+                value: valueInList ? selectedId : null,
+                hint: const Text('Select'),
+                items: dropdownItems,
+                onChanged: onSelected,
+              ),
+            ),
           ),
       ],
     );
@@ -279,7 +339,8 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen> {
         const SizedBox(height: 8),
         Text(
           translation['text'] as String? ?? 'No text available',
-          style: const TextStyle(fontSize: 16, height: 1.5),
+          style: const TextStyle(fontSize: 16, height: 1.6),
+          textAlign: TextAlign.justify,
         ),
       ],
     );
@@ -312,8 +373,9 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen> {
         const SizedBox(height: 8),
         Text(
           tafsir['text'] as String? ?? 'No text available',
-          style: const TextStyle(fontSize: 16, height: 1.5),
+          style: const TextStyle(fontSize: 16, height: 1.6),
           textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
+          textAlign: TextAlign.justify,
         ),
       ],
     );

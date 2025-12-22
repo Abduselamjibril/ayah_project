@@ -398,27 +398,6 @@ class _TafsirScreenState extends State<TafsirScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tafsir & Translation'),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (value) async {
-              if (value == 'pick-tafsir') {
-                await _openDownloadedPicker('tafsir');
-              } else if (value == 'pick-translation') {
-                await _openDownloadedPicker('translation');
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem<String>(
-                value: 'pick-tafsir',
-                child: Text('Choose Tafsir (Downloaded)'),
-              ),
-              PopupMenuItem<String>(
-                value: 'pick-translation',
-                child: Text('Choose Translation (Downloaded)'),
-              ),
-            ],
-          ),
-        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -454,7 +433,7 @@ class _TafsirScreenState extends State<TafsirScreen> {
                                       .map((e) => DropdownMenuItem<int>(
                                             value: e.id,
                                             child: Text(
-                                              '${e.name}${_downloadedTafsirs.contains(e.id.toString()) ? ' (downloaded)' : ''}',
+                                              '${(e.languageName ?? '').isNotEmpty ? '${e.languageName} — ' : ''}${e.name}${_downloadedTafsirs.contains(e.id.toString()) ? ' (downloaded)' : ''}',
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                           ))
@@ -502,7 +481,7 @@ class _TafsirScreenState extends State<TafsirScreen> {
                                       .map((e) => DropdownMenuItem<int>(
                                             value: e.id,
                                             child: Text(
-                                              '${e.name}${_downloadedTranslations.contains(e.id.toString()) ? ' (downloaded)' : ''}',
+                                              '${(e.languageName ?? '').isNotEmpty ? '${e.languageName} — ' : ''}${e.name}${_downloadedTranslations.contains(e.id.toString()) ? ' (downloaded)' : ''}',
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                           ))
@@ -568,19 +547,24 @@ class _TafsirScreenState extends State<TafsirScreen> {
                               children: [
                                 Text(
                                   _activeType == 'tafsir'
-                                      ? (_selectedTafsir?.name ??
-                                          'Unknown Tafsir')
-                                      : (_selectedTranslation?.name ??
-                                          'Unknown Translation'),
+                                      ? [
+                                          (_selectedTafsir?.languageName ?? ''),
+                                          (_selectedTafsir?.name ??
+                                              'Unknown Tafsir')
+                                        ]
+                                          .where((s) => s.trim().isNotEmpty)
+                                          .join(' — ')
+                                      : [
+                                          (_selectedTranslation?.languageName ??
+                                              ''),
+                                          (_selectedTranslation?.name ??
+                                              'Unknown Translation')
+                                        ]
+                                          .where((s) => s.trim().isNotEmpty)
+                                          .join(' — '),
                                   style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Language: ${_activeType == 'tafsir' ? (_selectedTafsir?.languageName ?? '') : (_selectedTranslation?.languageName ?? '')}',
-                                  style: TextStyle(
-                                      color: Colors.grey[600], fontSize: 14),
                                 ),
                               ],
                             ),
