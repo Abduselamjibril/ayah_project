@@ -59,9 +59,10 @@ class BookmarkNotesRepository {
 
     final bookmark = await db.transaction((txn) async {
       if (isKhatmahPin) {
-        await txn.update(
+        await txn.delete(
           'bookmarks',
-          {'is_khatmah_pin': 0, 'updated_at': now},
+          where: 'is_khatmah_pin = 1 OR category_name = ?',
+          whereArgs: ['Last read'],
         );
       }
 
@@ -102,11 +103,10 @@ class BookmarkNotesRepository {
 
   Future<void> clearKhatmahPin() async {
     final db = await _db;
-    final now = DateTime.now().toIso8601String();
-    await db.update(
+    await db.delete(
       'bookmarks',
-      {'is_khatmah_pin': 0, 'updated_at': now},
-      where: 'is_khatmah_pin = 1',
+      where: 'is_khatmah_pin = 1 OR category_name = ?',
+      whereArgs: ['Last read'],
     );
   }
 

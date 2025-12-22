@@ -141,7 +141,6 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                         scrollMode: ScrollMode.horizontal,
                         onPageChanged: (page) {
                           widget.controller.setPage(page);
-                          _updateKhatmahPinForPage(bookmarkState, page);
                         },
                         textColor: Theme.of(context).colorScheme.onSurface,
                         pageBackgroundColor:
@@ -163,20 +162,87 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
           ),
         ),
         _buildPageOverlay(),
+        Positioned(
+          top: MediaQuery.of(context).padding.top + 8,
+          right: 12,
+          child: _buildRibbon(bookmarkState),
+        ),
       ],
     );
   }
 
   Color? _getVerseBackgroundColor(
       BookmarkNotesNotifier state, int surah, int verse) {
-    if (state.isBookmarked(surah, verse)) {
-      return Colors.yellow.withValues(alpha: 0.25);
-    }
-    if (widget.controller.highlightedSurah == surah &&
-        widget.controller.highlightedVerse == verse) {
-      return Colors.blue.withValues(alpha: 0.2);
+    final b = state.bookmarkForVerse(surah, verse);
+    if (b != null) {
+      if (b.isKhatmahPin) {
+        // Last read: no verse-level highlight (represents whole page)
+        return null;
+      }
+      final color = Color(_parseColor(b.colorHex));
+      return color.withValues(alpha: 0.25);
     }
     return null;
+  }
+
+  Widget _buildRibbon(BookmarkNotesNotifier state) {
+    final currentPage = widget.controller.currentPage;
+    bool isPinned = false;
+    final pin = state.khatmahPin;
+    if (pin != null) {
+      try {
+        final pinPage = getPageNumber(pin.surahId, pin.ayahId);
+        isPinned = pinPage == currentPage;
+      } catch (_) {}
+    }
+    final color = Theme.of(context).colorScheme.primary;
+    final onColor = Theme.of(context).colorScheme.onPrimary;
+    return Material(
+      color: color.withValues(alpha: 0.9),
+      borderRadius: BorderRadius.circular(6),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: () => _bookmarkCurrentPageAsLastRead(state),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: Icon(
+            isPinned ? Icons.bookmark : Icons.bookmark_border,
+            size: 20,
+            color: onColor,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _bookmarkCurrentPageAsLastRead(
+      BookmarkNotesNotifier state) async {
+    final page = widget.controller.currentPage;
+    final data = getPageData(page);
+    if (data.isEmpty) return;
+    final surah = int.tryParse(data.first['surah'].toString()) ?? 1;
+    final ayah = int.tryParse(data.first['start'].toString()) ?? 1;
+    final pin = state.khatmahPin;
+    if (pin != null) {
+      try {
+        final pinPage = getPageNumber(pin.surahId, pin.ayahId);
+        if (pinPage == page) {
+          await state.clearKhatmahPin();
+          if (!mounted) return;
+          _showSnack('Removed last read for page $page');
+          return;
+        }
+      } catch (_) {}
+    }
+    await state.setKhatmahPin(
+      surahId: surah,
+      ayahId: ayah,
+      colorHex: '#4DB6AC',
+      category: 'Last read',
+    );
+    if (!mounted) return;
+    final name = getSurahName(surah);
+    _showSnack('Saved last read: Page $page • $name:$ayah');
   }
 
   Widget _buildPageOverlay() {
@@ -847,72 +913,88 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     final result = await showModalBottomSheet<Map<String, String?>>(
       context: context,
       builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Add colored bookmark',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  children: _bookmarkColors.map((hex) {
-                    final color = Color(_parseColor(hex));
-                    final isSelected = hex == selectedColor;
-                    return ChoiceChip(
-                      label: const SizedBox.shrink(),
-                      selected: isSelected,
-                      selectedColor: color,
-                      backgroundColor: color.withOpacity(0.25),
-                      shape: StadiumBorder(
-                        side: BorderSide(
-                          color: isSelected
-                              ? Theme.of(context).colorScheme.onPrimary
-                              : color,
-                          width: 2,
-                        ),
-                      ),
-                      onSelected: (_) => setState(() => selectedColor = hex),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: categoryController,
-                  decoration: const InputDecoration(
-                    labelText: 'Category (optional)',
-                    hintText: 'e.g. To Memorize',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
+                    const Text(
+                      'Add colored bookmark',
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
-                    const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.check),
-                      label: const Text('Save'),
-                      onPressed: () {
-                        Navigator.pop<Map<String, String?>>(context, {
-                          'color': selectedColor,
-                          'category': categoryController.text.trim(),
-                        });
-                      },
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      children: _bookmarkColors.map((hex) {
+                        final color = Color(_parseColor(hex));
+                        final isSelected = hex == selectedColor;
+                        return ChoiceChip(
+                          label: Icon(
+                            isSelected ? Icons.check : Icons.circle,
+                            size: isSelected ? 16 : 10,
+                            color: isSelected
+                                ? Theme.of(context).colorScheme.onPrimary
+                                : color,
+                          ),
+                          selected: isSelected,
+                          selectedColor: color,
+                          backgroundColor: color.withOpacity(0.25),
+                          labelPadding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                          shape: StadiumBorder(
+                            side: BorderSide(
+                              color: isSelected
+                                  ? Theme.of(context).colorScheme.onPrimary
+                                  : color,
+                              width: 2,
+                            ),
+                          ),
+                          onSelected: (_) =>
+                              setModalState(() => selectedColor = hex),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: categoryController,
+                      decoration: const InputDecoration(
+                        labelText: 'Category (optional)',
+                        hintText: 'e.g. To Memorize',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.check),
+                          label: const Text('Save'),
+                          onPressed: () {
+                            Navigator.pop<Map<String, String?>>(context, {
+                              'color': selectedColor,
+                              'category': categoryController.text.trim(),
+                            });
+                          },
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
