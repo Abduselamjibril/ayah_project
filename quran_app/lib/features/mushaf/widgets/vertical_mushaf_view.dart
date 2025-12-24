@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:screenshot/screenshot.dart';
 import '../../../core/quran/qcf_quran.dart';
 import '../../../core/services/audio_player_service.dart';
+import '../../audio_player/audio_player_screen.dart';
 import '../../downloads/audio_surah_list_page.dart';
 import 'package:quran_app/core/services/audio_service.dart';
 import 'package:quran_app/data/models/audio_model.dart';
@@ -410,44 +411,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   }
 
   Widget _buildAudioPlayerCard() {
-    return Card(
-      elevation: 12,
-      color: Theme.of(context).colorScheme.surface.withOpacity(0.95),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        child: Directionality(
-          textDirection: TextDirection.rtl,
-          child: Row(
-            children: [
-              IconButton(
-                icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
-                onPressed: _togglePlayPause,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  _audioName,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.menu),
-                onPressed: _openAudioPicker,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    return AudioPlayerCard(controller: widget.controller);
   }
 
   Future<void> _togglePlayPause() async {
