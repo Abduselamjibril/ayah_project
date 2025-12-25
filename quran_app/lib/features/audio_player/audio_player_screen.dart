@@ -150,17 +150,30 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   }
 
   Future<void> _togglePlayPause() async {
-    final recitation = await _ensureReciterSelected();
-    if (recitation == null) return;
+    // If currently playing -> pause immediately without prompting
     if (_audioPlayer.isPlaying.value) {
       await _audioPlayer.pause();
       return;
     }
+
+    // If in sequential mode and we have a source -> resume without prompting
     if (_isSequentialMode && _audioPlayer.hasSource) {
       await _audioPlayer.resume();
       return;
     }
+
     await _cancelSequence();
+
+    // Determine recitation without showing picker when possible.
+    AudioRecitation? recitation = _selectedRecitation;
+    if (recitation == null && _audioPlayer.userSelectedReciter) {
+      recitation = _audioPlayer.getSelectedRecitation();
+    }
+    // If still null, prompt user to choose a reciter.
+    if (recitation == null) {
+      recitation = await _ensureReciterSelected();
+      if (recitation == null) return;
+    }
 
     final hs = widget.controller.highlightedSurah;
     final hv = widget.controller.highlightedVerse;
