@@ -60,6 +60,7 @@ class AudioPlayerService {
   final ValueNotifier<String> currentLabel = ValueNotifier('Select audio');
   final ValueNotifier<bool> isDownloading = ValueNotifier(false);
   final ValueNotifier<double> downloadProgress = ValueNotifier(0.0);
+  final ValueNotifier<int?> downloadingSurah = ValueNotifier<int?>(null);
   final ValueNotifier<String> reciterNameNotifier =
       ValueNotifier('Mishary Alafasy');
 
@@ -230,6 +231,7 @@ class AudioPlayerService {
       AudioRecitation recitation, int surah) async {
     // Set UI state immediately for responsiveness
     isDownloading.value = true;
+    downloadingSurah.value = surah;
     downloadProgress.value = 0.0;
     try {
       // Start initialization and download status check in parallel
@@ -261,6 +263,7 @@ class AudioPlayerService {
     } finally {
       // Clear download UI state and cancel download notification (if any)
       isDownloading.value = false;
+      downloadingSurah.value = null;
       downloadProgress.value = 0.0;
       try {
         await AudioNotificationService.instance.cancel();

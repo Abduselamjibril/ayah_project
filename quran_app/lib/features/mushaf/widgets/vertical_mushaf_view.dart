@@ -529,7 +529,25 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                             return ListTile(
                               title: Text('${s.padLeft(3, '0')} - $name'),
                               subtitle: Text(_audioPlayer.recitationName),
-                              trailing: const Icon(Icons.play_arrow),
+                              trailing: ValueListenableBuilder<int?>(
+                                valueListenable: AudioPlayerService
+                                    .instance.downloadingSurah,
+                                builder: (context, downloading, _) {
+                                  final isThis = downloading != null &&
+                                      downloading == n &&
+                                      AudioPlayerService
+                                          .instance.isDownloading.value;
+                                  if (isThis) {
+                                    return const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2.5),
+                                    );
+                                  }
+                                  return const Icon(Icons.play_arrow);
+                                },
+                              ),
                               onTap: () async {
                                 Navigator.pop(context);
                                 await _cancelSequence();
