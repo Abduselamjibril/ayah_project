@@ -22,6 +22,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   late final VoidCallback _labelListener;
   late final VoidCallback _downloadingListener;
   late final VoidCallback _downloadProgressListener;
+  late final VoidCallback _reciterListener;
 
   bool _isPlaying = false;
   String _audioName = 'Select audio';
@@ -30,6 +31,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   int _sequenceToken = 0;
   bool _isDownloading = false;
   double _downloadProgress = 0.0;
+  String _reciterName = '';
 
   @override
   void initState() {
@@ -37,6 +39,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     _audioPlayer = AudioPlayerService.instance;
     _isPlaying = _audioPlayer.isPlaying.value;
     _audioName = _audioPlayer.currentLabel.value;
+    _reciterName = _audioPlayer.recitationName;
 
     _playerStateListener = () {
       if (!mounted) return;
@@ -54,11 +57,16 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
       if (!mounted) return;
       setState(() => _downloadProgress = _audioPlayer.downloadProgress.value);
     };
+    _reciterListener = () {
+      if (!mounted) return;
+      setState(() => _reciterName = _audioPlayer.recitationName);
+    };
 
     _audioPlayer.isPlaying.addListener(_playerStateListener);
     _audioPlayer.currentLabel.addListener(_labelListener);
     _audioPlayer.isDownloading.addListener(_downloadingListener);
     _audioPlayer.downloadProgress.addListener(_downloadProgressListener);
+    _audioPlayer.reciterNameNotifier.addListener(_reciterListener);
   }
 
   @override
@@ -67,6 +75,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     _audioPlayer.currentLabel.removeListener(_labelListener);
     _audioPlayer.isDownloading.removeListener(_downloadingListener);
     _audioPlayer.downloadProgress.removeListener(_downloadProgressListener);
+    _audioPlayer.reciterNameNotifier.removeListener(_reciterListener);
     super.dispose();
   }
 
@@ -102,13 +111,30 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  _audioName,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontWeight: FontWeight.w600,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _audioName,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (_reciterName.isNotEmpty)
+                      Text(
+                        _reciterName,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.7),
+                          fontSize: 12,
+                        ),
+                      ),
+                  ],
                 ),
               ),
               IconButton(

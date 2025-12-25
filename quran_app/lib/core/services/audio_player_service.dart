@@ -60,6 +60,8 @@ class AudioPlayerService {
   final ValueNotifier<String> currentLabel = ValueNotifier('Select audio');
   final ValueNotifier<bool> isDownloading = ValueNotifier(false);
   final ValueNotifier<double> downloadProgress = ValueNotifier(0.0);
+  final ValueNotifier<String> reciterNameNotifier =
+      ValueNotifier('Mishary Alafasy');
 
   int _recitationId = 7; // Default to Mishary Alafasy
   String _recitationName = 'Mishary Alafasy';
@@ -74,12 +76,14 @@ class AudioPlayerService {
     _recitationId = id;
     _recitationName = name ?? 'Recitation $id';
     _userSelectedReciter = true;
+    reciterNameNotifier.value = _recitationName;
   }
 
   void setRecitationInfo({required int id, required String name}) {
     _recitationId = id;
     _recitationName = name;
     _userSelectedReciter = true;
+    reciterNameNotifier.value = _recitationName;
   }
 
   bool get userSelectedReciter => _userSelectedReciter;
