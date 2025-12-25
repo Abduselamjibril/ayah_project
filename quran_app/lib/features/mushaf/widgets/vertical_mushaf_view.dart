@@ -952,13 +952,11 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                   icon: Icons.volume_up,
                   title: 'Play Audio',
                   onTap: () {
-                    _showOverlay();
-                    final recName = AudioPlayerService.instance.recitationName;
-                    AudioPlayerService.instance.playSurahSequence(
-                      surah: surah,
-                      surahLabel: getSurahName(surah),
-                      reciterName: recName,
-                      startAyah: verse,
+                    Navigator.pop(context);
+                    AudioPlayerService.instance.playSurahSequenceWithDownload(
+                      context,
+                      surah,
+                      verse,
                     );
                   },
                 ),

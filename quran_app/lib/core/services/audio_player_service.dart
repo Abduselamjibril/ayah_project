@@ -281,6 +281,92 @@ class AudioPlayerService {
         reciterName: recitation.reciterName);
   }
 
+  /// Play a surah sequence ensuring reciter selection and download first.
+  /// This will play from [startAyah] to the end of the surah continuously.
+  /// Prompts for reciter selection if needed, downloads the surah if not cached,
+  /// then plays the sequence.
+  Future<void> playSurahSequenceWithDownload(
+    BuildContext context,
+    int surah,
+    int startAyah, {
+    bool forceReciter = false,
+  }) async {
+    AudioRecitation? recitation;
+    if (!forceReciter && _userSelectedReciter) {
+      recitation = getSelectedRecitation();
+    } else {
+      await _storage.initialize();
+      final recitations = await _storage.getAvailableRecitations();
+      if (!context.mounted) return;
+      final chosen = await showModalBottomSheet<AudioRecitation>(
+        context: context,
+        builder: (context) {
+          final maxHeight = MediaQuery.of(context).size.height * 0.7 > 520.0
+              ? 520.0
+              : MediaQuery.of(context).size.height * 0.7;
+          return SafeArea(
+            child: SizedBox(
+              height: maxHeight,
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.all(12.0),
+                    child: Text('Choose Reciter',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: recitations.length,
+                      itemBuilder: (context, index) {
+                        final r = recitations[index];
+                        return ListTile(
+                          title: Text(r.reciterName),
+                          subtitle: r.style != null ? Text(r.style!) : null,
+                          onTap: () => Navigator.pop(context, r),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+      if (chosen != null) {
+        recitation = chosen;
+        setRecitationInfo(id: chosen.id, name: chosen.reciterName);
+      }
+    }
+    if (recitation == null) return;
+
+    await _storage.initialize();
+
+    // Check if surah is downloaded, if not download it
+    final hasLocal = await _storage.isSurahDownloaded(recitation.id, surah);
+    if (!hasLocal) {
+      final ok = await downloadSurahIfNeeded(recitation, surah);
+      if (!ok) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text('Could not download audio for Surah $surah')),
+          );
+        }
+        return;
+      }
+    }
+
+    // Play the surah sequence from startAyah to the end
+    await playSurahSequence(
+      surah: surah,
+      startAyah: startAyah,
+      surahLabel: getSurahName(surah),
+      reciterName: recitation.reciterName,
+    );
+  }
+
   /// Ensure surah is downloaded; starts download as early as possible for faster feedback.
   Future<bool> downloadSurahIfNeeded(
       AudioRecitation recitation, int surah) async {

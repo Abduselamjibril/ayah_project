@@ -823,8 +823,11 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                   title: 'Play Audio',
                   onTap: () {
                     Navigator.pop(context);
-                    AudioPlayerService.instance
-                        .playAyahWithDownload(context, surah, verse);
+                    AudioPlayerService.instance.playSurahSequenceWithDownload(
+                      context,
+                      surah,
+                      verse,
+                    );
                   },
                 ),
                 _buildOptionTile(
