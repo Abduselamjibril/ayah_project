@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:quran_app/data/models/audio_model.dart';
 import '../../data/sources/remote/audio_api.dart';
 import 'audio_service.dart';
 import 'audio_notification_service.dart';
@@ -11,7 +13,7 @@ class AudioPlayerService {
   AudioPlayerService._() {
     // Ensure audio routes to device speaker and has proper session settings
     _player.setAudioContext(AudioContext(
-      android: AudioContextAndroid(
+      android: const AudioContextAndroid(
         isSpeakerphoneOn: true,
         audioFocus: AndroidAudioFocus.gain,
         stayAwake: true,
@@ -20,7 +22,7 @@ class AudioPlayerService {
       ),
       iOS: AudioContextIOS(
         category: AVAudioSessionCategory.playback,
-        options: {},
+        options: const {},
       ),
     ));
     _player.onPlayerStateChanged.listen((state) {
@@ -56,10 +58,13 @@ class AudioPlayerService {
 
   final ValueNotifier<bool> isPlaying = ValueNotifier(false);
   final ValueNotifier<String> currentLabel = ValueNotifier('Select audio');
+  final ValueNotifier<bool> isDownloading = ValueNotifier(false);
+  final ValueNotifier<double> downloadProgress = ValueNotifier(0.0);
 
   int _recitationId = 7; // Default to Mishary Alafasy
   String _recitationName = 'Mishary Alafasy';
   bool _hasSource = false;
+  bool _userSelectedReciter = false;
 
   int get recitationId => _recitationId;
   String get recitationName => _recitationName;
@@ -68,12 +73,19 @@ class AudioPlayerService {
   void setRecitation(int id, {String? name}) {
     _recitationId = id;
     _recitationName = name ?? 'Recitation $id';
+    _userSelectedReciter = true;
   }
 
   void setRecitationInfo({required int id, required String name}) {
     _recitationId = id;
     _recitationName = name;
+    _userSelectedReciter = true;
   }
+
+  bool get userSelectedReciter => _userSelectedReciter;
+
+  AudioRecitation getSelectedRecitation() =>
+      AudioRecitation(id: _recitationId, reciterName: _recitationName);
 
   /// Waits until the current audio finishes or is stopped.
   Future<void> waitForCompleteOrStop() async {
@@ -134,6 +146,122 @@ class AudioPlayerService {
     isPlaying.value = false;
     await _player.stop();
     await AudioNotificationService.instance.cancel();
+  }
+
+  /// Play a verse ensuring the surah is downloaded first. This will prompt for
+  /// reciter selection only if the user hasn't already chosen one (or if
+  /// `forceReciter` is true). UI feedback uses the `isDownloading`/`downloadProgress` notifiers.
+  Future<void> playAyahWithDownload(BuildContext context, int surah, int ayah,
+      {bool forceReciter = false}) async {
+    AudioRecitation? recitation;
+    if (!forceReciter && _userSelectedReciter) {
+      recitation = getSelectedRecitation();
+    } else {
+      await _storage.initialize();
+      final recitations = await _storage.getAvailableRecitations();
+      if (!context.mounted) return;
+      final chosen = await showModalBottomSheet<AudioRecitation>(
+        context: context,
+        builder: (context) {
+          final maxHeight = MediaQuery.of(context).size.height * 0.7 > 520.0
+              ? 520.0
+              : MediaQuery.of(context).size.height * 0.7;
+          return SafeArea(
+            child: SizedBox(
+              height: maxHeight,
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.all(12.0),
+                    child: Text('Choose Reciter',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: recitations.length,
+                      itemBuilder: (context, index) {
+                        final r = recitations[index];
+                        return ListTile(
+                          title: Text(r.reciterName),
+                          subtitle: r.style != null ? Text(r.style!) : null,
+                          onTap: () => Navigator.pop(context, r),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+      if (chosen != null) {
+        recitation = chosen;
+        setRecitationInfo(id: chosen.id, name: chosen.reciterName);
+      }
+    }
+    if (recitation == null) return;
+
+    await _storage.initialize();
+    final local = await _storage.getLocalAyahFile(recitation.id, surah, ayah);
+    if (local == null) {
+      final ok = await downloadSurahIfNeeded(recitation, surah);
+      if (!ok) {
+        if (context.mounted)
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Could not download audio')));
+        return;
+      }
+    }
+    await playAyahPreferLocal(
+        surah: surah,
+        ayah: ayah,
+        recitationId: recitation.id,
+        reciterName: recitation.reciterName);
+  }
+
+  /// Ensure surah is downloaded; starts download as early as possible for faster feedback.
+  Future<bool> downloadSurahIfNeeded(
+      AudioRecitation recitation, int surah) async {
+    // Set UI state immediately for responsiveness
+    isDownloading.value = true;
+    downloadProgress.value = 0.0;
+    try {
+      // Start initialization and download status check in parallel
+      final initFuture = _storage.initialize();
+      final isDownloadedFuture =
+          _storage.isSurahDownloaded(recitation.id, surah);
+      await initFuture;
+      final already = await isDownloadedFuture;
+      if (already) return true;
+      // Start download as soon as possible
+      final ok = await _storage.downloadSurahAudio(
+        recitation,
+        surah,
+        onProgress: (p) {
+          downloadProgress.value = p;
+          // Update the system notification progress so the user sees download progress
+          try {
+            AudioNotificationService.instance.showDownloadProgress(
+              title: 'Downloading Surah ${surah.toString().padLeft(3, '0')}',
+              reciterName: _recitationName,
+              progress: p,
+            );
+          } catch (_) {}
+        },
+      );
+      return ok;
+    } catch (_) {
+      return false;
+    } finally {
+      // Clear download UI state and cancel download notification (if any)
+      isDownloading.value = false;
+      downloadProgress.value = 0.0;
+      try {
+        await AudioNotificationService.instance.cancel();
+      } catch (_) {}
+    }
   }
 
   /// Play a verse, preferring a locally downloaded file if present.

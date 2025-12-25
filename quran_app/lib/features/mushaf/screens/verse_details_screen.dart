@@ -36,7 +36,7 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
   late Animation<Color?> _backgroundColorAnimation;
 
   final PageController _pageController = PageController();
-  int _currentPage = 0;
+  final int _currentPage = 0;
   bool _showArabicOnly = false;
   bool _isExpanded = true;
 
@@ -84,7 +84,7 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
     // Initialize background color animation here since it requires Theme
     _backgroundColorAnimation = ColorTween(
       begin: Colors.grey.shade50,
-      end: Theme.of(context).colorScheme.background,
+      end: Theme.of(context).colorScheme.surface,
     ).animate(
       CurvedAnimation(
         parent: _animationController,
@@ -113,10 +113,8 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
           await _translationService.getSelectedTranslationId();
       final savedTafsirInt = await _tafsirService.getSelectedTafsirId();
 
-      String? savedTranslationId =
-          savedTranslationInt != null ? savedTranslationInt.toString() : null;
-      String? savedTafsirId =
-          savedTafsirInt != null ? savedTafsirInt.toString() : null;
+      String? savedTranslationId = savedTranslationInt?.toString();
+      String? savedTafsirId = savedTafsirInt?.toString();
 
       final hasSavedTranslation = savedTranslationId != null &&
           translations
@@ -408,7 +406,7 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.background,
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(20),
                   bottomRight: Radius.circular(20),
@@ -578,7 +576,7 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.background,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
                 color: Theme.of(context).dividerColor.withOpacity(0.2)),
@@ -612,7 +610,7 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
 
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.background,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: Theme.of(context).dividerColor.withOpacity(0.2),
@@ -949,7 +947,7 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
         '${_getSurahName()} ${widget.surahNumber}:${widget.ayahNumber}';
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [

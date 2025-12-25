@@ -6,7 +6,6 @@ import '../controller/mushaf_controller.dart';
 import '../../../core/quran/data/suwar.dart';
 import '../../khatmah/widgets/khatmah_tab.dart';
 import '../../../core/quran/qcf_quran.dart';
-import '../../../core/quran/qcf_quran.dart';
 
 class SurahDrawer extends StatefulWidget {
   final Function(int) onSurahSelected;

@@ -50,6 +50,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   bool _isSequentialMode = false;
   int _sequenceToken = 0;
   final ScreenshotController _screenshotController = ScreenshotController();
+  double _downloadProgress = 0.0;
 
   static const List<String> _bookmarkColors = [
     '#FFB300',
@@ -63,8 +64,9 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   @override
   void initState() {
     super.initState();
-    _pageController =
-        PageController(initialPage: widget.controller.currentPage - 1);
+    _pageController = PageController(
+      initialPage: widget.controller.currentPage - 1,
+    );
     _sliderValue = widget.controller.currentPage.toDouble();
     _audioPlayer = AudioPlayerService.instance;
     _isPlaying = _audioPlayer.isPlaying.value;
@@ -99,18 +101,17 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   }
 
   void _onControllerChanged() {
-    if (!_pageController.hasClients) return;
-
     final targetPage = widget.controller.currentPage - 1;
-    if (_pageController.page?.round() != targetPage) {
-      // Release slider to follow controller updates
-      _sliderValue = null;
-      _isSliderActive = false;
-      _pageController.animateToPage(
-        targetPage,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+    if (!_isSliderActive && _pageController.hasClients) {
+      if ((_pageController.page?.round() ?? -1) != targetPage) {
+        _sliderValue = null;
+        _isSliderActive = false;
+        _pageController.animateToPage(
+          targetPage,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
     }
   }
 
@@ -801,7 +802,8 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                   title: 'Play Audio',
                   onTap: () {
                     Navigator.pop(context);
-                    _playAudio(surah, verse);
+                    AudioPlayerService.instance
+                        .playAyahWithDownload(context, surah, verse);
                   },
                 ),
                 _buildOptionTile(
@@ -1087,6 +1089,52 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     _showOverlay();
     final recitation = await _ensureReciterSelected();
     if (recitation == null) return;
+    await AudioService.instance.initialize();
+    final hasLocal =
+        await AudioService.instance.isSurahDownloaded(recitation.id, surah) ||
+            (await AudioService.instance
+                    .getLocalAyahFile(recitation.id, surah, verse)) !=
+                null;
+    if (!hasLocal) {
+      bool ok = false;
+      _downloadProgress = 0.0;
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          AudioService.instance.downloadSurahAudio(recitation, surah,
+              onProgress: (p) {
+            _downloadProgress = p;
+            if (mounted) setState(() {});
+          }).then((v) {
+            ok = v;
+            if (mounted) Navigator.of(context).pop();
+          }).catchError((_) {
+            ok = false;
+            if (mounted) Navigator.of(context).pop();
+          });
+
+          return AlertDialog(
+            title:
+                Text('Downloading Surah ${surah.toString().padLeft(3, '0')}'),
+            content: SizedBox(
+              height: 80,
+              child: Column(
+                children: [
+                  LinearProgressIndicator(value: _downloadProgress),
+                  const SizedBox(height: 12),
+                  Text('${(_downloadProgress * 100).toStringAsFixed(0)}%'),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+      if (!ok) {
+        _showSnack('Could not download audio for Surah $surah');
+        return;
+      }
+    }
     try {
       await _audioPlayer.playAyahPreferLocal(
         surah: surah,
@@ -1179,8 +1227,8 @@ class _VerseShareCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            Row(
-              children: const [
+            const Row(
+              children: [
                 Icon(Icons.bedtime, color: Colors.white70, size: 18),
                 SizedBox(width: 8),
                 Text(

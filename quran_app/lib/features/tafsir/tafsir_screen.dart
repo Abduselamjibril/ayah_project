@@ -343,10 +343,10 @@ class _TafsirScreenState extends State<TafsirScreen>
           const SizedBox(height: 16),
           DropdownButtonFormField<dynamic>(
             isExpanded: true,
-            value: selectedEdition,
+            initialValue: selectedEdition,
             decoration: InputDecoration(
               filled: true,
-              fillColor: Theme.of(context).colorScheme.background,
+              fillColor: Theme.of(context).colorScheme.surface,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -402,7 +402,7 @@ class _TafsirScreenState extends State<TafsirScreen>
                       ),
                     ),
                     if (isDownloaded)
-                      Icon(
+                      const Icon(
                         Icons.download_done,
                         size: 16,
                         color: Colors.green,
@@ -684,7 +684,7 @@ class _TafsirScreenState extends State<TafsirScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text('Tafsir & Translation'),
         backgroundColor: Theme.of(context).colorScheme.surface,
@@ -865,7 +865,7 @@ class _DownloadButton extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'This ${type} needs to be downloaded for offline use',
+                  'This $type needs to be downloaded for offline use',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: Theme.of(context)
                             .colorScheme

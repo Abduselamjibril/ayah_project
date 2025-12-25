@@ -5,7 +5,6 @@ import 'package:quran_app/data/models/audio_model.dart';
 import 'package:quran_app/features/downloads/audio_surah_list_page.dart';
 import 'package:quran_app/core/services/audio_player_service.dart';
 import '../../core/quran/qcf_quran.dart';
-import '../../features/bookmarks/state/bookmark_notes_notifier.dart';
 import '../mushaf/controller/mushaf_controller.dart';
 
 /// Reusable audio player card used by mushaf views.
@@ -21,11 +20,16 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   late final AudioPlayerService _audioPlayer;
   late final VoidCallback _playerStateListener;
   late final VoidCallback _labelListener;
+  late final VoidCallback _downloadingListener;
+  late final VoidCallback _downloadProgressListener;
+
   bool _isPlaying = false;
   String _audioName = 'Select audio';
   AudioRecitation? _selectedRecitation;
   bool _isSequentialMode = false;
   int _sequenceToken = 0;
+  bool _isDownloading = false;
+  double _downloadProgress = 0.0;
 
   @override
   void initState() {
@@ -33,6 +37,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     _audioPlayer = AudioPlayerService.instance;
     _isPlaying = _audioPlayer.isPlaying.value;
     _audioName = _audioPlayer.currentLabel.value;
+
     _playerStateListener = () {
       if (!mounted) return;
       setState(() => _isPlaying = _audioPlayer.isPlaying.value);
@@ -41,14 +46,27 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
       if (!mounted) return;
       setState(() => _audioName = _audioPlayer.currentLabel.value);
     };
+    _downloadingListener = () {
+      if (!mounted) return;
+      setState(() => _isDownloading = _audioPlayer.isDownloading.value);
+    };
+    _downloadProgressListener = () {
+      if (!mounted) return;
+      setState(() => _downloadProgress = _audioPlayer.downloadProgress.value);
+    };
+
     _audioPlayer.isPlaying.addListener(_playerStateListener);
     _audioPlayer.currentLabel.addListener(_labelListener);
+    _audioPlayer.isDownloading.addListener(_downloadingListener);
+    _audioPlayer.downloadProgress.addListener(_downloadProgressListener);
   }
 
   @override
   void dispose() {
     _audioPlayer.isPlaying.removeListener(_playerStateListener);
     _audioPlayer.currentLabel.removeListener(_labelListener);
+    _audioPlayer.isDownloading.removeListener(_downloadingListener);
+    _audioPlayer.downloadProgress.removeListener(_downloadProgressListener);
     super.dispose();
   }
 
@@ -67,7 +85,18 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
           child: Row(
             children: [
               IconButton(
-                icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
+                iconSize: 28,
+                icon: _isDownloading
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          value:
+                              _downloadProgress > 0 ? _downloadProgress : null,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                    : Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
                 onPressed: _togglePlayPause,
                 color: Theme.of(context).colorScheme.primary,
               ),
@@ -111,6 +140,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     final hv = widget.controller.highlightedVerse;
     if (hs != null && hv != null) {
       try {
+        await _audioPlayer.downloadSurahIfNeeded(recitation, hs);
         await _audioPlayer.playAyahPreferLocal(
           surah: hs,
           ayah: hv,
@@ -135,8 +165,11 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     final hasLocal =
         await AudioService.instance.isSurahDownloaded(recitationId, surah);
     if (!hasLocal) {
-      _navigateToDownloadSurah(recitationId);
-      return;
+      final ok = await _audioPlayer.downloadSurahIfNeeded(recitation, surah);
+      if (!ok) {
+        _showSnack('Could not download audio for Surah $surah');
+        return;
+      }
     }
     try {
       _startSurahSequence(
@@ -150,85 +183,8 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   }
 
   Future<void> _openAudioPicker() async {
-    final recitation = await _ensureReciterSelected();
-    if (recitation == null) return;
-    final recitationId = recitation.id;
-    await AudioService.instance.initialize();
-    final downloaded =
-        await AudioService.instance.getDownloadedSurahs(recitationId);
-    if (!mounted) return;
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        final maxHeight = MediaQuery.of(context).size.height * 0.7 > 520.0
-            ? 520.0
-            : MediaQuery.of(context).size.height * 0.7;
-        return SafeArea(
-          child: SizedBox(
-            height: maxHeight,
-            child: Column(
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.all(12.0),
-                  child: Text('Downloaded Audios',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-                Expanded(
-                  child: downloaded.isEmpty
-                      ? const Center(child: Text('No downloaded surahs'))
-                      : ListView.builder(
-                          itemCount: downloaded.length,
-                          itemBuilder: (context, index) {
-                            final s = downloaded[index];
-                            final n = int.tryParse(s) ?? 0;
-                            final name = getSurahName(n);
-                            return ListTile(
-                              title: Text('${s.padLeft(3, '0')} - $name'),
-                              subtitle: Text(_audioPlayer.recitationName),
-                              trailing: const Icon(Icons.play_arrow),
-                              onTap: () async {
-                                Navigator.pop(context);
-                                await _cancelSequence();
-                                _startSurahSequence(
-                                  surah: n,
-                                  surahLabel: name,
-                                  reciterName: _audioPlayer.recitationName,
-                                );
-                              },
-                            );
-                          },
-                        ),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.switch_account),
-                  title: const Text('Change Reciter'),
-                  onTap: () async {
-                    Navigator.pop(context);
-                    _selectedRecitation = null;
-                    final recitation =
-                        await _ensureReciterSelected(force: true);
-                    if (!mounted) return;
-                    if (recitation != null) {
-                      _openAudioPicker();
-                    }
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.download),
-                  title: const Text('Open Audio Downloads'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _navigateToDownloadSurah(recitationId);
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+    _selectedRecitation = null;
+    await _ensureReciterSelected(force: true);
   }
 
   Future<void> _cancelSequence() async {
@@ -351,6 +307,19 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   Future<void> _playAudio(int surah, int verse) async {
     final recitation = await _ensureReciterSelected();
     if (recitation == null) return;
+    await AudioService.instance.initialize();
+    final hasLocal =
+        await AudioService.instance.isSurahDownloaded(recitation.id, surah) ||
+            (await AudioService.instance
+                    .getLocalAyahFile(recitation.id, surah, verse)) !=
+                null;
+    if (!hasLocal) {
+      final ok = await _audioPlayer.downloadSurahIfNeeded(recitation, surah);
+      if (!ok) {
+        _showSnack('Could not download audio for Surah $surah');
+        return;
+      }
+    }
     try {
       await _audioPlayer.playAyahPreferLocal(
         surah: surah,
@@ -361,8 +330,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Audio not available for this verse')),
-      );
+          const SnackBar(content: Text('Audio not available for this verse')));
     }
   }
 

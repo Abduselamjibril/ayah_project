@@ -73,6 +73,43 @@ class AudioNotificationService {
         _notificationId, title, reciterName, notificationDetails);
   }
 
+  /// Show download progress in the notification area (Android only).
+  Future<void> showDownloadProgress({
+    required String title,
+    required String reciterName,
+    required double progress, // 0.0 - 1.0
+  }) async {
+    if (!_initialized) await init();
+    final intPct = (progress.clamp(0.0, 1.0) * 100).round();
+
+    final androidDetails = AndroidNotificationDetails(
+      _channelId,
+      _channelName,
+      channelDescription: 'Audio download progress',
+      importance: Importance.low,
+      priority: Priority.low,
+      ongoing: true,
+      onlyAlertOnce: true,
+      showWhen: false,
+      category: AndroidNotificationCategory.progress,
+      // progress support
+      showProgress: true,
+      maxProgress: 100,
+      progress: intPct,
+      indeterminate: false,
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      interruptionLevel: InterruptionLevel.passive,
+      presentSound: false,
+    );
+
+    final notificationDetails =
+        NotificationDetails(android: androidDetails, iOS: iosDetails);
+    await _plugin.show(
+        _notificationId, title, '$reciterName • $intPct%', notificationDetails);
+  }
+
   Future<void> cancel() async {
     if (!_initialized) return;
     await _plugin.cancel(_notificationId);
