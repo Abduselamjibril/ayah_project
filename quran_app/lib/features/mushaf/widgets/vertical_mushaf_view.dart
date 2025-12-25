@@ -952,9 +952,14 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                   icon: Icons.volume_up,
                   title: 'Play Audio',
                   onTap: () {
-                    Navigator.pop(context);
-                    AudioPlayerService.instance
-                        .playAyahWithDownload(context, surah, verse);
+                    _showOverlay();
+                    final recName = AudioPlayerService.instance.recitationName;
+                    AudioPlayerService.instance.playSurahSequence(
+                      surah: surah,
+                      surahLabel: getSurahName(surah),
+                      reciterName: recName,
+                      startAyah: verse,
+                    );
                   },
                 ),
                 _buildOptionTile(
@@ -1241,63 +1246,19 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     final recitation = await _ensureReciterSelected();
     if (recitation == null) return;
     await AudioService.instance.initialize();
-    final hasLocal =
-        await AudioService.instance.isSurahDownloaded(recitation.id, surah) ||
-            (await AudioService.instance
-                    .getLocalAyahFile(recitation.id, surah, verse)) !=
-                null;
-    if (!hasLocal) {
-      bool ok = false;
-      _downloadProgress = 0.0;
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) {
-          AudioService.instance.downloadSurahAudio(recitation, surah,
-              onProgress: (p) {
-            _downloadProgress = p;
-            if (mounted) setState(() {});
-          }).then((v) {
-            ok = v;
-            if (mounted) Navigator.of(context).pop();
-          }).catchError((_) {
-            ok = false;
-            if (mounted) Navigator.of(context).pop();
-          });
-
-          return AlertDialog(
-            title:
-                Text('Downloading Surah ${surah.toString().padLeft(3, '0')}'),
-            content: SizedBox(
-              height: 80,
-              child: Column(
-                children: [
-                  LinearProgressIndicator(value: _downloadProgress),
-                  const SizedBox(height: 12),
-                  Text('${(_downloadProgress * 100).toStringAsFixed(0)}%'),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-      if (!ok) {
-        _showSnack('Could not download audio for Surah $surah');
-        return;
-      }
-    }
+    // Use background download + play helper to avoid blocking modal dialogs.
+    // `_ensureReciterSelected` sets recitation info on the player already.
     try {
-      await _audioPlayer.playAyahPreferLocal(
+      final recName = AudioPlayerService.instance.recitationName;
+      await AudioPlayerService.instance.playSurahSequence(
         surah: surah,
-        ayah: verse,
-        surahName: getSurahName(surah),
-        reciterName: recitation.reciterName,
+        surahLabel: getSurahName(surah),
+        reciterName: recName,
+        startAyah: verse,
       );
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Audio not available for this verse')),
-      );
+      _showSnack('Audio not available for this verse');
     }
   }
 

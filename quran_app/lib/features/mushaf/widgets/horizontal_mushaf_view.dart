@@ -564,6 +564,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     required int surah,
     required String surahLabel,
     required String reciterName,
+    int startAyah = 1,
   }) {
     final token = ++_sequenceToken;
     _isSequentialMode = true;
@@ -572,6 +573,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
           surah: surah,
           surahLabel: surahLabel,
           reciterName: reciterName,
+          startAyah: startAyah,
         ));
   }
 
@@ -580,10 +582,11 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     required int surah,
     required String surahLabel,
     required String reciterName,
+    int startAyah = 1,
   }) async {
     await _audioPlayer.stop();
     final totalAyat = getVerseCount(surah);
-    for (var ayah = 1; ayah <= totalAyat; ayah++) {
+    for (var ayah = startAyah; ayah <= totalAyat; ayah++) {
       if (!mounted || token != _sequenceToken) break;
       widget.controller.setHighlightedVerse(surah, ayah);
       try {
@@ -1104,61 +1107,23 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   }
 
   Future<void> _playAudio(int surah, int verse) async {
-    _showOverlay();
     final recitation = await _ensureReciterSelected();
     if (recitation == null) return;
-    await AudioService.instance.initialize();
-    final hasLocal =
-        await AudioService.instance.isSurahDownloaded(recitation.id, surah) ||
-            (await AudioService.instance
-                    .getLocalAyahFile(recitation.id, surah, verse)) !=
-                null;
-    if (!hasLocal) {
-      bool ok = false;
-      _downloadProgress = 0.0;
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) {
-          AudioService.instance.downloadSurahAudio(recitation, surah,
-              onProgress: (p) {
-            _downloadProgress = p;
-            if (mounted) setState(() {});
-          }).then((v) {
-            ok = v;
-            if (mounted) Navigator.of(context).pop();
-          }).catchError((_) {
-            ok = false;
-            if (mounted) Navigator.of(context).pop();
-          });
-
-          return AlertDialog(
-            title:
-                Text('Downloading Surah ${surah.toString().padLeft(3, '0')}'),
-            content: SizedBox(
-              height: 80,
-              child: Column(
-                children: [
-                  LinearProgressIndicator(value: _downloadProgress),
-                  const SizedBox(height: 12),
-                  Text('${(_downloadProgress * 100).toStringAsFixed(0)}%'),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-      if (!ok) {
-        _showSnack('Could not download audio for Surah $surah');
-        return;
-      }
+    // Ensure storage initialized and surah downloaded; UI shows inline spinner
+    final ok = await AudioPlayerService.instance
+        .downloadSurahIfNeeded(recitation, surah);
+    if (!ok) {
+      _showSnack('Could not download audio for Surah $surah');
+      return;
     }
+    // Start sequential playback from this ayah
     try {
-      await _audioPlayer.playAyahPreferLocal(
+      await _cancelSequence();
+      _startSurahSequence(
         surah: surah,
-        ayah: verse,
-        surahName: getSurahName(surah),
+        surahLabel: getSurahName(surah),
         reciterName: recitation.reciterName,
+        startAyah: verse,
       );
     } catch (_) {
       if (!mounted) return;

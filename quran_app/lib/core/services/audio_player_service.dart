@@ -1,16 +1,26 @@
 import 'dart:async';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:quran_app/data/models/audio_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/sources/remote/audio_api.dart';
 import 'audio_service.dart';
 import 'audio_notification_service.dart';
+import 'package:quran_app/core/quran/qcf_quran.dart';
 
 /// Thin wrapper around audioplayers for verse playback.
 class AudioPlayerService {
   static final AudioPlayerService instance = AudioPlayerService._();
+
+  // Cache keys for persistent storage
+  static const String _reciterIdKey = 'audio_reciter_id';
+  static const String _reciterNameKey = 'audio_reciter_name';
+
   AudioPlayerService._() {
+    // Load cached reciter selection
+    _loadReciterFromCache();
     // Ensure audio routes to device speaker and has proper session settings
     _player.setAudioContext(AudioContext(
       android: const AudioContextAndroid(
@@ -64,10 +74,16 @@ class AudioPlayerService {
   final ValueNotifier<String> reciterNameNotifier =
       ValueNotifier('Mishary Alafasy');
 
+  final ValueNotifier<int?> currentSurah = ValueNotifier(null);
+  final ValueNotifier<int?> currentAyah = ValueNotifier(null);
+
   int _recitationId = 7; // Default to Mishary Alafasy
   String _recitationName = 'Mishary Alafasy';
   bool _hasSource = false;
   bool _userSelectedReciter = false;
+
+  // Sequence control
+  int _serviceSequenceToken = 0;
 
   int get recitationId => _recitationId;
   String get recitationName => _recitationName;
@@ -85,6 +101,7 @@ class AudioPlayerService {
     _recitationName = name;
     _userSelectedReciter = true;
     reciterNameNotifier.value = _recitationName;
+    _saveReciterToCache(); // Persist selection
   }
 
   bool get userSelectedReciter => _userSelectedReciter;
@@ -92,12 +109,43 @@ class AudioPlayerService {
   AudioRecitation getSelectedRecitation() =>
       AudioRecitation(id: _recitationId, reciterName: _recitationName);
 
+  /// Load cached reciter selection from SharedPreferences
+  Future<void> _loadReciterFromCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedId = prefs.getInt(_reciterIdKey);
+      final cachedName = prefs.getString(_reciterNameKey);
+
+      if (cachedId != null && cachedName != null) {
+        _recitationId = cachedId;
+        _recitationName = cachedName;
+        _userSelectedReciter = true;
+        reciterNameNotifier.value = cachedName;
+      }
+    } catch (e) {
+      // If cache loading fails, use defaults
+      debugPrint('Failed to load cached reciter: $e');
+    }
+  }
+
+  /// Save reciter selection to SharedPreferences
+  Future<void> _saveReciterToCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_reciterIdKey, _recitationId);
+      await prefs.setString(_reciterNameKey, _recitationName);
+    } catch (e) {
+      debugPrint('Failed to save reciter to cache: $e');
+    }
+  }
+
   /// Waits until the current audio finishes or is stopped.
   Future<void> waitForCompleteOrStop() async {
     await Future.any([
       _player.onPlayerComplete.first,
       _player.onPlayerStateChanged.firstWhere(
-        (state) => state == PlayerState.stopped,
+        (state) =>
+            state == PlayerState.stopped || state == PlayerState.completed,
       ),
     ]);
   }
@@ -116,8 +164,12 @@ class AudioPlayerService {
     if (file == null || file.url.isEmpty) {
       throw Exception('Audio not available for reciter $reciterLabel');
     }
+
     currentLabel.value = '$surahLabel, Ayah $ayah • $reciterLabel';
+    currentSurah.value = surah;
+    currentAyah.value = ayah;
     _hasSource = true;
+
     await _player.stop();
     await _player.play(UrlSource(file.url));
     await AudioNotificationService.instance.showNowPlaying(
@@ -147,7 +199,10 @@ class AudioPlayerService {
   }
 
   Future<void> stop() async {
+    _serviceSequenceToken++; // invalidates any running sequence
     _hasSource = false;
+    currentSurah.value = null;
+    currentAyah.value = null;
     isPlaying.value = false;
     await _player.stop();
     await AudioNotificationService.instance.cancel();
@@ -284,24 +339,80 @@ class AudioPlayerService {
     final surahLabel = surahName ?? 'Surah $surah';
     await _storage.initialize();
     final local = await _storage.getLocalAyahFile(rid, surah, ayah);
+
+    currentSurah.value = surah;
+    currentAyah.value = ayah;
+    currentLabel.value = '$surahLabel, Ayah $ayah • $reciterLabel';
+    _hasSource = true;
+
+    await _player.stop();
+
     if (local != null) {
-      currentLabel.value = '$surahLabel, Ayah $ayah • $reciterLabel';
-      _hasSource = true;
-      await _player.stop();
       await _player.play(DeviceFileSource(local.path));
-      await AudioNotificationService.instance.showNowPlaying(
-        title: currentLabel.value,
-        reciterName: reciterLabel,
-        isPlaying: true,
-      );
-      return;
+    } else {
+      // Fallback if local play requested but somehow file missing
+      final file = await _api.getAudioByAyah(rid, surah, ayah);
+      if (file != null && file.url.isNotEmpty) {
+        await _player.play(UrlSource(file.url));
+      } else {
+        return; // failed
+      }
     }
-    await playAyah(
-      surah: surah,
-      ayah: ayah,
-      recitationId: rid,
-      surahName: surahLabel,
+
+    await AudioNotificationService.instance.showNowPlaying(
+      title: currentLabel.value,
       reciterName: reciterLabel,
+      isPlaying: true,
     );
+  }
+
+  /// Plays a sequence of verses for the given Surah, starting from [startAyah].
+  /// This manages the loop internally.
+  Future<void> playSurahSequence({
+    required int surah,
+    required String surahLabel,
+    required String reciterName,
+    int startAyah = 1,
+  }) async {
+    // Invalidate any old sequence
+    final token = ++_serviceSequenceToken;
+
+    await _player.stop();
+    final totalAyat = getVerseCount(surah);
+
+    for (var ayah = startAyah; ayah <= totalAyat; ayah++) {
+      // Check for cancellation
+      if (token != _serviceSequenceToken) break;
+
+      try {
+        // We assume files are already downloaded or we rely on playAyahPreferLocal fallback.
+        // For smoother experience, the caller should ensure downloadSurahIfNeeded called first.
+        await playAyahPreferLocal(
+          surah: surah,
+          ayah: ayah,
+          surahName: surahLabel,
+          reciterName: reciterName,
+        );
+      } catch (e) {
+        // Error playing this ayah, stop sequence
+        break;
+      }
+
+      await waitForCompleteOrStop();
+
+      // If stopped explicitly by user, we stop loop
+      if (token != _serviceSequenceToken || !_hasSource) {
+        break;
+      }
+    }
+
+    // Clear state if finished naturally
+    if (token == _serviceSequenceToken) {
+      currentSurah.value = null;
+      currentAyah.value = null;
+      _hasSource = false;
+      isPlaying.value = false;
+      await AudioNotificationService.instance.cancel();
+    }
   }
 }
