@@ -254,7 +254,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
       return const SizedBox.shrink();
     }
     return Positioned(
-      bottom: 8,
+      bottom: 0,
       left: 0,
       right: 0,
       child: ListenableBuilder(

@@ -275,7 +275,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
       return const SizedBox.shrink();
     }
     return Positioned(
-      bottom: 8,
+      bottom: 0,
       left: 0,
       right: 0,
       child: ListenableBuilder(
