@@ -87,7 +87,9 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     _audioPlayer.currentLabel.addListener(_labelListener);
     widget.controller.addListener(_onControllerChanged);
     _scheduleAutoHide();
-    widget.onOverlayVisibilityChanged?.call(true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.onOverlayVisibilityChanged?.call(true);
+    });
   }
 
   @override
@@ -252,7 +254,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
       return const SizedBox.shrink();
     }
     return Positioned(
-      bottom: 40,
+      bottom: 8,
       left: 0,
       right: 0,
       child: ListenableBuilder(
@@ -320,14 +322,15 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                 const SizedBox(height: 4),
                 Card(
                   elevation: 16,
+                  margin: EdgeInsets.zero,
                   color:
                       Theme.of(context).colorScheme.surface.withOpacity(0.95),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(0),
                   ),
                   child: Padding(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
                     child: Directionality(
                       textDirection: TextDirection.rtl,
                       child: Slider(

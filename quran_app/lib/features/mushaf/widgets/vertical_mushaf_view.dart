@@ -87,7 +87,9 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     _audioPlayer.currentLabel.addListener(_labelListener);
     widget.controller.addListener(_onControllerChanged);
     _scheduleAutoHide();
-    widget.onOverlayVisibilityChanged?.call(true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.onOverlayVisibilityChanged?.call(true);
+    });
   }
 
   @override
@@ -108,10 +110,18 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
       if (!widget.scrollController.hasClients) return;
       final position = widget.scrollController.position;
       final viewportHeight = position.viewportDimension;
-      final rawOffset = (_lastPage - 1) * viewportHeight;
-      final target = rawOffset
-          .clamp(position.minScrollExtent, position.maxScrollExtent)
-          .toDouble();
+
+      // For the last page, go to the maximum scroll extent
+      final double target;
+      if (_lastPage == 604) {
+        target = position.maxScrollExtent;
+      } else {
+        final rawOffset = (_lastPage - 1) * viewportHeight;
+        target = rawOffset
+            .clamp(position.minScrollExtent, position.maxScrollExtent)
+            .toDouble();
+      }
+
       if ((position.pixels - target).abs() > 1.0) {
         try {
           widget.scrollController.animateTo(
@@ -265,7 +275,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
       return const SizedBox.shrink();
     }
     return Positioned(
-      bottom: 24,
+      bottom: 8,
       left: 0,
       right: 0,
       child: ListenableBuilder(
@@ -329,14 +339,15 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                 const SizedBox(height: 8),
                 Card(
                   elevation: 16,
+                  margin: EdgeInsets.zero,
                   color:
                       Theme.of(context).colorScheme.surface.withOpacity(0.95),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(0),
                   ),
                   child: Padding(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
                     child: Directionality(
                       textDirection: TextDirection.rtl,
                       child: Row(
@@ -728,10 +739,18 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     if (!widget.scrollController.hasClients) return;
     final position = widget.scrollController.position;
     final viewportHeight = position.viewportDimension;
-    final rawOffset = (page - 1) * viewportHeight;
-    final target = rawOffset
-        .clamp(position.minScrollExtent, position.maxScrollExtent)
-        .toDouble();
+
+    // For the last page, go to the maximum scroll extent
+    final double target;
+    if (page == 604) {
+      target = position.maxScrollExtent;
+    } else {
+      final rawOffset = (page - 1) * viewportHeight;
+      target = rawOffset
+          .clamp(position.minScrollExtent, position.maxScrollExtent)
+          .toDouble();
+    }
+
     try {
       widget.scrollController.animateTo(
         target,
