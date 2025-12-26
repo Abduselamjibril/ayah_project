@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:quran_app/core/quran/qcf_quran.dart';
+import 'package:quran_app/core/services/theme_service.dart';
 
 /// Scrolling direction for the mushaf widget.
 enum ScrollMode { horizontal, vertical }
@@ -367,7 +368,56 @@ class _PageWithNumber extends StatelessWidget {
             bottom: true,
             child: Padding(
               padding: const EdgeInsets.only(bottom: 12, top: 8),
-              child: Text(pageNumber.toString(), style: style),
+              child: _PageNumberWithBackground(
+                pageNumber: pageNumber,
+                textStyle: style,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Widget that displays the page number with a themed background image
+class _PageNumberWithBackground extends StatelessWidget {
+  final int pageNumber;
+  final TextStyle textStyle;
+
+  const _PageNumberWithBackground({
+    required this.pageNumber,
+    required this.textStyle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final themeService = ThemeService();
+    final backgroundImage = themeService.pageBackgroundImagePath;
+
+    return SizedBox(
+      width: 60,
+      height: 60,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Background decorative image
+          Image.asset(
+            backgroundImage,
+            width: 60,
+            height: 60,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              // Fallback to plain text if image not found
+              return const SizedBox.shrink();
+            },
+          ),
+          // Page number text overlay
+          Text(
+            pageNumber.toString(),
+            style: textStyle.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
             ),
           ),
         ],

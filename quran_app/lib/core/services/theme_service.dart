@@ -41,6 +41,24 @@ class ThemeService extends ChangeNotifier {
     }
   }
 
+  /// Get the page number background image path for the current theme
+  String get pageBackgroundImagePath =>
+      getPageBackgroundImagePath(_currentTheme);
+
+  /// Get the page number background image path for a specific theme
+  static String getPageBackgroundImagePath(AppTheme theme) {
+    switch (theme) {
+      case AppTheme.goldenParchment:
+        return 'assets/images/Page.png';
+      case AppTheme.midnightBlueprint:
+        return 'assets/images/Page_dark.png';
+      case AppTheme.mintGarden:
+        return 'assets/images/Page_green.png';
+      case AppTheme.ornateTwilight:
+        return 'assets/images/Page_green_dark.png';
+    }
+  }
+
   /// Get the display name for a theme
   static String getThemeName(AppTheme theme) {
     switch (theme) {
