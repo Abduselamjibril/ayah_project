@@ -4,8 +4,11 @@ import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart'
 import 'package:quran_app/features/bookmarks/data/models/note.dart';
 import '../controller/mushaf_controller.dart';
 import '../../../core/quran/data/suwar.dart';
+import '../../../core/quran/data/juzs.dart';
 import '../../khatmah/widgets/khatmah_tab.dart';
 import '../../../core/quran/qcf_quran.dart';
+
+enum NavigationMode { surah, juz }
 
 class SurahDrawer extends StatefulWidget {
   final Function(int) onSurahSelected;
@@ -27,6 +30,7 @@ class _SurahDrawerState extends State<SurahDrawer>
   final TextEditingController _noteSearchController = TextEditingController();
   List<NoteModel> _noteResults = [];
   bool _isSearchingNotes = false;
+  NavigationMode _navigationMode = NavigationMode.surah;
 
   @override
   void initState() {
@@ -154,9 +158,22 @@ class _SurahDrawerState extends State<SurahDrawer>
   }
 
   Widget _buildSurahList() {
-    return ListView.builder(
-      itemCount: surah.length,
-      itemBuilder: (context, index) => _buildSurahItem(index + 1, surah[index]),
+    return Column(
+      children: [
+        Expanded(
+          child: _navigationMode == NavigationMode.surah
+              ? ListView.builder(
+                  itemCount: surah.length,
+                  itemBuilder: (context, index) =>
+                      _buildSurahItem(index + 1, surah[index]),
+                )
+              : ListView.builder(
+                  itemCount: juz.length,
+                  itemBuilder: (context, index) => _buildJuzItem(juz[index]),
+                ),
+        ),
+        _buildNavigationToggle(),
+      ],
     );
   }
 
@@ -212,6 +229,154 @@ class _SurahDrawerState extends State<SurahDrawer>
             fontWeight: FontWeight.bold,
             fontSize: 16,
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildJuzItem(Map<String, dynamic> juzInfo) {
+    final juzNumber = juzInfo['id'] as int;
+    final surahs = juzInfo['surahs'] as List<dynamic>;
+    final startingSurah = surahs.first as int;
+
+    final surahInfo = surah[startingSurah - 1];
+    final surahName = surahInfo['name'] ?? 'Unknown';
+    final surahNameEnglish = surahInfo['english'] ?? '';
+
+    return ListTile(
+      leading: _buildJuzAvatar(juzNumber, context),
+      title: Text(
+        'Juz $juzNumber',
+        style: const TextStyle(fontWeight: FontWeight.w500),
+      ),
+      subtitle: Text(
+        'Starts: $surahName ($surahNameEnglish)',
+        style: TextStyle(
+          fontSize: 12,
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+        ),
+      ),
+      trailing: Text(
+        'ﺟ $juzNumber',
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+      ),
+      onTap: () {
+        widget.onSurahSelected(startingSurah);
+        Navigator.pop(context);
+      },
+    );
+  }
+
+  Widget _buildJuzAvatar(int juzNumber, BuildContext context) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).colorScheme.secondary.withOpacity(0.2),
+            Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+          width: 1.5,
+        ),
+      ),
+      child: Center(
+        child: Text(
+          juzNumber.toString(),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.secondary,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavigationToggle() {
+    return Container(
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildToggleButton(
+              label: 'Surahs',
+              icon: Icons.menu_book_rounded,
+              isSelected: _navigationMode == NavigationMode.surah,
+              onTap: () {
+                setState(() {
+                  _navigationMode = NavigationMode.surah;
+                });
+              },
+            ),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: _buildToggleButton(
+              label: 'Juz',
+              icon: Icons.book_outlined,
+              isSelected: _navigationMode == NavigationMode.juz,
+              onTap: () {
+                setState(() {
+                  _navigationMode = NavigationMode.juz;
+                });
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToggleButton({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        decoration: BoxDecoration(
+          color:
+              isSelected ? Theme.of(context).primaryColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected
+                  ? Theme.of(context).colorScheme.onPrimary
+                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                fontSize: 14,
+                color: isSelected
+                    ? Theme.of(context).colorScheme.onPrimary
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              ),
+            ),
+          ],
         ),
       ),
     );
