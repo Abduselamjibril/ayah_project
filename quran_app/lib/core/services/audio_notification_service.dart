@@ -19,15 +19,46 @@ class AudioNotificationService {
 
   Future<void> init() async {
     if (_initialized) return;
+
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosInit = DarwinInitializationSettings();
+    const iosInit = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
     const initSettings =
         InitializationSettings(android: androidInit, iOS: iosInit);
+
     await _plugin.initialize(
       initSettings,
       onDidReceiveNotificationResponse: _handleAction,
     );
+
+    // Request notification permissions for Android 13+ and iOS
+    await _requestPermissions();
+
     _initialized = true;
+  }
+
+  /// Request notification permissions (Android 13+ and iOS)
+  Future<bool> _requestPermissions() async {
+    // Request Android 13+ notification permission
+    final androidPermission = await _plugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission();
+
+    // Request iOS permissions
+    final iosPermission = await _plugin
+        .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+
+    return androidPermission ?? iosPermission ?? true;
   }
 
   Future<void> showNowPlaying({

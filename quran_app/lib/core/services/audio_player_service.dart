@@ -37,16 +37,15 @@ class AudioPlayerService {
     ));
     _player.onPlayerStateChanged.listen((state) {
       isPlaying.value = state == PlayerState.playing;
-      if (state == PlayerState.stopped) {
+      // Only clear _hasSource on stop if we're not in the middle of a sequence
+      if (state == PlayerState.stopped && !_inSequence) {
         _hasSource = false;
         AudioNotificationService.instance.cancel();
       }
     });
-    _player.onPlayerComplete.listen((_) {
-      isPlaying.value = false;
-      _hasSource = false;
-      AudioNotificationService.instance.cancel();
-    });
+    // Note: We don't set _hasSource = false on completion here because
+    // that would break sequence playback. The playSurahSequence method
+    // handles cleanup properly when the entire sequence completes.
 
     // Keep the notification in sync with play/pause changes
     isPlaying.addListener(() {
@@ -81,6 +80,7 @@ class AudioPlayerService {
   String _recitationName = 'Mishary Alafasy';
   bool _hasSource = false;
   bool _userSelectedReciter = false;
+  bool _inSequence = false; // Track if we're currently playing a sequence
 
   // Sequence control
   int _serviceSequenceToken = 0;
@@ -200,6 +200,7 @@ class AudioPlayerService {
 
   Future<void> stop() async {
     _serviceSequenceToken++; // invalidates any running sequence
+    _inSequence = false; // Clear sequence flag
     _hasSource = false;
     currentSurah.value = null;
     currentAyah.value = null;
@@ -429,7 +430,6 @@ class AudioPlayerService {
     currentSurah.value = surah;
     currentAyah.value = ayah;
     currentLabel.value = '$surahLabel, Ayah $ayah • $reciterLabel';
-    _hasSource = true;
 
     await _player.stop();
 
@@ -444,6 +444,9 @@ class AudioPlayerService {
         return; // failed
       }
     }
+
+    // Set _hasSource AFTER playing to prevent the stop() call above from clearing it
+    _hasSource = true;
 
     await AudioNotificationService.instance.showNowPlaying(
       title: currentLabel.value,
@@ -462,6 +465,7 @@ class AudioPlayerService {
   }) async {
     // Invalidate any old sequence
     final token = ++_serviceSequenceToken;
+    _inSequence = true; // Mark that we're in a sequence
 
     await _player.stop();
     final totalAyat = getVerseCount(surah);
@@ -493,6 +497,7 @@ class AudioPlayerService {
     }
 
     // Clear state if finished naturally
+    _inSequence = false; // Sequence is done
     if (token == _serviceSequenceToken) {
       currentSurah.value = null;
       currentAyah.value = null;
