@@ -1,6 +1,19 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'audio_player_service.dart';
 
+// Top-level function for handling notification actions in background
+@pragma('vm:entry-point')
+void notificationActionHandler(NotificationResponse response) {
+  final actionId = response.actionId;
+  if (actionId == 'audio_pause') {
+    AudioPlayerService.instance.pause();
+  } else if (actionId == 'audio_play') {
+    AudioPlayerService.instance.resume();
+  } else if (actionId == 'audio_stop') {
+    AudioPlayerService.instance.stop();
+  }
+}
+
 /// Manages audio playback notification with play/pause/stop actions.
 class AudioNotificationService {
   AudioNotificationService._();
@@ -32,6 +45,7 @@ class AudioNotificationService {
     await _plugin.initialize(
       initSettings,
       onDidReceiveNotificationResponse: _handleAction,
+      onDidReceiveBackgroundNotificationResponse: notificationActionHandler,
     );
 
     // Request notification permissions for Android 13+ and iOS
@@ -69,9 +83,17 @@ class AudioNotificationService {
     if (!_initialized) await init();
     final actions = <AndroidNotificationAction>[
       if (isPlaying)
-        const AndroidNotificationAction(_actionPause, 'Pause')
+        const AndroidNotificationAction(
+          _actionPause,
+          'Pause',
+          showsUserInterface: false,
+        )
       else
-        const AndroidNotificationAction(_actionPlay, 'Play'),
+        const AndroidNotificationAction(
+          _actionPlay,
+          'Play',
+          showsUserInterface: false,
+        ),
       const AndroidNotificationAction(
         _actionStop,
         'Stop',
@@ -146,7 +168,7 @@ class AudioNotificationService {
     await _plugin.cancel(_notificationId);
   }
 
-  // Handle notification button taps.
+  // Handle notification button taps when app is in foreground
   void _handleAction(NotificationResponse response) {
     final actionId = response.actionId;
     if (actionId == _actionPause) {
