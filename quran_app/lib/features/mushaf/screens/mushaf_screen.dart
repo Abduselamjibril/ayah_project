@@ -203,23 +203,28 @@ class _MushafScreenState extends State<MushafScreen> {
   }
 
   Widget _buildMushafView() {
-    // Use IndexedStack to keep both views alive and avoid rebuilding on switch
-    return IndexedStack(
-      index: _controller.scrollMode == ScrollMode.horizontal ? 0 : 1,
-      sizing: StackFit.expand,
+    // Use Stack with Offstage to keep views alive but only render the visible one
+    final isHorizontal = _controller.scrollMode == ScrollMode.horizontal;
+    return Stack(
       children: [
-        RepaintBoundary(
-          child: HorizontalMushafView(
-            controller: _controller,
-            onOverlayVisibilityChanged: _onOverlayVisibilityChanged,
-            onDragDown: _enterSearchModeFromGesture,
+        Offstage(
+          offstage: !isHorizontal,
+          child: RepaintBoundary(
+            child: HorizontalMushafView(
+              controller: _controller,
+              onOverlayVisibilityChanged: _onOverlayVisibilityChanged,
+              onDragDown: _enterSearchModeFromGesture,
+            ),
           ),
         ),
-        RepaintBoundary(
-          child: VerticalMushafView(
-            controller: _controller,
-            scrollController: _scrollController,
-            onOverlayVisibilityChanged: _onOverlayVisibilityChanged,
+        Offstage(
+          offstage: isHorizontal,
+          child: RepaintBoundary(
+            child: VerticalMushafView(
+              controller: _controller,
+              scrollController: _scrollController,
+              onOverlayVisibilityChanged: _onOverlayVisibilityChanged,
+            ),
           ),
         ),
       ],
