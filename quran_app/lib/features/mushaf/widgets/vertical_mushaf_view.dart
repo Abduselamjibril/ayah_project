@@ -124,11 +124,8 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
 
       if ((position.pixels - target).abs() > 1.0) {
         try {
-          widget.scrollController.animateTo(
-            target,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          );
+          // Use jumpTo instead of animateTo to avoid lag with IndexedStack
+          widget.scrollController.jumpTo(target);
         } catch (_) {
           // Ignore transient issues while scroll metrics stabilize
         }
@@ -752,11 +749,8 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     }
 
     try {
-      widget.scrollController.animateTo(
-        target,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+      // Use jumpTo instead of animateTo to avoid lag
+      widget.scrollController.jumpTo(target);
     } catch (_) {
       // Avoid crashing if the position is not yet ready
     }

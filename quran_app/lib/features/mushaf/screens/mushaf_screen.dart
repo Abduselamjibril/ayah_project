@@ -203,17 +203,27 @@ class _MushafScreenState extends State<MushafScreen> {
   }
 
   Widget _buildMushafView() {
-    return _controller.scrollMode == ScrollMode.horizontal
-        ? HorizontalMushafView(
+    // Use IndexedStack to keep both views alive and avoid rebuilding on switch
+    return IndexedStack(
+      index: _controller.scrollMode == ScrollMode.horizontal ? 0 : 1,
+      sizing: StackFit.expand,
+      children: [
+        RepaintBoundary(
+          child: HorizontalMushafView(
             controller: _controller,
             onOverlayVisibilityChanged: _onOverlayVisibilityChanged,
             onDragDown: _enterSearchModeFromGesture,
-          )
-        : VerticalMushafView(
+          ),
+        ),
+        RepaintBoundary(
+          child: VerticalMushafView(
             controller: _controller,
             scrollController: _scrollController,
             onOverlayVisibilityChanged: _onOverlayVisibilityChanged,
-          );
+          ),
+        ),
+      ],
+    );
   }
 
   void _jumpToSurah(int surah) {

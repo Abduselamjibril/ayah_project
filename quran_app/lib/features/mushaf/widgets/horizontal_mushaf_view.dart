@@ -108,11 +108,8 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
       if ((_pageController.page?.round() ?? -1) != targetPage) {
         _sliderValue = null;
         _isSliderActive = false;
-        _pageController.animateToPage(
-          targetPage,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
+        // Use jumpToPage instead of animateToPage to avoid lag with IndexedStack
+        _pageController.jumpToPage(targetPage);
       }
     }
   }
