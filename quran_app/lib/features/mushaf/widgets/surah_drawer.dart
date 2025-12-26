@@ -43,7 +43,12 @@ class _SurahDrawerState extends State<SurahDrawer>
 
   @override
   Widget build(BuildContext context) {
+    // Increase drawer width to 85% of screen width (max 380px) for better content visibility
+    final screenWidth = MediaQuery.of(context).size.width;
+    final drawerWidth = (screenWidth * 0.95).clamp(280.0, 380.0);
+
     return Drawer(
+      width: drawerWidth,
       child: Column(
         children: [
           _buildDrawerHeader(context),
@@ -234,6 +239,8 @@ class _SurahDrawerState extends State<SurahDrawer>
             );
 
             return ListTile(
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               leading: CircleAvatar(
                 backgroundColor:
                     Color(_parseColor(bookmark.colorHex)).withOpacity(0.2),
@@ -257,8 +264,32 @@ class _SurahDrawerState extends State<SurahDrawer>
                   ),
                   if (bookmark.categoryName != null &&
                       bookmark.categoryName!.trim().isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(bookmark.categoryName!.trim()),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Color(_parseColor(bookmark.colorHex))
+                            .withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Color(_parseColor(bookmark.colorHex))
+                              .withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        bookmark.categoryName!.trim(),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Color(_parseColor(bookmark.colorHex)),
+                        ),
+                        // Show full text without truncation
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -332,6 +363,8 @@ class _SurahDrawerState extends State<SurahDrawer>
                     verseEndSymbol: true,
                   );
                   return ListTile(
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     leading: const Icon(Icons.sticky_note_2_outlined),
                     title: Text('${note.surahId}:${note.ayahId} • $surahName'),
                     subtitle: Column(
@@ -345,11 +378,25 @@ class _SurahDrawerState extends State<SurahDrawer>
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          note.content,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primaryContainer
+                                .withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            note.content,
+                            maxLines: 4, // Increased from 2 to 4 lines
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
                         ),
                       ],
                     ),
