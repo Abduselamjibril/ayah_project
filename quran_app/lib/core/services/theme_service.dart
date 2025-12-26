@@ -101,7 +101,7 @@ class ThemeService extends ChangeNotifier {
   /// Golden Parchment Theme (Light)
   ThemeData get _goldenParchmentTheme {
     return ThemeData(
-      useMaterial3: false,
+      useMaterial3: true,
       brightness: Brightness.light,
       primaryColor: AppColors.lightAccent,
       scaffoldBackgroundColor: AppColors.lightBackground,
@@ -109,22 +109,73 @@ class ThemeService extends ChangeNotifier {
         primary: AppColors.lightAccent,
         secondary: AppColors.lightAccent,
         surface: AppColors.lightSurface,
+        surfaceVariant: AppColors.lightSurfaceVariant,
+        primaryContainer: AppColors.lightAccentContainer,
         onPrimary: Colors.white,
         onSecondary: Colors.white,
         onSurface: AppColors.lightText,
+        onPrimaryContainer: AppColors.lightOnAccentContainer,
+      ),
+      textTheme: const TextTheme(
+        displayLarge: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: AppColors.lightText),
+        titleLarge: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+            color: AppColors.lightText),
+        titleMedium: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: AppColors.lightText),
+        bodyLarge: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.normal,
+            color: AppColors.lightText),
+        bodyMedium: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.normal,
+            color: AppColors.lightText),
+        labelLarge: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: AppColors.lightText),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.lightAccent,
         foregroundColor: Colors.white,
         elevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+            fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white),
       ),
-      cardTheme: const CardThemeData(
+      cardTheme: CardThemeData(
         color: AppColors.lightSurface,
-        elevation: 1,
-        margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.1),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       ),
       listTileTheme: const ListTileThemeData(
         iconColor: AppColors.lightAccent,
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.lightSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.lightSurfaceVariant,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }
@@ -132,7 +183,7 @@ class ThemeService extends ChangeNotifier {
   /// Midnight Blueprint Theme (Dark)
   ThemeData get _midnightBlueprintTheme {
     return ThemeData(
-      useMaterial3: false,
+      useMaterial3: true,
       brightness: Brightness.dark,
       primaryColor: AppColors.darkAccent,
       scaffoldBackgroundColor: AppColors.darkBackground,
@@ -140,22 +191,75 @@ class ThemeService extends ChangeNotifier {
         primary: AppColors.darkAccent,
         secondary: AppColors.darkAccent,
         surface: AppColors.darkSurface,
-        onPrimary: Colors.black87,
-        onSecondary: Colors.black87,
+        surfaceVariant: AppColors.darkSurfaceVariant,
+        primaryContainer: AppColors.darkAccentContainer,
+        onPrimary: Colors.white,
+        onSecondary: Colors.white,
         onSurface: AppColors.darkText,
+        onPrimaryContainer: AppColors.darkOnAccentContainer,
+      ),
+      textTheme: const TextTheme(
+        displayLarge: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: AppColors.darkText),
+        titleLarge: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+            color: AppColors.darkText),
+        titleMedium: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: AppColors.darkText),
+        bodyLarge: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.normal,
+            color: AppColors.darkText),
+        bodyMedium: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.normal,
+            color: AppColors.darkText),
+        labelLarge: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: AppColors.darkText),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.darkSurface,
         foregroundColor: AppColors.darkAccent,
         elevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: AppColors.darkAccent),
       ),
-      cardTheme: const CardThemeData(
+      cardTheme: CardThemeData(
         color: AppColors.darkSurface,
-        elevation: 1,
-        margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.3),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       ),
       listTileTheme: const ListTileThemeData(
         iconColor: AppColors.darkAccent,
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.darkSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.darkSurfaceVariant,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }
@@ -163,7 +267,7 @@ class ThemeService extends ChangeNotifier {
   /// Mint Garden Theme (Green Light)
   ThemeData get _mintGardenTheme {
     return ThemeData(
-      useMaterial3: false,
+      useMaterial3: true,
       brightness: Brightness.light,
       primaryColor: AppColors.greenLightAccent,
       scaffoldBackgroundColor: AppColors.greenLightBackground,
@@ -171,22 +275,73 @@ class ThemeService extends ChangeNotifier {
         primary: AppColors.greenLightAccent,
         secondary: AppColors.greenLightAccent,
         surface: AppColors.greenLightSurface,
+        surfaceVariant: AppColors.greenLightSurfaceVariant,
+        primaryContainer: AppColors.greenLightAccentContainer,
         onPrimary: Colors.white,
         onSecondary: Colors.white,
         onSurface: AppColors.greenLightText,
+        onPrimaryContainer: AppColors.greenLightOnAccentContainer,
+      ),
+      textTheme: const TextTheme(
+        displayLarge: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: AppColors.greenLightText),
+        titleLarge: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+            color: AppColors.greenLightText),
+        titleMedium: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: AppColors.greenLightText),
+        bodyLarge: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.normal,
+            color: AppColors.greenLightText),
+        bodyMedium: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.normal,
+            color: AppColors.greenLightText),
+        labelLarge: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: AppColors.greenLightText),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.greenLightAccent,
         foregroundColor: Colors.white,
         elevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+            fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white),
       ),
-      cardTheme: const CardThemeData(
+      cardTheme: CardThemeData(
         color: AppColors.greenLightSurface,
-        elevation: 1,
-        margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.1),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       ),
       listTileTheme: const ListTileThemeData(
         iconColor: AppColors.greenLightAccent,
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.greenLightSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.greenLightSurfaceVariant,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }
@@ -194,7 +349,7 @@ class ThemeService extends ChangeNotifier {
   /// Ornate Twilight Theme (Green Dark)
   ThemeData get _ornateTwilightTheme {
     return ThemeData(
-      useMaterial3: false,
+      useMaterial3: true,
       brightness: Brightness.dark,
       primaryColor: AppColors.greenDarkAccent,
       scaffoldBackgroundColor: AppColors.greenDarkBackground,
@@ -202,22 +357,75 @@ class ThemeService extends ChangeNotifier {
         primary: AppColors.greenDarkAccent,
         secondary: AppColors.greenDarkAccent,
         surface: AppColors.greenDarkSurface,
-        onPrimary: Colors.black87,
-        onSecondary: Colors.black87,
+        surfaceVariant: AppColors.greenDarkSurfaceVariant,
+        primaryContainer: AppColors.greenDarkAccentContainer,
+        onPrimary: Colors.white,
+        onSecondary: Colors.white,
         onSurface: AppColors.greenDarkText,
+        onPrimaryContainer: AppColors.greenDarkOnAccentContainer,
+      ),
+      textTheme: const TextTheme(
+        displayLarge: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: AppColors.greenDarkText),
+        titleLarge: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+            color: AppColors.greenDarkText),
+        titleMedium: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: AppColors.greenDarkText),
+        bodyLarge: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.normal,
+            color: AppColors.greenDarkText),
+        bodyMedium: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.normal,
+            color: AppColors.greenDarkText),
+        labelLarge: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: AppColors.greenDarkText),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.greenDarkSurface,
         foregroundColor: AppColors.greenDarkAccent,
         elevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: AppColors.greenDarkAccent),
       ),
-      cardTheme: const CardThemeData(
+      cardTheme: CardThemeData(
         color: AppColors.greenDarkSurface,
-        elevation: 1,
-        margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.3),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       ),
       listTileTheme: const ListTileThemeData(
         iconColor: AppColors.greenDarkAccent,
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.greenDarkSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.greenDarkSurfaceVariant,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }
