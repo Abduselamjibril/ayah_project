@@ -105,6 +105,7 @@ class BookmarkNotesNotifier extends ChangeNotifier {
     String colorHex = '#4DB6AC',
     String? category,
   }) async {
+    final previousPin = _khatmahPin;
     final saved = await _repository.upsertBookmark(
       surahId: surahId,
       ayahId: ayahId,
@@ -112,6 +113,9 @@ class BookmarkNotesNotifier extends ChangeNotifier {
       categoryName: category,
       isKhatmahPin: true,
     );
+    if (previousPin != null) {
+      _bookmarksByKey.remove(previousPin.verseKey);
+    }
     _khatmahPin = saved;
     _bookmarksByKey[_verseKey(surahId, ayahId)] = saved;
     await HomeWidgetService.instance
@@ -120,7 +124,11 @@ class BookmarkNotesNotifier extends ChangeNotifier {
   }
 
   Future<void> clearKhatmahPin() async {
+    final prev = _khatmahPin;
     await _repository.clearKhatmahPin();
+    if (prev != null) {
+      _bookmarksByKey.remove(prev.verseKey);
+    }
     _khatmahPin = null;
     notifyListeners();
   }

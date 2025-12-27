@@ -162,33 +162,60 @@ class AudioService {
         await targetDir.create(recursive: true);
       }
 
-      int completed = 0;
+      // Identify files that need downloading
+      final toDownload = <int>[];
       for (var ayah = 1; ayah <= totalVerses; ayah++) {
         final f = verseMap[ayah];
-        if (f == null || f.url.isEmpty) {
-          return false;
-        }
+        if (f == null || f.url.isEmpty) return false;
 
         final ext = (f.format ?? 'mp3').toLowerCase();
         final fileName = '${surahNumber}_$ayah.$ext';
         final outPath =
             File('${targetDir.path}${Platform.pathSeparator}$fileName');
-        if (await outPath.exists()) {
-          completed++;
-          onProgress?.call(completed / totalVerses);
-          continue;
-        }
 
-        final resp = await http.get(Uri.parse(f.url));
-        if (resp.statusCode == 200) {
-          await outPath.writeAsBytes(resp.bodyBytes);
-        } else {
-          return false;
+        if (!await outPath.exists()) {
+          toDownload.add(ayah);
         }
+      }
 
-        completed++;
-        onProgress?.call(completed / totalVerses);
-        await Future.delayed(const Duration(milliseconds: 50));
+      int totalItems = totalVerses;
+      // If we only count downloading items for progress, jump start progress for existing ones
+      int completed = totalVerses - toDownload.length;
+
+      if (completed == totalVerses) {
+        onProgress?.call(1.0);
+        return true;
+      }
+
+      onProgress?.call(completed / totalItems);
+
+      // Process in batches
+      const batchSize = 5;
+      for (var i = 0; i < toDownload.length; i += batchSize) {
+        final end = (i + batchSize < toDownload.length)
+            ? i + batchSize
+            : toDownload.length;
+        final batch = toDownload.sublist(i, end);
+
+        await Future.wait(batch.map((ayah) async {
+          final f = verseMap[ayah]!;
+          final ext = (f.format ?? 'mp3').toLowerCase();
+          final fileName = '${surahNumber}_$ayah.$ext';
+          final outPath =
+              File('${targetDir.path}${Platform.pathSeparator}$fileName');
+
+          try {
+            final resp = await http.get(Uri.parse(f.url));
+            if (resp.statusCode == 200) {
+              await outPath.writeAsBytes(resp.bodyBytes);
+            }
+          } catch (_) {
+            // Ignore individual failure to continue batch, verification at end will catch it
+          }
+        }));
+
+        completed += batch.length;
+        onProgress?.call(completed / totalItems);
       }
 
       return await isSurahDownloaded(recitation.id, surahNumber);

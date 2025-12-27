@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:quran_app/core/quran/qcf_quran.dart';
 import '../../settings/settings_screen.dart';
@@ -66,89 +67,131 @@ class _MushafScreenState extends State<MushafScreen> {
       child: IgnorePointer(
         ignoring: !_appBarVisible,
         child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 200),
+          duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
           opacity: _appBarVisible ? 1 : 0,
-          child: SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Material(
-                elevation: 10,
-                borderRadius: BorderRadius.circular(16),
-                color: Theme.of(context).colorScheme.surface.withOpacity(0.95),
-                child: SizedBox(
-                  height: kToolbarHeight,
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    switchInCurve: Curves.easeInOut,
-                    switchOutCurve: Curves.easeInOut,
-                    child: _isSearchMode
-                        ? Row(
-                            key: const ValueKey('search-mode'),
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.arrow_back),
-                                tooltip: 'Back',
-                                onPressed: _exitSearchMode,
-                              ),
-                              Expanded(
-                                child: TextField(
-                                  controller: _searchController,
-                                  focusNode: _searchFocusNode,
-                                  textInputAction: TextInputAction.search,
-                                  decoration: const InputDecoration(
-                                    hintText: 'Search verses or keywords',
-                                    border: InputBorder.none,
-                                  ),
-                                  onChanged: _onSearchChanged,
-                                  onSubmitted: _onSearchSubmitted,
+          child: AnimatedScale(
+            scale: _appBarVisible ? 1.0 : 0.95,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(0),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color:
+                        Theme.of(context).colorScheme.surface.withOpacity(0.85),
+                    borderRadius: BorderRadius.circular(0),
+                    border: Border.all(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.1),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 20,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: SizedBox(
+                        height: kToolbarHeight,
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 250),
+                          switchInCurve: Curves.easeInOut,
+                          switchOutCurve: Curves.easeInOut,
+                          child: _isSearchMode
+                              ? Row(
+                                  key: const ValueKey('search-mode'),
+                                  children: [
+                                    IconButton(
+                                      icon:
+                                          const Icon(Icons.arrow_back_rounded),
+                                      tooltip: 'Back',
+                                      onPressed: _exitSearchMode,
+                                    ),
+                                    Expanded(
+                                      child: TextField(
+                                        controller: _searchController,
+                                        focusNode: _searchFocusNode,
+                                        textInputAction: TextInputAction.search,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyLarge,
+                                        decoration: InputDecoration(
+                                          hintText: 'Search verses or keywords',
+                                          border: InputBorder.none,
+                                          hintStyle: TextStyle(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withOpacity(0.5),
+                                          ),
+                                        ),
+                                        onChanged: _onSearchChanged,
+                                        onSubmitted: _onSearchSubmitted,
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.tune_rounded),
+                                      tooltip: 'Advanced search',
+                                      onPressed: _openAdvancedSearch,
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.close_rounded),
+                                      tooltip: 'Close search',
+                                      onPressed: _exitSearchMode,
+                                    ),
+                                  ],
+                                )
+                              : Row(
+                                  key: const ValueKey('default-mode'),
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.menu_rounded),
+                                      tooltip: 'Surahs',
+                                      onPressed: () => _scaffoldKey.currentState
+                                          ?.openDrawer(),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Al-Quran',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
+                                    const Spacer(),
+                                    IconButton(
+                                      icon: const Icon(Icons.search_rounded),
+                                      tooltip: 'Search',
+                                      onPressed: _enterSearchMode,
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.settings_rounded),
+                                      tooltip: 'Settings',
+                                      onPressed: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (context) =>
+                                                const SettingsScreen()),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.tune),
-                                tooltip: 'Advanced search',
-                                onPressed: _openAdvancedSearch,
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.close),
-                                tooltip: 'Close search',
-                                onPressed: _exitSearchMode,
-                              ),
-                            ],
-                          )
-                        : Row(
-                            key: const ValueKey('default-mode'),
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.menu),
-                                tooltip: 'Surahs',
-                                onPressed: () =>
-                                    _scaffoldKey.currentState?.openDrawer(),
-                              ),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'Al-Quran',
-                                style: TextStyle(fontWeight: FontWeight.w600),
-                              ),
-                              const Spacer(),
-                              IconButton(
-                                icon: const Icon(Icons.search),
-                                tooltip: 'Search',
-                                onPressed: _enterSearchMode,
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.settings),
-                                tooltip: 'Settings',
-                                onPressed: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) =>
-                                          const SettingsScreen()),
-                                ),
-                              ),
-                            ],
-                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -160,17 +203,32 @@ class _MushafScreenState extends State<MushafScreen> {
   }
 
   Widget _buildMushafView() {
-    return _controller.scrollMode == ScrollMode.horizontal
-        ? HorizontalMushafView(
-            controller: _controller,
-            onOverlayVisibilityChanged: _onOverlayVisibilityChanged,
-            onDragDown: _enterSearchModeFromGesture,
-          )
-        : VerticalMushafView(
-            controller: _controller,
-            scrollController: _scrollController,
-            onOverlayVisibilityChanged: _onOverlayVisibilityChanged,
-          );
+    // Use Stack with Offstage to keep views alive but only render the visible one
+    final isHorizontal = _controller.scrollMode == ScrollMode.horizontal;
+    return Stack(
+      children: [
+        Offstage(
+          offstage: !isHorizontal,
+          child: RepaintBoundary(
+            child: HorizontalMushafView(
+              controller: _controller,
+              onOverlayVisibilityChanged: _onOverlayVisibilityChanged,
+              onDragDown: _enterSearchModeFromGesture,
+            ),
+          ),
+        ),
+        Offstage(
+          offstage: isHorizontal,
+          child: RepaintBoundary(
+            child: VerticalMushafView(
+              controller: _controller,
+              scrollController: _scrollController,
+              onOverlayVisibilityChanged: _onOverlayVisibilityChanged,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   void _jumpToSurah(int surah) {

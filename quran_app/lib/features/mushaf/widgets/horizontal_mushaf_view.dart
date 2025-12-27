@@ -10,6 +10,7 @@ import 'package:screenshot/screenshot.dart';
 import '../../../core/quran/widgets/quran_pageview.dart';
 import '../../../core/quran/qcf_quran.dart';
 import '../../../core/services/audio_player_service.dart';
+import '../../audio_player/audio_player_screen.dart';
 import '../../downloads/audio_surah_list_page.dart';
 import 'package:quran_app/core/services/audio_service.dart';
 import 'package:quran_app/data/models/audio_model.dart';
@@ -49,6 +50,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   bool _isSequentialMode = false;
   int _sequenceToken = 0;
   final ScreenshotController _screenshotController = ScreenshotController();
+  double _downloadProgress = 0.0;
 
   static const List<String> _bookmarkColors = [
     '#FFB300',
@@ -62,8 +64,9 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   @override
   void initState() {
     super.initState();
-    _pageController =
-        PageController(initialPage: widget.controller.currentPage - 1);
+    _pageController = PageController(
+      initialPage: widget.controller.currentPage - 1,
+    );
     _sliderValue = widget.controller.currentPage.toDouble();
     _audioPlayer = AudioPlayerService.instance;
     _isPlaying = _audioPlayer.isPlaying.value;
@@ -84,7 +87,9 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     _audioPlayer.currentLabel.addListener(_labelListener);
     widget.controller.addListener(_onControllerChanged);
     _scheduleAutoHide();
-    widget.onOverlayVisibilityChanged?.call(true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.onOverlayVisibilityChanged?.call(true);
+    });
   }
 
   @override
@@ -98,18 +103,14 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   }
 
   void _onControllerChanged() {
-    if (!_pageController.hasClients) return;
-
     final targetPage = widget.controller.currentPage - 1;
-    if (_pageController.page?.round() != targetPage) {
-      // Release slider to follow controller updates
-      _sliderValue = null;
-      _isSliderActive = false;
-      _pageController.animateToPage(
-        targetPage,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+    if (!_isSliderActive && _pageController.hasClients) {
+      if ((_pageController.page?.round() ?? -1) != targetPage) {
+        _sliderValue = null;
+        _isSliderActive = false;
+        // Use jumpToPage instead of animateToPage to avoid lag with IndexedStack
+        _pageController.jumpToPage(targetPage);
+      }
     }
   }
 
@@ -141,7 +142,6 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                         scrollMode: ScrollMode.horizontal,
                         onPageChanged: (page) {
                           widget.controller.setPage(page);
-                          _updateKhatmahPinForPage(bookmarkState, page);
                         },
                         textColor: Theme.of(context).colorScheme.onSurface,
                         pageBackgroundColor:
@@ -163,20 +163,87 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
           ),
         ),
         _buildPageOverlay(),
+        Positioned(
+          top: MediaQuery.of(context).padding.top + 8,
+          right: 12,
+          child: _buildRibbon(bookmarkState),
+        ),
       ],
     );
   }
 
   Color? _getVerseBackgroundColor(
       BookmarkNotesNotifier state, int surah, int verse) {
-    if (state.isBookmarked(surah, verse)) {
-      return Colors.yellow.withValues(alpha: 0.25);
-    }
-    if (widget.controller.highlightedSurah == surah &&
-        widget.controller.highlightedVerse == verse) {
-      return Colors.blue.withValues(alpha: 0.2);
+    final b = state.bookmarkForVerse(surah, verse);
+    if (b != null) {
+      if (b.isKhatmahPin) {
+        // Last read: no verse-level highlight (represents whole page)
+        return null;
+      }
+      final color = Color(_parseColor(b.colorHex));
+      return color.withValues(alpha: 0.25);
     }
     return null;
+  }
+
+  Widget _buildRibbon(BookmarkNotesNotifier state) {
+    final currentPage = widget.controller.currentPage;
+    bool isPinned = false;
+    final pin = state.khatmahPin;
+    if (pin != null) {
+      try {
+        final pinPage = getPageNumber(pin.surahId, pin.ayahId);
+        isPinned = pinPage == currentPage;
+      } catch (_) {}
+    }
+    final color = Theme.of(context).colorScheme.primary;
+    final onColor = Theme.of(context).colorScheme.onPrimary;
+    return Material(
+      color: color.withValues(alpha: 0.9),
+      borderRadius: BorderRadius.circular(6),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: () => _bookmarkCurrentPageAsLastRead(state),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: Icon(
+            isPinned ? Icons.bookmark : Icons.bookmark_border,
+            size: 20,
+            color: onColor,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _bookmarkCurrentPageAsLastRead(
+      BookmarkNotesNotifier state) async {
+    final page = widget.controller.currentPage;
+    final data = getPageData(page);
+    if (data.isEmpty) return;
+    final surah = int.tryParse(data.first['surah'].toString()) ?? 1;
+    final ayah = int.tryParse(data.first['start'].toString()) ?? 1;
+    final pin = state.khatmahPin;
+    if (pin != null) {
+      try {
+        final pinPage = getPageNumber(pin.surahId, pin.ayahId);
+        if (pinPage == page) {
+          await state.clearKhatmahPin();
+          if (!mounted) return;
+          _showSnack('Removed last read for page $page');
+          return;
+        }
+      } catch (_) {}
+    }
+    await state.setKhatmahPin(
+      surahId: surah,
+      ayahId: ayah,
+      colorHex: '#4DB6AC',
+      category: 'Last read',
+    );
+    if (!mounted) return;
+    final name = getSurahName(surah);
+    _showSnack('Saved last read: Page $page • $name:$ayah');
   }
 
   Widget _buildPageOverlay() {
@@ -184,7 +251,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
       return const SizedBox.shrink();
     }
     return Positioned(
-      bottom: 40,
+      bottom: 0,
       left: 0,
       right: 0,
       child: ListenableBuilder(
@@ -252,14 +319,15 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                 const SizedBox(height: 4),
                 Card(
                   elevation: 16,
+                  margin: EdgeInsets.zero,
                   color:
                       Theme.of(context).colorScheme.surface.withOpacity(0.95),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(0),
                   ),
                   child: Padding(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
                     child: Directionality(
                       textDirection: TextDirection.rtl,
                       child: Slider(
@@ -304,44 +372,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   }
 
   Widget _buildAudioPlayerCard() {
-    return Card(
-      elevation: 12,
-      color: Theme.of(context).colorScheme.surface.withOpacity(0.95),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        child: Directionality(
-          textDirection: TextDirection.rtl,
-          child: Row(
-            children: [
-              IconButton(
-                icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
-                onPressed: _togglePlayPause,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  _audioName,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.menu),
-                onPressed: _openAudioPicker,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    return AudioPlayerCard(controller: widget.controller);
   }
 
   Future<void> _togglePlayPause() async {
@@ -459,7 +490,25 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                             return ListTile(
                               title: Text('${s.padLeft(3, '0')} - $name'),
                               subtitle: Text(_audioPlayer.recitationName),
-                              trailing: const Icon(Icons.play_arrow),
+                              trailing: ValueListenableBuilder<int?>(
+                                valueListenable: AudioPlayerService
+                                    .instance.downloadingSurah,
+                                builder: (context, downloading, _) {
+                                  final isThis = downloading != null &&
+                                      downloading == n &&
+                                      AudioPlayerService
+                                          .instance.isDownloading.value;
+                                  if (isThis) {
+                                    return const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2.5),
+                                    );
+                                  }
+                                  return const Icon(Icons.play_arrow);
+                                },
+                              ),
                               onTap: () async {
                                 Navigator.pop(context);
                                 await _cancelSequence();
@@ -515,6 +564,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     required int surah,
     required String surahLabel,
     required String reciterName,
+    int startAyah = 1,
   }) {
     final token = ++_sequenceToken;
     _isSequentialMode = true;
@@ -523,6 +573,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
           surah: surah,
           surahLabel: surahLabel,
           reciterName: reciterName,
+          startAyah: startAyah,
         ));
   }
 
@@ -531,10 +582,11 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     required int surah,
     required String surahLabel,
     required String reciterName,
+    int startAyah = 1,
   }) async {
     await _audioPlayer.stop();
     final totalAyat = getVerseCount(surah);
-    for (var ayah = 1; ayah <= totalAyat; ayah++) {
+    for (var ayah = startAyah; ayah <= totalAyat; ayah++) {
       if (!mounted || token != _sequenceToken) break;
       widget.controller.setHighlightedVerse(surah, ayah);
       try {
@@ -771,7 +823,11 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                   title: 'Play Audio',
                   onTap: () {
                     Navigator.pop(context);
-                    _playAudio(surah, verse);
+                    AudioPlayerService.instance.playSurahSequenceWithDownload(
+                      context,
+                      surah,
+                      verse,
+                    );
                   },
                 ),
                 _buildOptionTile(
@@ -847,72 +903,88 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     final result = await showModalBottomSheet<Map<String, String?>>(
       context: context,
       builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Add colored bookmark',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  children: _bookmarkColors.map((hex) {
-                    final color = Color(_parseColor(hex));
-                    final isSelected = hex == selectedColor;
-                    return ChoiceChip(
-                      label: const SizedBox.shrink(),
-                      selected: isSelected,
-                      selectedColor: color,
-                      backgroundColor: color.withOpacity(0.25),
-                      shape: StadiumBorder(
-                        side: BorderSide(
-                          color: isSelected
-                              ? Theme.of(context).colorScheme.onPrimary
-                              : color,
-                          width: 2,
-                        ),
-                      ),
-                      onSelected: (_) => setState(() => selectedColor = hex),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: categoryController,
-                  decoration: const InputDecoration(
-                    labelText: 'Category (optional)',
-                    hintText: 'e.g. To Memorize',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
+                    const Text(
+                      'Add colored bookmark',
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
-                    const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.check),
-                      label: const Text('Save'),
-                      onPressed: () {
-                        Navigator.pop<Map<String, String?>>(context, {
-                          'color': selectedColor,
-                          'category': categoryController.text.trim(),
-                        });
-                      },
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      children: _bookmarkColors.map((hex) {
+                        final color = Color(_parseColor(hex));
+                        final isSelected = hex == selectedColor;
+                        return ChoiceChip(
+                          label: Icon(
+                            isSelected ? Icons.check : Icons.circle,
+                            size: isSelected ? 16 : 10,
+                            color: isSelected
+                                ? Theme.of(context).colorScheme.onPrimary
+                                : color,
+                          ),
+                          selected: isSelected,
+                          selectedColor: color,
+                          backgroundColor: color.withOpacity(0.25),
+                          labelPadding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                          shape: StadiumBorder(
+                            side: BorderSide(
+                              color: isSelected
+                                  ? Theme.of(context).colorScheme.onPrimary
+                                  : color,
+                              width: 2,
+                            ),
+                          ),
+                          onSelected: (_) =>
+                              setModalState(() => selectedColor = hex),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: categoryController,
+                      decoration: const InputDecoration(
+                        labelText: 'Category (optional)',
+                        hintText: 'e.g. To Memorize',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.check),
+                          label: const Text('Save'),
+                          onPressed: () {
+                            Navigator.pop<Map<String, String?>>(context, {
+                              'color': selectedColor,
+                              'category': categoryController.text.trim(),
+                            });
+                          },
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -1038,15 +1110,23 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   }
 
   Future<void> _playAudio(int surah, int verse) async {
-    _showOverlay();
     final recitation = await _ensureReciterSelected();
     if (recitation == null) return;
+    // Ensure storage initialized and surah downloaded; UI shows inline spinner
+    final ok = await AudioPlayerService.instance
+        .downloadSurahIfNeeded(recitation, surah);
+    if (!ok) {
+      _showSnack('Could not download audio for Surah $surah');
+      return;
+    }
+    // Start sequential playback from this ayah
     try {
-      await _audioPlayer.playAyahPreferLocal(
+      await _cancelSequence();
+      _startSurahSequence(
         surah: surah,
-        ayah: verse,
-        surahName: getSurahName(surah),
+        surahLabel: getSurahName(surah),
         reciterName: recitation.reciterName,
+        startAyah: verse,
       );
     } catch (_) {
       if (!mounted) return;
@@ -1133,8 +1213,8 @@ class _VerseShareCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            Row(
-              children: const [
+            const Row(
+              children: [
                 Icon(Icons.bedtime, color: Colors.white70, size: 18),
                 SizedBox(width: 8),
                 Text(

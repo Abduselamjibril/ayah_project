@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:quran_app/core/quran/qcf_quran.dart';
+import 'package:quran_app/core/services/theme_service.dart';
 
 /// Scrolling direction for the mushaf widget.
 enum ScrollMode { horizontal, vertical }
@@ -200,39 +201,42 @@ class _PageviewQuranState extends State<PageviewQuran> {
   Widget _buildHorizontalPager(BuildContext context) {
     return Container(
       color: widget.pageBackgroundColor,
-      child: PageView.builder(
-        controller: _controller,
-        reverse: false, // right-to-left paging order
-        itemCount: totalPagesCount,
-        onPageChanged: (index) {
-          _currentPage = index + 1;
-          widget.onPageChanged?.call(_currentPage);
-        },
-        itemBuilder: (context, index) {
-          final pageNumber = index + 1; // 1-based page
-          final header = _headerForPage(pageNumber);
-          return _PageWithNumber(
-            backgroundColor: widget.pageBackgroundColor,
-            pageNumber: pageNumber,
-            pageNumberTextStyle: widget.pageNumberTextStyle,
-            textColorFallback: widget.textColor,
-            leftLabel: header.surahName,
-            rightLabel: header.juzNumber > 0 ? "Part ${header.juzNumber}" : '',
-            child: QuranPageContent(
+      child: MediaQuery.withNoTextScaling(
+        child: PageView.builder(
+          controller: _controller,
+          reverse: false, // right-to-left paging order
+          itemCount: totalPagesCount,
+          onPageChanged: (index) {
+            _currentPage = index + 1;
+            widget.onPageChanged?.call(_currentPage);
+          },
+          itemBuilder: (context, index) {
+            final pageNumber = index + 1; // 1-based page
+            final header = _headerForPage(pageNumber);
+            return _PageWithNumber(
+              backgroundColor: widget.pageBackgroundColor,
               pageNumber: pageNumber,
-              fontSize: widget.fontSize,
-              textColor: widget.textColor,
-              verseBackgroundColor: widget.verseBackgroundColor,
-              verseTrailingBuilder: widget.verseTrailingBuilder,
-              onLongPress: widget.onLongPress,
-              onLongPressUp: widget.onLongPressUp,
-              onLongPressCancel: widget.onLongPressCancel,
-              onLongPressStart: widget.onLongPressStart,
-              sp: widget.sp,
-              h: widget.h,
-            ),
-          );
-        },
+              pageNumberTextStyle: widget.pageNumberTextStyle,
+              textColorFallback: widget.textColor,
+              leftLabel: header.surahName,
+              rightLabel:
+                  header.juzNumber > 0 ? "Part ${header.juzNumber}" : '',
+              child: QuranPageContent(
+                pageNumber: pageNumber,
+                fontSize: widget.fontSize,
+                textColor: widget.textColor,
+                verseBackgroundColor: widget.verseBackgroundColor,
+                verseTrailingBuilder: widget.verseTrailingBuilder,
+                onLongPress: widget.onLongPress,
+                onLongPressUp: widget.onLongPressUp,
+                onLongPressCancel: widget.onLongPressCancel,
+                onLongPressStart: widget.onLongPressStart,
+                sp: widget.sp,
+                h: widget.h,
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -242,52 +246,54 @@ class _PageviewQuranState extends State<PageviewQuran> {
 
     return Container(
       color: widget.pageBackgroundColor,
-      child: ListView.builder(
-        controller: _verticalController,
-        physics: const BouncingScrollPhysics(),
-        itemCount: totalPagesCount,
-        // Cache nearby pages for smoother scrolling
-        cacheExtent: viewportHeight * 2, // Cache 2 pages above and below
-        // Keep alive widgets to avoid rebuilding
-        addAutomaticKeepAlives: true,
-        // Add repaint boundaries automatically
-        addRepaintBoundaries: true,
-        itemBuilder: (context, index) {
-          final pageNumber = index + 1;
-          final header = _headerForPage(pageNumber);
-          final isLandscape =
-              MediaQuery.of(context).orientation == Orientation.landscape;
+      child: MediaQuery.withNoTextScaling(
+        child: ListView.builder(
+          controller: _verticalController,
+          physics: const BouncingScrollPhysics(),
+          itemCount: totalPagesCount,
+          // Cache nearby pages for smoother scrolling
+          cacheExtent: viewportHeight * 2, // Cache 2 pages above and below
+          // Keep alive widgets to avoid rebuilding
+          addAutomaticKeepAlives: true,
+          // Add repaint boundaries automatically
+          addRepaintBoundaries: true,
+          itemBuilder: (context, index) {
+            final pageNumber = index + 1;
+            final header = _headerForPage(pageNumber);
+            final isLandscape =
+                MediaQuery.of(context).orientation == Orientation.landscape;
 
-          return SizedBox(
-            height: isLandscape ? null : viewportHeight,
-            // Wrap each page in RepaintBoundary for better performance
-            child: RepaintBoundary(
-              child: _PageWithNumber(
-                backgroundColor: widget.pageBackgroundColor,
-                pageNumber: pageNumber,
-                pageNumberTextStyle: widget.pageNumberTextStyle,
-                textColorFallback: widget.textColor,
-                leftLabel: header.surahName,
-                rightLabel:
-                    header.juzNumber > 0 ? "Part ${header.juzNumber}" : '',
-                child: QuranPageContent(
+            return SizedBox(
+              height: isLandscape ? null : viewportHeight,
+              // Wrap each page in RepaintBoundary for better performance
+              child: RepaintBoundary(
+                child: _PageWithNumber(
+                  backgroundColor: widget.pageBackgroundColor,
                   pageNumber: pageNumber,
-                  fontSize: widget.fontSize,
-                  textColor: widget.textColor,
-                  verseBackgroundColor: widget.verseBackgroundColor,
-                  verseTrailingBuilder: widget.verseTrailingBuilder,
-                  onLongPress: widget.onLongPress,
-                  onLongPressUp: widget.onLongPressUp,
-                  onLongPressCancel: widget.onLongPressCancel,
-                  onLongPressStart: widget.onLongPressStart,
-                  sp: widget.sp,
-                  h: widget.h,
-                  allowInternalScroll: false,
+                  pageNumberTextStyle: widget.pageNumberTextStyle,
+                  textColorFallback: widget.textColor,
+                  leftLabel: header.surahName,
+                  rightLabel:
+                      header.juzNumber > 0 ? "Part ${header.juzNumber}" : '',
+                  child: QuranPageContent(
+                    pageNumber: pageNumber,
+                    fontSize: widget.fontSize,
+                    textColor: widget.textColor,
+                    verseBackgroundColor: widget.verseBackgroundColor,
+                    verseTrailingBuilder: widget.verseTrailingBuilder,
+                    onLongPress: widget.onLongPress,
+                    onLongPressUp: widget.onLongPressUp,
+                    onLongPressCancel: widget.onLongPressCancel,
+                    onLongPressStart: widget.onLongPressStart,
+                    sp: widget.sp,
+                    h: widget.h,
+                    allowInternalScroll: false,
+                  ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -324,7 +330,7 @@ class _PageWithNumber extends StatelessWidget {
     final style = pageNumberTextStyle ??
         TextStyle(
           color: textColorFallback.withValues(alpha: 0.6),
-          fontSize: 14,
+          fontSize: 12.0,
           fontWeight: FontWeight.w500,
         );
 
@@ -362,7 +368,56 @@ class _PageWithNumber extends StatelessWidget {
             bottom: true,
             child: Padding(
               padding: const EdgeInsets.only(bottom: 12, top: 8),
-              child: Text(pageNumber.toString(), style: style),
+              child: _PageNumberWithBackground(
+                pageNumber: pageNumber,
+                textStyle: style,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Widget that displays the page number with a themed background image
+class _PageNumberWithBackground extends StatelessWidget {
+  final int pageNumber;
+  final TextStyle textStyle;
+
+  const _PageNumberWithBackground({
+    required this.pageNumber,
+    required this.textStyle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final themeService = ThemeService();
+    final backgroundImage = themeService.pageBackgroundImagePath;
+
+    return SizedBox(
+      width: 60,
+      height: 60,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Background decorative image
+          Image.asset(
+            backgroundImage,
+            width: 60,
+            height: 60,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              // Fallback to plain text if image not found
+              return const SizedBox.shrink();
+            },
+          ),
+          // Page number text overlay
+          Text(
+            pageNumber.toString(),
+            style: textStyle.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
             ),
           ),
         ],

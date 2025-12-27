@@ -22,7 +22,7 @@ class _AudioSurahListPageState extends State<AudioSurahListPage> {
 
   bool _loading = true;
   List<Chapter> _chapters = [];
-  Set<int> _downloadingSurahs = {};
+  final Set<int> _downloadingSurahs = {};
   final Map<int, double> _progress = {}; // surahNumber -> progress
   Set<int> _downloadedSurahs = {};
 

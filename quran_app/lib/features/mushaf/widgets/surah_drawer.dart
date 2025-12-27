@@ -4,9 +4,11 @@ import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart'
 import 'package:quran_app/features/bookmarks/data/models/note.dart';
 import '../controller/mushaf_controller.dart';
 import '../../../core/quran/data/suwar.dart';
+import '../../../core/quran/data/juzs.dart';
 import '../../khatmah/widgets/khatmah_tab.dart';
 import '../../../core/quran/qcf_quran.dart';
-import '../../../core/quran/qcf_quran.dart';
+
+enum NavigationMode { surah, juz }
 
 class SurahDrawer extends StatefulWidget {
   final Function(int) onSurahSelected;
@@ -28,6 +30,7 @@ class _SurahDrawerState extends State<SurahDrawer>
   final TextEditingController _noteSearchController = TextEditingController();
   List<NoteModel> _noteResults = [];
   bool _isSearchingNotes = false;
+  NavigationMode _navigationMode = NavigationMode.surah;
 
   @override
   void initState() {
@@ -44,7 +47,12 @@ class _SurahDrawerState extends State<SurahDrawer>
 
   @override
   Widget build(BuildContext context) {
+    // Increase drawer width to 85% of screen width (max 380px) for better content visibility
+    final screenWidth = MediaQuery.of(context).size.width;
+    final drawerWidth = (screenWidth * 0.95).clamp(280.0, 380.0);
+
     return Drawer(
+      width: drawerWidth,
       child: Column(
         children: [
           _buildDrawerHeader(context),
@@ -56,35 +64,81 @@ class _SurahDrawerState extends State<SurahDrawer>
 
   Widget _buildDrawerHeader(BuildContext context) {
     return Container(
-      color: Theme.of(context).primaryColor,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).primaryColor,
+            Theme.of(context).primaryColor.withOpacity(0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
       child: SafeArea(
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                'Al-Quran',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimary,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+              padding: const EdgeInsets.all(20.0),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onPrimary
+                          .withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.menu_book_rounded,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Al-Quran',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ],
               ),
             ),
-            TabBar(
-              controller: _tabController,
-              indicatorColor: Theme.of(context).colorScheme.onPrimary,
-              labelColor: Theme.of(context).colorScheme.onPrimary,
-              unselectedLabelColor:
-                  Theme.of(context).colorScheme.onPrimary.withOpacity(0.6),
-              isScrollable: true,
-              tabs: const [
-                Tab(text: 'Surah'),
-                Tab(text: 'Bookmarks'),
-                Tab(text: 'Khatmah'),
-                Tab(text: 'Note'),
-              ],
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color:
+                    Theme.of(context).colorScheme.onPrimary.withOpacity(0.15),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                indicatorSize: TabBarIndicatorSize.tab,
+                indicator: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color:
+                      Theme.of(context).colorScheme.onPrimary.withOpacity(0.3),
+                ),
+                labelColor: Theme.of(context).colorScheme.onPrimary,
+                unselectedLabelColor:
+                    Theme.of(context).colorScheme.onPrimary.withOpacity(0.6),
+                labelStyle:
+                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                unselectedLabelStyle: const TextStyle(
+                    fontWeight: FontWeight.normal, fontSize: 13),
+                dividerColor: Colors.transparent,
+                tabs: const [
+                  Tab(text: 'Surah'),
+                  Tab(text: 'Bookmarks'),
+                  Tab(text: 'Khatmah'),
+                  Tab(text: 'Notes'),
+                ],
+              ),
             ),
+            const SizedBox(height: 12),
           ],
         ),
       ),
@@ -104,9 +158,22 @@ class _SurahDrawerState extends State<SurahDrawer>
   }
 
   Widget _buildSurahList() {
-    return ListView.builder(
-      itemCount: surah.length,
-      itemBuilder: (context, index) => _buildSurahItem(index + 1, surah[index]),
+    return Column(
+      children: [
+        Expanded(
+          child: _navigationMode == NavigationMode.surah
+              ? ListView.builder(
+                  itemCount: surah.length,
+                  itemBuilder: (context, index) =>
+                      _buildSurahItem(index + 1, surah[index]),
+                )
+              : ListView.builder(
+                  itemCount: juz.length,
+                  itemBuilder: (context, index) => _buildJuzItem(juz[index]),
+                ),
+        ),
+        _buildNavigationToggle(),
+      ],
     );
   }
 
@@ -136,14 +203,180 @@ class _SurahDrawerState extends State<SurahDrawer>
   }
 
   Widget _buildSurahAvatar(int surahNumber, BuildContext context) {
-    return CircleAvatar(
-      backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
-      child: Text(
-        surahNumber.toString(),
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).primaryColor.withOpacity(0.2),
+            Theme.of(context).primaryColor.withOpacity(0.1),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).primaryColor.withOpacity(0.3),
+          width: 1.5,
+        ),
+      ),
+      child: Center(
+        child: Text(
+          surahNumber.toString(),
+          style: TextStyle(
+            color: Theme.of(context).primaryColor,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildJuzItem(Map<String, dynamic> juzInfo) {
+    final juzNumber = juzInfo['id'] as int;
+    final surahs = juzInfo['surahs'] as List<dynamic>;
+    final startingSurah = surahs.first as int;
+
+    final surahInfo = surah[startingSurah - 1];
+    final surahName = surahInfo['name'] ?? 'Unknown';
+    final surahNameEnglish = surahInfo['english'] ?? '';
+
+    return ListTile(
+      leading: _buildJuzAvatar(juzNumber, context),
+      title: Text(
+        'Juz $juzNumber',
+        style: const TextStyle(fontWeight: FontWeight.w500),
+      ),
+      subtitle: Text(
+        'Starts: $surahName ($surahNameEnglish)',
         style: TextStyle(
-          color: Theme.of(context).primaryColor,
-          fontWeight: FontWeight.bold,
           fontSize: 12,
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+        ),
+      ),
+      trailing: Text(
+        'ﺟ $juzNumber',
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+      ),
+      onTap: () {
+        widget.onSurahSelected(startingSurah);
+        Navigator.pop(context);
+      },
+    );
+  }
+
+  Widget _buildJuzAvatar(int juzNumber, BuildContext context) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).colorScheme.secondary.withOpacity(0.2),
+            Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+          width: 1.5,
+        ),
+      ),
+      child: Center(
+        child: Text(
+          juzNumber.toString(),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.secondary,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavigationToggle() {
+    return Container(
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildToggleButton(
+              label: 'Surahs',
+              icon: Icons.menu_book_rounded,
+              isSelected: _navigationMode == NavigationMode.surah,
+              onTap: () {
+                setState(() {
+                  _navigationMode = NavigationMode.surah;
+                });
+              },
+            ),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: _buildToggleButton(
+              label: 'Juz',
+              icon: Icons.book_outlined,
+              isSelected: _navigationMode == NavigationMode.juz,
+              onTap: () {
+                setState(() {
+                  _navigationMode = NavigationMode.juz;
+                });
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToggleButton({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        decoration: BoxDecoration(
+          color:
+              isSelected ? Theme.of(context).primaryColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected
+                  ? Theme.of(context).colorScheme.onPrimary
+                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                fontSize: 14,
+                color: isSelected
+                    ? Theme.of(context).colorScheme.onPrimary
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -171,6 +404,8 @@ class _SurahDrawerState extends State<SurahDrawer>
             );
 
             return ListTile(
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               leading: CircleAvatar(
                 backgroundColor:
                     Color(_parseColor(bookmark.colorHex)).withOpacity(0.2),
@@ -194,8 +429,32 @@ class _SurahDrawerState extends State<SurahDrawer>
                   ),
                   if (bookmark.categoryName != null &&
                       bookmark.categoryName!.trim().isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(bookmark.categoryName!.trim()),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Color(_parseColor(bookmark.colorHex))
+                            .withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Color(_parseColor(bookmark.colorHex))
+                              .withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        bookmark.categoryName!.trim(),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Color(_parseColor(bookmark.colorHex)),
+                        ),
+                        // Show full text without truncation
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -269,6 +528,8 @@ class _SurahDrawerState extends State<SurahDrawer>
                     verseEndSymbol: true,
                   );
                   return ListTile(
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     leading: const Icon(Icons.sticky_note_2_outlined),
                     title: Text('${note.surahId}:${note.ayahId} • $surahName'),
                     subtitle: Column(
@@ -282,11 +543,25 @@ class _SurahDrawerState extends State<SurahDrawer>
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          note.content,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primaryContainer
+                                .withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            note.content,
+                            maxLines: 4, // Increased from 2 to 4 lines
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
                         ),
                       ],
                     ),
