@@ -10,12 +10,12 @@ import 'package:screenshot/screenshot.dart';
 import '../../../core/quran/qcf_quran.dart';
 import '../../../core/services/audio_player_service.dart';
 import '../../audio_player/audio_player_screen.dart';
-import '../../downloads/audio_surah_list_page.dart';
 import 'package:quran_app/core/services/audio_service.dart';
 import 'package:quran_app/data/models/audio_model.dart';
 import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart';
 import '../controller/mushaf_controller.dart';
 import '../screens/verse_details_screen.dart';
+import 'mushaf_audio_navigation.dart';
 
 class VerticalMushafView extends StatefulWidget {
   final MushafController controller;
@@ -37,22 +37,17 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   int _lastPage = 1;
   double? _sliderValue;
   bool _isSliderActive = false;
-  bool _isPlaying = false;
-  String _audioName = 'Select audio';
   late final AudioPlayerService _audioPlayer;
-  late final VoidCallback _playerStateListener;
-  late final VoidCallback _labelListener;
+  late final VoidCallback _ayahListener;
   AudioRecitation? _selectedRecitation;
   final Map<int, String> _surahNameCache = {};
   bool _overlayVisible = true;
   Timer? _autoHideTimer;
   bool _isSequentialMode = false;
-  int _sequenceToken = 0;
   Timer? _autoScrollTimer;
   bool _isAutoScrolling = false;
   double _autoScrollSpeed = 60.0; // pixels per second
   final ScreenshotController _screenshotController = ScreenshotController();
-  double _downloadProgress = 0.0;
 
   static const List<String> _bookmarkColors = [
     '#FFB300',
@@ -69,22 +64,16 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     _lastPage = widget.controller.currentPage;
     _sliderValue = _lastPage.toDouble();
     _audioPlayer = AudioPlayerService.instance;
-    _isPlaying = _audioPlayer.isPlaying.value;
-    _audioName = _audioPlayer.currentLabel.value;
-    _playerStateListener = () {
-      if (!mounted) return;
-      setState(() {
-        _isPlaying = _audioPlayer.isPlaying.value;
-      });
+    _ayahListener = () {
+      if (!mounted || !_isSequentialMode) return;
+      final s = _audioPlayer.currentSurah.value;
+      final a = _audioPlayer.currentAyah.value;
+      if (s != null && a != null) {
+        widget.controller.setHighlightedVerse(s, a);
+      }
     };
-    _labelListener = () {
-      if (!mounted) return;
-      setState(() {
-        _audioName = _audioPlayer.currentLabel.value;
-      });
-    };
-    _audioPlayer.isPlaying.addListener(_playerStateListener);
-    _audioPlayer.currentLabel.addListener(_labelListener);
+    _audioPlayer.currentSurah.addListener(_ayahListener);
+    _audioPlayer.currentAyah.addListener(_ayahListener);
     widget.controller.addListener(_onControllerChanged);
     _scheduleAutoHide();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -94,8 +83,8 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
 
   @override
   void dispose() {
-    _audioPlayer.isPlaying.removeListener(_playerStateListener);
-    _audioPlayer.currentLabel.removeListener(_labelListener);
+    _audioPlayer.currentSurah.removeListener(_ayahListener);
+    _audioPlayer.currentAyah.removeListener(_ayahListener);
     widget.controller.removeListener(_onControllerChanged);
     _stopAutoScroll();
     _autoHideTimer?.cancel();
@@ -602,7 +591,6 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
 
   Future<void> _cancelSequence() async {
     _isSequentialMode = false;
-    _sequenceToken++;
     widget.controller.clearHighlight();
     await _audioPlayer.stop();
   }
@@ -612,106 +600,43 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     required String surahLabel,
     required String reciterName,
   }) {
-    final token = ++_sequenceToken;
     _isSequentialMode = true;
-    Future.microtask(() => _runSurahSequence(
-          token: token,
-          surah: surah,
-          surahLabel: surahLabel,
-          reciterName: reciterName,
-        ));
-  }
-
-  Future<void> _runSurahSequence({
-    required int token,
-    required int surah,
-    required String surahLabel,
-    required String reciterName,
-  }) async {
-    await _audioPlayer.stop();
-    final totalAyat = getVerseCount(surah);
-    for (var ayah = 1; ayah <= totalAyat; ayah++) {
-      if (!mounted || token != _sequenceToken) break;
-      widget.controller.setHighlightedVerse(surah, ayah);
-      try {
-        await _audioPlayer.playAyahPreferLocal(
-          surah: surah,
-          ayah: ayah,
-          surahName: surahLabel,
-          reciterName: reciterName,
-        );
-      } catch (_) {
-        break;
-      }
-      await _audioPlayer.waitForCompleteOrStop();
-      if (token != _sequenceToken) {
-        await _audioPlayer.stop();
-        break;
-      }
-    }
-    if (!mounted) return;
-    if (token == _sequenceToken) {
-      _isSequentialMode = false;
-      widget.controller.clearHighlight();
-    }
+    // Fire-and-forget so UI remains responsive; highlight updates via _ayahListener.
+    unawaited(
+      _audioPlayer
+          .playSurahSequence(
+        surah: surah,
+        startAyah: 1,
+        surahLabel: surahLabel,
+        reciterName: reciterName,
+      )
+          .whenComplete(() {
+        if (!mounted) return;
+        if (_isSequentialMode) {
+          _isSequentialMode = false;
+          widget.controller.clearHighlight();
+        }
+      }),
+    );
   }
 
   Future<void> _navigateToDownloadSurah(int recitationId) async {
-    final recitation = AudioRecitation(
-        id: recitationId,
-        reciterName:
-            _selectedRecitation?.reciterName ?? _audioPlayer.recitationName);
-    if (!mounted) return;
-    await Navigator.push(
+    await navigateToMushafAudioDownloads(
       context,
-      MaterialPageRoute(
-          builder: (_) => AudioSurahListPage(recitation: recitation)),
+      recitationId: recitationId,
+      reciterName:
+          _selectedRecitation?.reciterName ?? _audioPlayer.recitationName,
     );
   }
 
   Future<AudioRecitation?> _ensureReciterSelected({bool force = false}) async {
-    if (!force && _selectedRecitation != null) return _selectedRecitation;
-    await AudioService.instance.initialize();
-    final recitations = await AudioService.instance.getAvailableRecitations();
-    if (!mounted) return null;
-    final chosen = await showModalBottomSheet<AudioRecitation>(
-      context: context,
-      builder: (context) {
-        final maxHeight = min(MediaQuery.of(context).size.height * 0.7, 520.0);
-        return SafeArea(
-          child: SizedBox(
-            height: maxHeight,
-            child: Column(
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.all(12.0),
-                  child: Text('Choose Reciter',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: recitations.length,
-                    itemBuilder: (context, index) {
-                      final r = recitations[index];
-                      return ListTile(
-                        title: Text(r.reciterName),
-                        subtitle: r.style != null ? Text(r.style!) : null,
-                        onTap: () => Navigator.pop(context, r),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+    final chosen = await ensureMushafReciterSelected(
+      context,
+      _audioPlayer,
+      selected: _selectedRecitation,
+      force: force,
     );
-    if (chosen != null) {
-      _selectedRecitation = chosen;
-      _audioPlayer.setRecitationInfo(id: chosen.id, name: chosen.reciterName);
-    }
+    if (chosen != null) _selectedRecitation = chosen;
     return _selectedRecitation;
   }
 

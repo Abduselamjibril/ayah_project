@@ -48,9 +48,9 @@ class _MushafScreenState extends State<MushafScreen> {
       ),
       body: Stack(
         children: [
-          ListenableBuilder(
-            listenable: _controller,
-            builder: (context, _) => _buildMushafView(),
+          ValueListenableBuilder<ScrollMode>(
+            valueListenable: _controller.scrollModeListenable,
+            builder: (context, mode, _) => _buildMushafView(mode),
           ),
           _buildFloatingAppBar(context),
           if (_isSearchMode) _buildSuggestionOverlay(),
@@ -202,9 +202,9 @@ class _MushafScreenState extends State<MushafScreen> {
     );
   }
 
-  Widget _buildMushafView() {
+  Widget _buildMushafView(ScrollMode mode) {
     // Use Stack with Offstage to keep views alive but only render the visible one
-    final isHorizontal = _controller.scrollMode == ScrollMode.horizontal;
+    final isHorizontal = mode == ScrollMode.horizontal;
     return Stack(
       children: [
         Offstage(

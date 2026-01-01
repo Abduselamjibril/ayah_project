@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:quran_app/data/models/audio_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -109,6 +108,60 @@ class AudioPlayerService {
   AudioRecitation getSelectedRecitation() =>
       AudioRecitation(id: _recitationId, reciterName: _recitationName);
 
+  /// Return the cached recitation or prompt the user to choose one.
+  Future<AudioRecitation?> _selectOrCachedReciter(BuildContext context,
+      {bool forceReciter = false}) async {
+    if (!forceReciter && _userSelectedReciter) {
+      return getSelectedRecitation();
+    }
+
+    await _storage.initialize();
+    final recitations = await _storage.getAvailableRecitations();
+    if (!context.mounted) return null;
+
+    final chosen = await showModalBottomSheet<AudioRecitation>(
+      context: context,
+      builder: (context) {
+        final maxHeight = MediaQuery.of(context).size.height * 0.7 > 520.0
+            ? 520.0
+            : MediaQuery.of(context).size.height * 0.7;
+        return SafeArea(
+          child: SizedBox(
+            height: maxHeight,
+            child: Column(
+              mainAxisSize: MainAxisSize.max,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.all(12.0),
+                  child: Text('Choose Reciter',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: recitations.length,
+                    itemBuilder: (context, index) {
+                      final r = recitations[index];
+                      return ListTile(
+                        title: Text(r.reciterName),
+                        subtitle: r.style != null ? Text(r.style!) : null,
+                        onTap: () => Navigator.pop(context, r),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (chosen != null) {
+      setRecitationInfo(id: chosen.id, name: chosen.reciterName);
+    }
+    return chosen;
+  }
+
   /// Load cached reciter selection from SharedPreferences
   Future<void> _loadReciterFromCache() async {
     try {
@@ -214,54 +267,8 @@ class AudioPlayerService {
   /// `forceReciter` is true). UI feedback uses the `isDownloading`/`downloadProgress` notifiers.
   Future<void> playAyahWithDownload(BuildContext context, int surah, int ayah,
       {bool forceReciter = false}) async {
-    AudioRecitation? recitation;
-    if (!forceReciter && _userSelectedReciter) {
-      recitation = getSelectedRecitation();
-    } else {
-      await _storage.initialize();
-      final recitations = await _storage.getAvailableRecitations();
-      if (!context.mounted) return;
-      final chosen = await showModalBottomSheet<AudioRecitation>(
-        context: context,
-        builder: (context) {
-          final maxHeight = MediaQuery.of(context).size.height * 0.7 > 520.0
-              ? 520.0
-              : MediaQuery.of(context).size.height * 0.7;
-          return SafeArea(
-            child: SizedBox(
-              height: maxHeight,
-              child: Column(
-                mainAxisSize: MainAxisSize.max,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Text('Choose Reciter',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: recitations.length,
-                      itemBuilder: (context, index) {
-                        final r = recitations[index];
-                        return ListTile(
-                          title: Text(r.reciterName),
-                          subtitle: r.style != null ? Text(r.style!) : null,
-                          onTap: () => Navigator.pop(context, r),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-      if (chosen != null) {
-        recitation = chosen;
-        setRecitationInfo(id: chosen.id, name: chosen.reciterName);
-      }
-    }
+    final recitation =
+        await _selectOrCachedReciter(context, forceReciter: forceReciter);
     if (recitation == null) return;
 
     await _storage.initialize();
@@ -269,9 +276,11 @@ class AudioPlayerService {
     if (local == null) {
       final ok = await downloadSurahIfNeeded(recitation, surah);
       if (!ok) {
-        if (context.mounted)
+        if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Could not download audio')));
+            const SnackBar(content: Text('Could not download audio')),
+          );
+        }
         return;
       }
     }
@@ -292,54 +301,8 @@ class AudioPlayerService {
     int startAyah, {
     bool forceReciter = false,
   }) async {
-    AudioRecitation? recitation;
-    if (!forceReciter && _userSelectedReciter) {
-      recitation = getSelectedRecitation();
-    } else {
-      await _storage.initialize();
-      final recitations = await _storage.getAvailableRecitations();
-      if (!context.mounted) return;
-      final chosen = await showModalBottomSheet<AudioRecitation>(
-        context: context,
-        builder: (context) {
-          final maxHeight = MediaQuery.of(context).size.height * 0.7 > 520.0
-              ? 520.0
-              : MediaQuery.of(context).size.height * 0.7;
-          return SafeArea(
-            child: SizedBox(
-              height: maxHeight,
-              child: Column(
-                mainAxisSize: MainAxisSize.max,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Text('Choose Reciter',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: recitations.length,
-                      itemBuilder: (context, index) {
-                        final r = recitations[index];
-                        return ListTile(
-                          title: Text(r.reciterName),
-                          subtitle: r.style != null ? Text(r.style!) : null,
-                          onTap: () => Navigator.pop(context, r),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-      if (chosen != null) {
-        recitation = chosen;
-        setRecitationInfo(id: chosen.id, name: chosen.reciterName);
-      }
-    }
+    final recitation =
+        await _selectOrCachedReciter(context, forceReciter: forceReciter);
     if (recitation == null) return;
 
     await _storage.initialize();
@@ -393,7 +356,7 @@ class AudioPlayerService {
           try {
             AudioNotificationService.instance.showDownloadProgress(
               title: 'Downloading Surah ${surah.toString().padLeft(3, '0')}',
-              reciterName: _recitationName,
+              reciterName: recitation.reciterName,
               progress: p,
             );
           } catch (_) {}

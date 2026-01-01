@@ -31,6 +31,7 @@ class _SurahDrawerState extends State<SurahDrawer>
   List<NoteModel> _noteResults = [];
   bool _isSearchingNotes = false;
   NavigationMode _navigationMode = NavigationMode.surah;
+  final Map<int, String> _verseTextCache = {};
 
   @override
   void initState() {
@@ -43,6 +44,19 @@ class _SurahDrawerState extends State<SurahDrawer>
     _tabController.dispose();
     _noteSearchController.dispose();
     super.dispose();
+  }
+
+  String _getVerseTextCached(int surahId, int ayahId) {
+    final key = (surahId * 1000) + ayahId;
+    final cached = _verseTextCache[key];
+    if (cached != null) return cached;
+    final verseText = getVerse(
+      surahId,
+      ayahId,
+      verseEndSymbol: true,
+    );
+    _verseTextCache[key] = verseText;
+    return verseText;
   }
 
   @override
@@ -397,11 +411,8 @@ class _SurahDrawerState extends State<SurahDrawer>
           itemBuilder: (context, index) {
             final bookmark = state.bookmarks[index];
             final surahName = surah[bookmark.surahId - 1]['name'] ?? 'Surah';
-            final verseText = getVerse(
-              bookmark.surahId,
-              bookmark.ayahId,
-              verseEndSymbol: true,
-            );
+            final verseText =
+                _getVerseTextCached(bookmark.surahId, bookmark.ayahId);
 
             return ListTile(
               contentPadding:
@@ -522,11 +533,8 @@ class _SurahDrawerState extends State<SurahDrawer>
                 itemBuilder: (context, index) {
                   final note = notes[index];
                   final surahName = surah[note.surahId - 1]['name'] ?? 'Surah';
-                  final verseText = getVerse(
-                    note.surahId,
-                    note.ayahId,
-                    verseEndSymbol: true,
-                  );
+                  final verseText =
+                      _getVerseTextCached(note.surahId, note.ayahId);
                   return ListTile(
                     contentPadding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

@@ -5,6 +5,7 @@ import '../../../core/services/mushaf_settings_service.dart';
 class MushafController extends ChangeNotifier {
   final MushafSettingsService _settings = MushafSettingsService();
   ScrollMode _scrollMode = ScrollMode.horizontal;
+  late final ValueNotifier<ScrollMode> scrollModeListenable;
   int _currentPage = 1;
   int _currentSurah = 1;
   int? _highlightedSurah;
@@ -14,6 +15,7 @@ class MushafController extends ChangeNotifier {
 
   MushafController() {
     _scrollMode = _settings.scrollMode;
+    scrollModeListenable = ValueNotifier(_scrollMode);
     _settings.addListener(_handleSettingsChanged);
   }
 
@@ -61,6 +63,7 @@ class MushafController extends ChangeNotifier {
     final nextMode = _settings.scrollMode;
     if (nextMode != _scrollMode) {
       _scrollMode = nextMode;
+      scrollModeListenable.value = _scrollMode;
       notifyListeners();
     }
   }
@@ -68,6 +71,7 @@ class MushafController extends ChangeNotifier {
   @override
   void dispose() {
     _settings.removeListener(_handleSettingsChanged);
+    scrollModeListenable.dispose();
     super.dispose();
   }
 }
