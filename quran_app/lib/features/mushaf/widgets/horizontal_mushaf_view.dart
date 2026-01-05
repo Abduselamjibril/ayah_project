@@ -15,7 +15,6 @@ import 'package:quran_app/data/models/audio_model.dart';
 import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart';
 import '../controller/mushaf_controller.dart';
 import '../screens/verse_details_screen.dart';
-import 'mushaf_audio_navigation.dart';
 
 class HorizontalMushafView extends StatefulWidget {
   final MushafController controller;
@@ -325,8 +324,8 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                     borderRadius: BorderRadius.circular(0),
                   ),
                   child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                    padding: EdgeInsets.fromLTRB(
+                        12, 2, 12, MediaQuery.of(context).padding.bottom + 8),
                     child: Directionality(
                       textDirection: TextDirection.rtl,
                       child: Slider(

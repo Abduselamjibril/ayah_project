@@ -370,8 +370,8 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                     borderRadius: BorderRadius.circular(0),
                   ),
                   child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                    padding: EdgeInsets.fromLTRB(
+                        12, 2, 12, MediaQuery.of(context).padding.bottom + 8),
                     child: Directionality(
                       textDirection: TextDirection.rtl,
                       child: Row(

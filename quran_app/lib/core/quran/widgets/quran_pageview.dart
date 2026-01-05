@@ -95,6 +95,7 @@ class PageviewQuran extends StatefulWidget {
 }
 
 class _PageviewQuranState extends State<PageviewQuran> {
+  final Map<int, _PageHeader> _headerCache = {};
   PageController? _internalController;
   // Removed _internalVerticalController as we now use ItemScrollController
   ItemScrollController? _internalItemScrollController;
@@ -184,6 +185,9 @@ class _PageviewQuranState extends State<PageviewQuran> {
   }
 
   _PageHeader _headerForPage(int pageNumber) {
+    if (_headerCache.containsKey(pageNumber)) {
+      return _headerCache[pageNumber]!;
+    }
     try {
       final pageData = getPageData(pageNumber);
       if (pageData.isEmpty) {
@@ -194,7 +198,9 @@ class _PageviewQuranState extends State<PageviewQuran> {
       final start = int.tryParse(first['start'].toString()) ?? 1;
       final juz = getJuzNumber(surah, start);
       final name = getSurahName(surah);
-      return _PageHeader(surahName: name, juzNumber: juz);
+      final header = _PageHeader(surahName: name, juzNumber: juz);
+      _headerCache[pageNumber] = header;
+      return header;
     } catch (_) {
       return const _PageHeader(surahName: '', juzNumber: 0);
     }
@@ -215,19 +221,17 @@ class _PageviewQuranState extends State<PageviewQuran> {
           physics: const BouncingScrollPhysics(),
           itemBuilder: (context, index) {
             final pageNumber = index + 1;
-            // For horizontal, we might not show headers inside the page if the app bar handles it,
-            // but let's keep consistent with _PageWithNumber usage if acceptable.
-            // Usually horizontal mode relies on external UI for Surah name.
-            // We'll pass empty strings to avoid clutter, or maybe the same logic?
-            // Let's pass empty for now as horizontal view usually has overlay.
+            final header = _headerForPage(pageNumber);
+
             return RepaintBoundary(
               child: _PageWithNumber(
                 backgroundColor: widget.pageBackgroundColor,
                 pageNumber: pageNumber,
                 pageNumberTextStyle: widget.pageNumberTextStyle,
                 textColorFallback: widget.textColor,
-                leftLabel: '',
-                rightLabel: '',
+                leftLabel: header.surahName,
+                rightLabel:
+                    header.juzNumber > 0 ? "Part ${header.juzNumber}" : '',
                 child: QuranPageContent(
                   pageNumber: pageNumber,
                   fontSize: widget.fontSize,
