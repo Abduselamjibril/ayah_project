@@ -57,8 +57,8 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   // focusing on the primary goal: index-based navigation.
 
   bool _isAutoScrolling = false;
-  double _autoScrollSpeed = 60.0; // pixels per second (conceptually)
-  Timer? _autoScrollTimer;
+  double _autoScrollSpeed = 30.0; // pixels per second (conceptually)
+  int _scrollGeneration = 0;
 
   final ScreenshotController _screenshotController = ScreenshotController();
 
@@ -185,25 +185,33 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                   child: SizedBox(
                     width: maxWidth,
                     height: constraints.maxHeight - topMargin,
-                    child: PageviewQuran(
-                      initialPageNumber: widget.controller.currentPage,
-                      scrollMode: ScrollMode.vertical,
-                      itemScrollController: _itemScrollController,
-                      itemPositionsListener: _itemPositionsListener,
-                      // We don't use onPageChanged callback here because we use the listener
-                      textColor: Theme.of(context).colorScheme.onSurface,
-                      pageBackgroundColor:
-                          Theme.of(context).scaffoldBackgroundColor,
-                      verseBackgroundColor: (s, v) =>
-                          _getVerseBackgroundColor(bookmarkState, s, v),
-                      onLongPress: (surah, verse) => _showVerseOptions(
-                          context, bookmarkState, surah, verse),
-                      onLongPressStart: (surah, verse, details) =>
-                          widget.controller.setHighlightedVerse(surah, verse),
-                      onLongPressCancel: (surah, verse) =>
-                          widget.controller.clearHighlight(),
-                      sp: 1.0,
-                      h: 1.0,
+                    child: NotificationListener<UserScrollNotification>(
+                      onNotification: (notification) {
+                        if (_isAutoScrolling) {
+                          _stopAutoScroll();
+                        }
+                        return false;
+                      },
+                      child: PageviewQuran(
+                        initialPageNumber: widget.controller.currentPage,
+                        scrollMode: ScrollMode.vertical,
+                        itemScrollController: _itemScrollController,
+                        itemPositionsListener: _itemPositionsListener,
+                        // We don't use onPageChanged callback here because we use the listener
+                        textColor: Theme.of(context).colorScheme.onSurface,
+                        pageBackgroundColor:
+                            Theme.of(context).scaffoldBackgroundColor,
+                        verseBackgroundColor: (s, v) =>
+                            _getVerseBackgroundColor(bookmarkState, s, v),
+                        onLongPress: (surah, verse) => _showVerseOptions(
+                            context, bookmarkState, surah, verse),
+                        onLongPressStart: (surah, verse, details) =>
+                            widget.controller.setHighlightedVerse(surah, verse),
+                        onLongPressCancel: (surah, verse) =>
+                            widget.controller.clearHighlight(),
+                        sp: 1.0,
+                        h: 1.0,
+                      ),
                     ),
                   ),
                 ),
@@ -472,38 +480,109 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     }
   }
 
-  void _startAutoScroll() {
-    // Auto-scroll is trickier with ScrollablePositionedList as it works by index.
-    // Index-based scrolling is "jumpy" for slow reading speeds unless we use
-    // ItemScrollController.scrollTo with a duration.
-    // However, if we scroll one item, we need to know when to scroll the next.
-    // For now, let's just implement a simple "next page" auto advancer or disabling it?
-    // Given the task is to FIX navigation, disabling the broken auto-scroll is safer than leaving it broken.
-    // We can show a snackbar saying it's temporarily disabled or try to make it work.
-
-    // Let's emulate it by scrolling to the *next* index slowly.
+  Future<void> _startAutoScroll() async {
     if (_isAutoScrolling || !_itemScrollController.isAttached) return;
 
     setState(() {
       _isAutoScrolling = true;
+      _scrollGeneration++;
     });
 
-    const tick = Duration(milliseconds: 100);
-    _autoScrollTimer = Timer.periodic(tick, (timer) {
-      // Complex logic would be needed here to scroll smoothly pixel by pixel.
-      // ScrollablePositionedList doesn't expose a pixel-based controller easily.
-      // So we will just disable it gracefully or implement a very rough version.
+    _scrollLoop();
+  }
 
-      // Rough version: Periodic small jumps? No, that's jittery.
-      // We will stop it for now to prevent unexpected behavior.
-      _stopAutoScroll();
-    });
+  Future<void> _scrollLoop() async {
+    final myGen = _scrollGeneration;
+    if (!_isAutoScrolling || !mounted || myGen != _scrollGeneration) return;
+
+    final positions = _itemPositionsListener.itemPositions.value;
+    if (positions.isEmpty) return;
+
+    final sorted = positions.toList()
+      ..sort((a, b) => a.index.compareTo(b.index));
+    final current = sorted.first;
+
+    // Determine the target index
+    int targetIndex = current.index;
+
+    // Provide a small duration for micro-steps (e.g., 250ms)
+    // This allows frequent checks for stop/speed change without long waits
+    const int stepDurationMs = 250;
+
+    // Calculate how much we move in this step in terms of viewport fraction
+    final pageHeight = MediaQuery.of(context).size.height;
+    if (pageHeight <= 0) return;
+
+    final speed = _autoScrollSpeed < 1.0 ? 1.0 : _autoScrollSpeed;
+    final movePixels = speed * (stepDurationMs / 1000.0);
+    final moveFraction = movePixels / pageHeight;
+
+    // Current alignment (leading edge)
+    // If we are scrolling down, leading edge decreases (moves up/negative)
+    double targetLimit = current.itemLeadingEdge - moveFraction;
+
+    // Check if we need to switch to the next page reference
+    // If the current item is almost off-screen (e.g. leading edge < -0.9),
+    // calculating alignment relative to it becomes unstable or unsupported.
+    // Instead, target the NEXT item.
+    // Assuming reduced height or overlap, let's say if leading edge is < -0.5, catch the next one?
+    // ScrollablePositionedList reports visible items. If 'current' is index 5 but index 6 is also visible.
+    // We can target index 6.
+
+    // Simple logic:
+    // If targetLimit is significantly negative (e.g. < -1.0), it means this page is fully scrolled out.
+    // But we are in a loop. We just want to move *a little bit*.
+
+    // Ideally, we scroll 'current' to 'targetLimit'.
+    // If 'targetLimit' is valid.
+
+    // Let's use the 'jump' logic only if we need to change reference item?
+    // No, scrollTo uses index.
+
+    // Use the next item if the current one is mostly gone.
+    if (current.itemLeadingEdge < -0.8 && sorted.length > 1) {
+      // Target the next item instead for better stability
+      final next = sorted[1];
+      targetIndex = next.index;
+      // We want to move 'next' upwards.
+      // Current 'next' alignment is next.itemLeadingEdge.
+      // Target = next.itemLeadingEdge - moveFraction.
+      targetLimit = next.itemLeadingEdge - moveFraction;
+    } else if (current.itemLeadingEdge < -1.5) {
+      // Single item visible but moved way off? Force next.
+      targetIndex = current.index + 1;
+      // Estimate alignment?
+      // If we switch index, we must know its current position or 0.0?
+      // This branch shouldn't happen often if we have >1 visible items.
+      // Just stop if we hit end of book.
+      if (targetIndex > 604) {
+        _stopAutoScroll();
+        return;
+      }
+      // Blind guess: alignment 0 (start of page)
+      targetLimit = 0;
+    }
+
+    try {
+      await _itemScrollController.scrollTo(
+        index: targetIndex,
+        alignment: targetLimit,
+        duration: const Duration(milliseconds: stepDurationMs),
+        curve: Curves.linear,
+      );
+      if (myGen != _scrollGeneration) return;
+      _scrollLoop();
+    } catch (_) {
+      if (myGen == _scrollGeneration) {
+        _stopAutoScroll();
+      }
+    }
   }
 
   void _stopAutoScroll() {
-    if (!_isAutoScrolling && _autoScrollTimer == null) return;
-    _autoScrollTimer?.cancel();
-    _autoScrollTimer = null;
+    _scrollGeneration++;
+    if (!_isAutoScrolling) return;
+
     if (mounted) {
       setState(() {
         _isAutoScrolling = false;
@@ -534,14 +613,20 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                     ),
                     const SizedBox(height: 12),
                     Slider(
-                      min: 20,
-                      max: 250,
-                      divisions: 230,
+                      min: 10,
+                      max: 80,
+                      divisions: 70,
                       label: '${tempSpeed.toStringAsFixed(0)} px/s',
                       value: tempSpeed,
                       onChanged: (value) {
                         setSheetState(() => tempSpeed = value);
-                        setState(() => _autoScrollSpeed = value);
+                        setState(() {
+                          _autoScrollSpeed = value;
+                          if (_isAutoScrolling) {
+                            _scrollGeneration++;
+                            _scrollLoop();
+                          }
+                        });
                       },
                     ),
                     const SizedBox(height: 8),
