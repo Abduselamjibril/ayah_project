@@ -1,7 +1,10 @@
 // lib/core/services/notification_service.dart
 import 'dart:io' show Platform;
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
 class AppNotificationService {
   AppNotificationService._();
@@ -24,6 +27,8 @@ class AppNotificationService {
   Future<void> initialize() async {
     if (_initialized) return;
 
+    tz.initializeTimeZones();
+
     const AndroidInitializationSettings androidInit =
         AndroidInitializationSettings('@mipmap/ic_launcher');
     const DarwinInitializationSettings iosInit = DarwinInitializationSettings(
@@ -39,9 +44,62 @@ class AppNotificationService {
       final android = _plugin.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
       await android?.createNotificationChannel(_downloadChannel);
+      await android?.createNotificationChannel(_dailyChannel);
     }
 
     _initialized = true;
+  }
+
+  static const AndroidNotificationChannel _dailyChannel =
+      AndroidNotificationChannel(
+    'daily_verse_channel',
+    'Daily Verse',
+    description: 'Daily verse of the day notifications',
+    importance: Importance.defaultImportance,
+    playSound: true,
+  );
+
+  Future<void> scheduleDailyNotification(TimeOfDay time) async {
+    await cancelDailyNotification();
+
+    const androidDetails = AndroidNotificationDetails(
+      'daily_verse_channel',
+      'Daily Verse',
+      channelDescription: 'Daily verse of the day notifications',
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+    );
+    const iosDetails = DarwinNotificationDetails();
+    const details =
+        NotificationDetails(android: androidDetails, iOS: iosDetails);
+
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduledDate = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      time.hour,
+      time.minute,
+    );
+
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
+    await _plugin.zonedSchedule(
+      888, // ID for daily notification
+      'Verse of the Day',
+      'Tap to read today\'s verse',
+      scheduledDate,
+      details,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+  }
+
+  Future<void> cancelDailyNotification() async {
+    await _plugin.cancel(888);
   }
 
   Future<bool> requestPermissionsIfNeeded() async {

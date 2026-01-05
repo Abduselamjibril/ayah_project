@@ -9,6 +9,7 @@ import '../widgets/surah_drawer.dart';
 import '../widgets/vertical_mushaf_view.dart';
 import 'package:quran_app/data/repositories/search_repository.dart';
 import 'package:quran_app/features/search/search_screen.dart';
+import '../../daily_verse/verse_of_the_day_screen.dart';
 
 class MushafScreen extends StatefulWidget {
   const MushafScreen({super.key});
@@ -172,6 +173,17 @@ class _MushafScreenState extends State<MushafScreen> {
                                           ),
                                     ),
                                     const Spacer(),
+                                    IconButton(
+                                      icon: const Icon(
+                                          Icons.calendar_month_rounded),
+                                      tooltip: 'Verse of the Day',
+                                      onPressed: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (context) =>
+                                                const VerseOfTheDayScreen()),
+                                      ),
+                                    ),
                                     IconButton(
                                       icon: const Icon(Icons.search_rounded),
                                       tooltip: 'Search',

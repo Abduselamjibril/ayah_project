@@ -9,6 +9,7 @@ import 'package:quran_app/core/services/home_widget_service.dart';
 import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'core/services/audio_notification_service.dart';
+import 'core/services/verse_of_the_day_service.dart';
 
 Future<void> main() async {
   // Ensure Flutter widgets are initialized
@@ -25,6 +26,9 @@ Future<void> main() async {
 
   // Initialize audio notification handling
   await AudioNotificationService.instance.init();
+
+  // Initialize Verse of the Day service
+  await VerseOfTheDayService.instance.initialize();
 
   // Keep home widget in sync with local database
   await HomeWidgetService.instance.initializeBackgroundSync();
