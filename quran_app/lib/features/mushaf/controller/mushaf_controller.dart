@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/quran/widgets/quran_pageview.dart';
 import '../../../core/services/mushaf_settings_service.dart';
+import 'package:quran_app/core/quran/qcf_quran.dart';
 
 class MushafController extends ChangeNotifier {
   final MushafSettingsService _settings = MushafSettingsService();
@@ -12,6 +14,12 @@ class MushafController extends ChangeNotifier {
   int? _highlightedVerse;
 
   static const int _totalPages = 604;
+
+  // Stream for navigation events to decouple UI forcing.
+  // Using broadcast stream so both views (if alive) can listen.
+  final StreamController<int> _navigationController =
+      StreamController<int>.broadcast();
+  Stream<int> get navigationStream => _navigationController.stream;
 
   MushafController() {
     _scrollMode = _settings.scrollMode;
@@ -59,6 +67,33 @@ class MushafController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Optimized consolidated navigation method.
+  /// All navigation requests should route through here.
+  void navigateToPage(int page) {
+    if (page < 1 || page > _totalPages) return;
+
+    // Update internal state
+    _currentPage = page;
+
+    // Notify views to physically scroll/jump
+    _navigationController.add(page);
+
+    // Notify listeners of state change (UI update)
+    notifyListeners();
+  }
+
+  void navigateToSurah(int surah) {
+    final page = getPageNumber(surah, 1);
+    setSurah(surah);
+    navigateToPage(page);
+  }
+
+  void navigateToVerse(int surah, int verse) {
+    final page = getPageNumber(surah, verse);
+    setHighlightedVerse(surah, verse);
+    navigateToPage(page);
+  }
+
   void _handleSettingsChanged() {
     final nextMode = _settings.scrollMode;
     if (nextMode != _scrollMode) {
@@ -72,6 +107,7 @@ class MushafController extends ChangeNotifier {
   void dispose() {
     _settings.removeListener(_handleSettingsChanged);
     scrollModeListenable.dispose();
+    _navigationController.close();
     super.dispose();
   }
 }

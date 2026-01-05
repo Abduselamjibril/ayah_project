@@ -210,7 +210,7 @@ class _SurahDrawerState extends State<SurahDrawer>
         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
       ),
       onTap: () {
-        widget.onSurahSelected(surahNumber);
+        widget.controller.navigateToSurah(surahNumber);
         Navigator.pop(context);
       },
     );
@@ -275,7 +275,7 @@ class _SurahDrawerState extends State<SurahDrawer>
         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
       ),
       onTap: () {
-        widget.onSurahSelected(startingSurah);
+        widget.controller.navigateToSurah(startingSurah);
         Navigator.pop(context);
       },
     );
@@ -477,7 +477,8 @@ class _SurahDrawerState extends State<SurahDrawer>
                 ),
               ),
               onTap: () {
-                widget.onSurahSelected(bookmark.surahId);
+                widget.controller
+                    .navigateToVerse(bookmark.surahId, bookmark.ayahId);
                 Navigator.pop(context);
               },
             );
@@ -581,7 +582,8 @@ class _SurahDrawerState extends State<SurahDrawer>
                       ),
                     ),
                     onTap: () {
-                      widget.onSurahSelected(note.surahId);
+                      widget.controller
+                          .navigateToVerse(note.surahId, note.ayahId);
                       Navigator.pop(context);
                     },
                   );

@@ -175,12 +175,10 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                             const SizedBox(width: 16),
                             FilledButton.icon(
                               onPressed: () {
-                                // Navigate to Mushaf at this location
-                                // We need to pop back to main screen and use controller to jump
-                                // This requires a callback or using a provider to access MushafController globally
-                                // For now, we can just close this screen
-                                Navigator.pop(context);
-                                // Ideally we would notify the MushafController to jump
+                                Navigator.pop(context, {
+                                  'surah': surah,
+                                  'verse': verse,
+                                });
                               },
                               icon: const Icon(Icons.menu_book_rounded),
                               label: const Text('Read in Mushaf'),
