@@ -2,35 +2,8 @@ import 'package:flutter/material.dart';
 
 enum ScreenType { small, medium, large }
 
-ScreenType getScreenType(BuildContext context) {
-  final double screenWidth = MediaQuery.of(context).size.width;
-
-  if (screenWidth < 360) {
-    return ScreenType.small;
-  } else if (screenWidth >= 360 && screenWidth < 600) {
-    return ScreenType.medium;
-  } else {
-    return ScreenType.large;
-  }
-}
-
 double getFontSize(int index, context) {
-  // if (getDeviceType(context) == DeviceType.large) {
-  //     return 33;
-  //   }  else if (getDeviceType(context) == DeviceType.small) {
-  //     return 20;
-  //   }else
-  if (MediaQuery.of(context).orientation != Orientation.portrait) {
-    // Landscape orientation
-    if (getScreenType(context) == ScreenType.large) {
-      return 45; // Tablet landscape
-    }
-    return 35; // Phone landscape
-  } else if (getScreenType(context) == ScreenType.large) {
-    return 30;
-  } else if (getScreenType(context) == ScreenType.small) {
-    return 20;
-  } else if (index == 1 || index == 2) {
+  if (index == 1 || index == 2) {
     return 25;
   } else if (index == 145 || index == 585) {
     return 22.7;
