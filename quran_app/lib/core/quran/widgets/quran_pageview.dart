@@ -350,51 +350,58 @@ class _PageWithNumber extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        return Container(
-          color: backgroundColor,
-          child: Column(
-            mainAxisSize: MainAxisSize.max,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  textDirection: TextDirection.ltr,
-                  children: [
-                    Text(
-                      leftLabel,
-                      overflow: TextOverflow.ellipsis,
-                      style: style,
-                      textAlign: TextAlign.left,
+        return Center(
+          child: FittedBox(
+            fit: BoxFit.contain,
+            child: Container(
+              width: 430, // Reference Width
+              height: 932, // Reference Height
+              color: backgroundColor,
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      textDirection: TextDirection.ltr,
+                      children: [
+                        Text(
+                          leftLabel,
+                          overflow: TextOverflow.ellipsis,
+                          style: style,
+                          textAlign: TextAlign.left,
+                        ),
+                        const Spacer(),
+                        Text(
+                          rightLabel,
+                          style: style,
+                        ),
+                      ],
                     ),
-                    const Spacer(),
-                    Text(
-                      rightLabel,
-                      style: style,
+                  ),
+                  Expanded(child: child),
+                  SafeArea(
+                    top: false,
+                    left: false,
+                    right: false,
+                    bottom: true,
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                        bottom: _footerPaddingBottom,
+                        top: _footerPaddingTop,
+                      ),
+                      child: _PageNumberWithBackground(
+                        pageNumber: pageNumber,
+                        textStyle: style,
+                      ),
                     ),
-                  ],
-                ),
-              ),
-              Expanded(child: child),
-              SafeArea(
-                top: false,
-                left: false,
-                right: false,
-                bottom: true,
-                child: Padding(
-                  padding: const EdgeInsets.only(
-                    bottom: _footerPaddingBottom,
-                    top: _footerPaddingTop,
                   ),
-                  child: _PageNumberWithBackground(
-                    pageNumber: pageNumber,
-                    textStyle: style,
-                  ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       },
@@ -504,24 +511,16 @@ class _QuranPageContentState extends State<QuranPageContent>
     final ranges = getPageData(widget.pageNumber);
     final pageFont = "QCF_P${widget.pageNumber.toString().padLeft(3, '0')}";
     final baseFontSize = getFontSize(widget.pageNumber, context) / widget.sp;
-    final mediaQuery = MediaQuery.of(context);
-    final isLandscape = mediaQuery.orientation == Orientation.landscape;
-    final screenType = getScreenType(context);
-    final isLargeScreen = screenType == ScreenType.large;
 
-    final headerFontSize = isLandscape
-        ? (isLargeScreen ? 50.0 : 35.0) / widget.sp
-        : (isLargeScreen ? 13.2 : 24.0) / widget.sp;
-
-    final bsmlFontSize = isLandscape
-        ? (isLargeScreen ? 45.0 : 30.0) / widget.sp
-        : (isLargeScreen ? 13.2 : 18.0) / widget.sp;
+    // Fixed reference sizes
+    final headerFontSize = 24.0 / widget.sp;
+    final bsmlFontSize = 18.0 / widget.sp;
 
     final verseSpans = <InlineSpan>[];
     if (widget.pageNumber == 2 || widget.pageNumber == 1) {
       verseSpans.add(
-        WidgetSpan(
-          child: SizedBox(height: mediaQuery.size.height * .000001),
+        const WidgetSpan(
+          child: SizedBox(height: 1),
         ),
       );
     }
