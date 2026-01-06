@@ -100,6 +100,9 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   void _onControllerChanged() {
     final targetPage = widget.controller.currentPage - 1;
     if (!_isSliderActive && _pageController.hasClients) {
+      // Don't interrupt user scrolling with external updates
+      if (_pageController.position.isScrollingNotifier.value) return;
+
       if ((_pageController.page?.round() ?? -1) != targetPage) {
         _sliderValue = null;
         _isSliderActive = false;
