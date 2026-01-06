@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:quran_app/core/quran/qcf_quran.dart';
-import 'package:quran_app/core/quran/widgets/quran_pageview.dart';
 import 'package:quran_app/core/services/audio_player_service.dart';
 import 'package:quran_app/features/audio_player/audio_player_screen.dart';
 import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart';
@@ -176,12 +175,11 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final maxWidth = min(constraints.maxWidth, 900.0);
-              final topMargin =
-                  MediaQuery.of(context).padding.top + kToolbarHeight + 8;
+              final topMargin = MediaQuery.of(context).padding.top + 12;
 
               return Center(
                 child: Padding(
-                  padding: EdgeInsets.only(top: topMargin),
+                  padding: EdgeInsets.only(top: topMargin, left: 5, right: 5),
                   child: SizedBox(
                     width: maxWidth,
                     height: constraints.maxHeight - topMargin,
@@ -220,11 +218,6 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
           ),
         ),
         _buildPageIndicator(),
-        Positioned(
-          top: MediaQuery.of(context).padding.top + 8,
-          right: 12,
-          child: _buildRibbon(bookmarkState),
-        ),
       ],
     );
   }
@@ -240,66 +233,6 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
       return color.withValues(alpha: 0.25);
     }
     return null;
-  }
-
-  Widget _buildRibbon(BookmarkNotesNotifier state) {
-    final currentPage = widget.controller.currentPage;
-    bool isPinned = false;
-    final pin = state.khatmahPin;
-    if (pin != null) {
-      try {
-        final pinPage = getPageNumber(pin.surahId, pin.ayahId);
-        isPinned = pinPage == currentPage;
-      } catch (_) {}
-    }
-    final color = Theme.of(context).colorScheme.primary;
-    final onColor = Theme.of(context).colorScheme.onPrimary;
-    return Material(
-      color: color.withValues(alpha: 0.9),
-      borderRadius: BorderRadius.circular(6),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(6),
-        onTap: () => _bookmarkCurrentPageAsLastRead(state),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          child: Icon(
-            isPinned ? Icons.bookmark : Icons.bookmark_border,
-            size: 20,
-            color: onColor,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _bookmarkCurrentPageAsLastRead(
-      BookmarkNotesNotifier state) async {
-    final page = widget.controller.currentPage;
-    final data = getPageData(page);
-    if (data.isEmpty) return;
-    final surah = int.tryParse(data.first['surah'].toString()) ?? 1;
-    final ayah = int.tryParse(data.first['start'].toString()) ?? 1;
-    final pin = state.khatmahPin;
-    if (pin != null) {
-      try {
-        final pinPage = getPageNumber(pin.surahId, pin.ayahId);
-        if (pinPage == page) {
-          await state.clearKhatmahPin();
-          if (!mounted) return;
-          _showSnack('Removed last read for page $page');
-          return;
-        }
-      } catch (_) {}
-    }
-    await state.setKhatmahPin(
-      surahId: surah,
-      ayahId: ayah,
-      colorHex: '#4DB6AC',
-      category: 'Last read',
-    );
-    if (!mounted) return;
-    final name = getSurahName(surah);
-    _showSnack('Saved last read: Page $page • $name:$ayah');
   }
 
   Widget _buildPageIndicator() {
@@ -691,19 +624,60 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     }
   }
 
+  Future<void> _toggleLastReadAt(
+      BookmarkNotesNotifier state, int surah, int verse) async {
+    int? page;
+    try {
+      page = getPageNumber(surah, verse);
+    } catch (_) {}
+
+    final pin = state.khatmahPin;
+    final isSameLastRead = pin != null &&
+        pin.surahId == surah &&
+        pin.ayahId == verse &&
+        (pin.categoryName == 'Last read' || pin.categoryName == null);
+
+    if (isSameLastRead) {
+      await state.clearKhatmahPin();
+      if (!mounted) return;
+      _showSnack(page != null
+          ? 'Removed last read for page $page'
+          : 'Removed last read');
+      return;
+    }
+
+    await state.setKhatmahPin(
+      surahId: surah,
+      ayahId: verse,
+      colorHex: '#4DB6AC',
+      category: 'Last read',
+    );
+
+    if (!mounted) return;
+    final name = getSurahName(surah);
+    final pageLabel = page != null ? 'Page $page • ' : '';
+    _showSnack('$pageLabel$name:$verse set as last read');
+  }
+
   void _showVerseOptions(
     BuildContext context,
     BookmarkNotesNotifier bookmarkState,
     int surah,
     int verse,
   ) {
+    final rootContext = context;
     final isBookmarked = bookmarkState.isBookmarked(surah, verse);
     final hasNote = bookmarkState.hasNote(surah, verse);
+    final pin = bookmarkState.khatmahPin;
+    final isLastReadPin = pin != null &&
+        pin.surahId == surah &&
+        pin.ayahId == verse &&
+        (pin.categoryName == 'Last read' || pin.categoryName == null);
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => SafeArea(
+      builder: (sheetContext) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: SingleChildScrollView(
@@ -713,17 +687,29 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                 _buildOptionTile(
                   icon: Icons.push_pin,
                   title: 'Pin here (Khatmah)',
-                  onTap: () async {
-                    await bookmarkState.setKhatmahPin(
-                      surahId: surah,
-                      ayahId: verse,
-                      colorHex: '#4DB6AC',
-                      category: 'Khatmah',
-                    );
-                    if (mounted) {
-                      Navigator.pop(context);
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    unawaited(() async {
+                      await bookmarkState.setKhatmahPin(
+                        surahId: surah,
+                        ayahId: verse,
+                        colorHex: '#4DB6AC',
+                        category: 'Khatmah',
+                      );
+                      if (!mounted) return;
                       _showSnack('Pinned Surah $surah:$verse for Khatmah');
-                    }
+                    }());
+                  },
+                ),
+                _buildOptionTile(
+                  icon: isLastReadPin
+                      ? Icons.bookmark_remove
+                      : Icons.bookmark_added,
+                  title:
+                      isLastReadPin ? 'Remove last read' : 'Set as last read',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    unawaited(_toggleLastReadAt(bookmarkState, surah, verse));
                   },
                 ),
                 _buildOptionTile(
@@ -731,37 +717,45 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                       isBookmarked ? Icons.bookmark_remove : Icons.bookmark_add,
                   title:
                       isBookmarked ? 'Remove bookmark' : 'Add colored bookmark',
-                  onTap: () async {
-                    Navigator.pop(context);
+                  onTap: () {
+                    Navigator.pop(sheetContext);
                     if (isBookmarked) {
-                      await bookmarkState.toggleBookmark(
-                          surahId: surah, ayahId: verse);
-                      _showBookmarkSnackbar(context, true);
+                      unawaited(() async {
+                        await bookmarkState.toggleBookmark(
+                            surahId: surah, ayahId: verse);
+                        if (!rootContext.mounted) return;
+                        _showBookmarkSnackbar(rootContext, true);
+                      }());
                     } else {
-                      await _openBookmarkDialog(
-                        context,
+                      unawaited(_openBookmarkDialog(
+                        rootContext,
                         bookmarkState,
                         surah,
                         verse,
-                      );
+                      ));
                     }
                   },
                 ),
                 _buildOptionTile(
                   icon: hasNote ? Icons.edit_note : Icons.note_add,
                   title: hasNote ? 'Edit note' : 'Write note',
-                  onTap: () async {
-                    Navigator.pop(context);
-                    await _openNoteSheet(context, bookmarkState, surah, verse);
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    unawaited(_openNoteSheet(
+                      rootContext,
+                      bookmarkState,
+                      surah,
+                      verse,
+                    ));
                   },
                 ),
                 _buildOptionTile(
                   icon: Icons.volume_up,
                   title: 'Play Audio',
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.pop(sheetContext);
                     AudioPlayerService.instance.playSurahSequenceWithDownload(
-                      context,
+                      rootContext,
                       surah,
                       verse,
                     );
@@ -771,8 +765,8 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                   icon: Icons.menu_book,
                   title: 'View Tafsir',
                   onTap: () {
-                    Navigator.pop(context);
-                    _viewTafsir(context, surah, verse);
+                    Navigator.pop(sheetContext);
+                    _viewTafsir(rootContext, surah, verse);
                   },
                 ),
                 _buildOptionTile(

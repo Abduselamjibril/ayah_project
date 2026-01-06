@@ -6,6 +6,8 @@ import '../../core/services/verse_of_the_day_service.dart';
 import '../../data/models/hijri_date_model.dart';
 import '../../data/repositories/hijri_date_repository.dart';
 import '../../core/ui/glassmorphic_card.dart';
+import '../../core/services/translation_service.dart';
+import '../downloads/downloads_screen.dart';
 
 class VerseOfTheDayScreen extends StatefulWidget {
   const VerseOfTheDayScreen({super.key});
@@ -24,6 +26,47 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
   void initState() {
     super.initState();
     _dateFuture = _hijriRepository.getHijriDate(DateTime.now());
+    _loadTranslation();
+  }
+
+  bool _isLoadingTranslation = true;
+  bool _hasSelectedTranslation = false;
+  String? _translationText;
+  String? _translatorName;
+  bool _showTranslation = false;
+
+  Future<void> _loadTranslation() async {
+    final service = TranslationService.instance;
+    final selected = await service.getSelectedTranslation();
+
+    if (selected != null) {
+      final surah = _service.surahNumber;
+      final verse = _service.verseNumber;
+      if (surah != null && verse != null) {
+        final text = await service.getTranslationByEdition(
+          surahNumber: surah,
+          ayahNumber: verse,
+          editionIdentifier: selected.id.toString(),
+        );
+
+        if (mounted) {
+          setState(() {
+            _hasSelectedTranslation = true;
+            _translatorName = selected.name;
+            _translationText = text;
+            _isLoadingTranslation = false;
+          });
+          return;
+        }
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _hasSelectedTranslation = false;
+        _isLoadingTranslation = false;
+      });
+    }
   }
 
   @override
@@ -160,6 +203,124 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                           ),
                         ),
                         const SizedBox(height: 24),
+
+                        // Translation Section
+                        if (!_isLoadingTranslation) ...[
+                          if (_hasSelectedTranslation &&
+                              _translationText != null) ...[
+                            AnimatedCrossFade(
+                              firstChild: InkWell(
+                                onTap: () =>
+                                    setState(() => _showTranslation = true),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color:
+                                          theme.primaryColor.withOpacity(0.3),
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    color: theme.primaryColor.withOpacity(0.05),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.translate_rounded,
+                                        size: 18,
+                                        color: theme.primaryColor,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'See Translation',
+                                        style: theme.textTheme.labelLarge
+                                            ?.copyWith(
+                                          color: theme.primaryColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              secondChild: Column(
+                                children: [
+                                  Text(
+                                    _translationText!,
+                                    textAlign: TextAlign.center,
+                                    style: theme.textTheme.bodyLarge?.copyWith(
+                                      height: 1.5,
+                                      color: theme.colorScheme.onSurface
+                                          .withOpacity(0.9),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '— $_translatorName',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: theme.colorScheme.onSurface
+                                          .withOpacity(0.5),
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              crossFadeState: _showTranslation
+                                  ? CrossFadeState.showSecond
+                                  : CrossFadeState.showFirst,
+                              duration: const Duration(milliseconds: 300),
+                            ),
+                          ] else ...[
+                            // Download Translation Button
+                            InkWell(
+                              onTap: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const DownloadsScreen(),
+                                  ),
+                                );
+                                // Reload after returning
+                                _loadTranslation();
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: theme.colorScheme.secondary
+                                        .withOpacity(0.3),
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  color: theme.colorScheme.secondary
+                                      .withOpacity(0.05),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.download_rounded,
+                                      size: 18,
+                                      color: theme.colorScheme.secondary,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Download Translation',
+                                      style:
+                                          theme.textTheme.labelLarge?.copyWith(
+                                        color: theme.colorScheme.secondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 24),
+                        ],
+
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [

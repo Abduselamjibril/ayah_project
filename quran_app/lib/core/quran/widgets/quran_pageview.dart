@@ -257,7 +257,7 @@ class _PageviewQuranState extends State<PageviewQuran> {
     // We still use constraints to ensure full height, but ScrollablePositionedList handles the jumping
     final viewportHeight = MediaQuery.of(context).size.height;
 
-    return Container(
+    return ColoredBox(
       color: widget.pageBackgroundColor,
       child: MediaQuery.withNoTextScaling(
         child: ScrollablePositionedList.builder(
@@ -324,6 +324,10 @@ class _PageWithNumber extends StatelessWidget {
   final String leftLabel;
   final String rightLabel;
 
+  static const double _footerBadgeExtent = 2.0;
+  static const double _footerPaddingTop = 0.0;
+  static const double _footerPaddingBottom = 0.0;
+
   const _PageWithNumber({
     required this.child,
     required this.pageNumber,
@@ -339,52 +343,61 @@ class _PageWithNumber extends StatelessWidget {
     final style = pageNumberTextStyle ??
         TextStyle(
           color: textColorFallback.withValues(alpha: 0.6),
-          fontSize: 12.0,
+          fontSize: 15.0,
           fontWeight: FontWeight.w500,
         );
+    final mediaQuery = MediaQuery.of(context);
 
-    return Container(
-      color: backgroundColor,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              textDirection: TextDirection.ltr,
-              children: [
-                Text(
-                  leftLabel,
-                  overflow: TextOverflow.ellipsis,
-                  style: style,
-                  textAlign: TextAlign.left,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Container(
+          color: backgroundColor,
+          child: Column(
+            mainAxisSize: MainAxisSize.max,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  textDirection: TextDirection.ltr,
+                  children: [
+                    Text(
+                      leftLabel,
+                      overflow: TextOverflow.ellipsis,
+                      style: style,
+                      textAlign: TextAlign.left,
+                    ),
+                    const Spacer(),
+                    Text(
+                      rightLabel,
+                      style: style,
+                    ),
+                  ],
                 ),
-                const Spacer(),
-                Text(
-                  rightLabel,
-                  style: style,
-                ),
-              ],
-            ),
-          ),
-          Flexible(fit: FlexFit.loose, child: child),
-          SafeArea(
-            top: false,
-            left: false,
-            right: false,
-            bottom: true,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 12, top: 8),
-              child: _PageNumberWithBackground(
-                pageNumber: pageNumber,
-                textStyle: style,
               ),
-            ),
+              Expanded(child: child),
+              SafeArea(
+                top: false,
+                left: false,
+                right: false,
+                bottom: true,
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    bottom: _footerPaddingBottom,
+                    top: _footerPaddingTop,
+                  ),
+                  child: _PageNumberWithBackground(
+                    pageNumber: pageNumber,
+                    textStyle: style,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -425,8 +438,7 @@ class _PageNumberWithBackground extends StatelessWidget {
           Text(
             pageNumber.toString(),
             style: textStyle.copyWith(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
+              fontSize: 15,
             ),
           ),
         ],
@@ -513,6 +525,8 @@ class _QuranPageContentState extends State<QuranPageContent>
         ),
       );
     }
+    const lineHeight = 2.1; // consistent line spacing across all lines
+
     for (final r in ranges) {
       final surah = int.parse(r['surah'].toString());
       final start = int.parse(r['start'].toString());
@@ -575,7 +589,7 @@ class _QuranPageContentState extends State<QuranPageContent>
                 style: TextStyle(
                   fontFamily: pageFont,
                   color: widget.textColor,
-                  height: 1.35 / widget.h,
+                  height: lineHeight,
                   backgroundColor: verseBgColor,
                 ),
               ),
@@ -594,55 +608,45 @@ class _QuranPageContentState extends State<QuranPageContent>
       }
     }
 
+    // Strict ratio lock: lay out the text once (no reflow), then scale it uniformly
+    // to fit the available box. Keep constraints finite to avoid infinite width.
     return LayoutBuilder(
       builder: (context, constraints) {
-        final useFitWidth = isLandscape;
-
-        // Use contain for tablets to fill screen, scaleDown for others to avoid overflow
-        final fitMode = isLargeScreen ? BoxFit.contain : BoxFit.scaleDown;
-
-        final content = Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 5.0),
           color: Colors.transparent,
           child: FittedBox(
-            fit: useFitWidth ? BoxFit.fitWidth : fitMode,
+            fit: BoxFit.contain,
             alignment: Alignment.center,
             child: ConstrainedBox(
+              // Keep constraints finite for FittedBox while letting the text
+              // honor its intrinsic line breaks (header/basmala).
               constraints: BoxConstraints(
                 maxWidth: constraints.maxWidth,
-                minWidth: constraints.maxWidth,
+                maxHeight: constraints.maxHeight,
               ),
               child: Text.rich(
                 TextSpan(children: verseSpans),
                 locale: const Locale("ar"),
                 textAlign: TextAlign.center,
                 textDirection: TextDirection.rtl,
+                softWrap: true,
+                textWidthBasis: TextWidthBasis.longestLine,
+                textHeightBehavior: const TextHeightBehavior(
+                  applyHeightToFirstAscent: true,
+                  applyHeightToLastDescent: true,
+                  leadingDistribution: TextLeadingDistribution.even,
+                ),
                 style: TextStyle(
                   fontFamily: pageFont,
                   fontSize: baseFontSize,
                   color: widget.textColor,
-                  height: (widget.pageNumber == 1 || widget.pageNumber == 2)
-                      ? 2.2
-                      : mediaQuery.systemGestureInsets.left > 0 == false
-                          ? 2.2
-                          : mediaQuery.viewPadding.top > 0
-                              ? 2.2
-                              : 2.2,
+                  height: lineHeight,
                 ),
               ),
             ),
           ),
         );
-
-        if (useFitWidth && widget.allowInternalScroll) {
-          return SingleChildScrollView(
-            scrollDirection: Axis.vertical,
-            physics: const BouncingScrollPhysics(),
-            child: content,
-          );
-        }
-
-        return content;
       },
     );
   }

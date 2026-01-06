@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../../core/quran/widgets/quran_pageview.dart';
 import '../../../core/services/mushaf_settings_service.dart';
 import 'package:quran_app/core/quran/qcf_quran.dart';
 
