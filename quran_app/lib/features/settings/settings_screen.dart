@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:quran_app/core/ui/glassmorphic_card.dart';
 import 'theme_settings_page.dart';
 import 'notification_settings_page.dart';
+import 'daily_verse_settings_page.dart';
 import '../downloads/downloads_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -134,6 +135,22 @@ class SettingsScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 _createRoute(const NotificationSettingsPage()),
+              );
+            },
+          ),
+          _buildSettingCard(
+            context,
+            icon: Icons.calendar_month_outlined,
+            title: 'Daily Inspiration',
+            subtitle: 'Verse of the day settings',
+            gradientColors: [
+              Colors.blue.shade700,
+              Colors.blue.shade400,
+            ],
+            onTap: () {
+              Navigator.push(
+                context,
+                _createRoute(const DailyVerseSettingsPage()),
               );
             },
           ),

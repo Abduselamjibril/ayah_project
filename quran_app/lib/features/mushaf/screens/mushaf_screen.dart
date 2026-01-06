@@ -9,6 +9,7 @@ import '../widgets/surah_drawer.dart';
 import '../widgets/vertical_mushaf_view.dart';
 import 'package:quran_app/data/repositories/search_repository.dart';
 import 'package:quran_app/features/search/search_screen.dart';
+import '../../daily_verse/verse_of_the_day_screen.dart';
 
 class MushafScreen extends StatefulWidget {
   const MushafScreen({super.key});
@@ -20,7 +21,7 @@ class MushafScreen extends StatefulWidget {
 class _MushafScreenState extends State<MushafScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final MushafController _controller = MushafController();
-  final ScrollController _scrollController = ScrollController();
+
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   bool _appBarVisible = true;
@@ -30,7 +31,6 @@ class _MushafScreenState extends State<MushafScreen> {
 
   @override
   void dispose() {
-    _scrollController.dispose();
     _controller.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
@@ -173,6 +173,26 @@ class _MushafScreenState extends State<MushafScreen> {
                                     ),
                                     const Spacer(),
                                     IconButton(
+                                      icon: const Icon(
+                                          Icons.calendar_month_rounded),
+                                      tooltip: 'Verse of the Day',
+                                      onPressed: () async {
+                                        final result = await Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                                  const VerseOfTheDayScreen()),
+                                        );
+                                        if (result != null &&
+                                            result is Map<String, int> &&
+                                            mounted) {
+                                          _controller.navigateToVerse(
+                                              result['surah']!,
+                                              result['verse']!);
+                                        }
+                                      },
+                                    ),
+                                    IconButton(
                                       icon: const Icon(Icons.search_rounded),
                                       tooltip: 'Search',
                                       onPressed: _enterSearchMode,
@@ -222,7 +242,6 @@ class _MushafScreenState extends State<MushafScreen> {
           child: RepaintBoundary(
             child: VerticalMushafView(
               controller: _controller,
-              scrollController: _scrollController,
               onOverlayVisibilityChanged: _onOverlayVisibilityChanged,
             ),
           ),
@@ -232,9 +251,7 @@ class _MushafScreenState extends State<MushafScreen> {
   }
 
   void _jumpToSurah(int surah) {
-    _controller.setSurah(surah);
-    final pageNumber = getPageNumber(surah, 1);
-    _controller.setPage(pageNumber);
+    _controller.navigateToSurah(surah);
   }
 
   void _onOverlayVisibilityChanged(bool visible) {
@@ -269,13 +286,13 @@ class _MushafScreenState extends State<MushafScreen> {
     _searchFocusNode.unfocus();
   }
 
-  void _onSearchSubmitted(String query) {
+  void _onSearchSubmitted(String query) async {
     final trimmed = query.trim();
     if (trimmed.isEmpty) {
       _exitSearchMode();
       return;
     }
-    Navigator.push(
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => SearchScreen(
@@ -284,6 +301,9 @@ class _MushafScreenState extends State<MushafScreen> {
         ),
       ),
     );
+    if (result != null && result is Map<String, int> && mounted) {
+      _controller.navigateToVerse(result['surah']!, result['verse']!);
+    }
   }
 
   void _openAdvancedSearch() {

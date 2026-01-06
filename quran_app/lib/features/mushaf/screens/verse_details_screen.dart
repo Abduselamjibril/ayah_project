@@ -1109,22 +1109,18 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
             ),
         ],
       ),
-      // floatingActionButton:
-      //     _allTranslations.isNotEmpty || _allTafsirs.isNotEmpty
-      //         ? FloatingActionButton.extended(
-      //             onPressed: () {
-      //               _pageController.animateToPage(
-      //                 (_currentPage + 1) % 3,
-      //                 duration: const Duration(milliseconds: 500),
-      //                 curve: Curves.easeInOut,
-      //               );
-      //             },
-      //             icon: const Icon(Icons.swap_horiz),
-      //             label: const Text('Switch View'),
-      //             backgroundColor: Theme.of(context).primaryColor,
-      //             foregroundColor: Colors.white,
-      //           )
-      //         : null,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.pop(context, {
+            'surah': widget.surahNumber,
+            'verse': widget.ayahNumber,
+          });
+        },
+        icon: const Icon(Icons.menu_book_rounded),
+        label: const Text('Read in Mushaf'),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+      ),
     );
   }
 }

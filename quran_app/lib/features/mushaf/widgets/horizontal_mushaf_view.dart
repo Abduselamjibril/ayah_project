@@ -10,12 +10,9 @@ import 'package:screenshot/screenshot.dart';
 import '../../../core/quran/qcf_quran.dart';
 import '../../../core/services/audio_player_service.dart';
 import '../../audio_player/audio_player_screen.dart';
-import 'package:quran_app/core/services/audio_service.dart';
-import 'package:quran_app/data/models/audio_model.dart';
 import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart';
 import '../controller/mushaf_controller.dart';
 import '../screens/verse_details_screen.dart';
-import 'mushaf_audio_navigation.dart';
 
 class HorizontalMushafView extends StatefulWidget {
   final MushafController controller;
@@ -39,11 +36,10 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   bool _isSliderActive = false;
   late final AudioPlayerService _audioPlayer;
   late final VoidCallback _ayahListener;
-  AudioRecitation? _selectedRecitation;
   final Map<int, String> _surahNameCache = {};
   bool _overlayVisible = true;
   Timer? _autoHideTimer;
-  bool _isSequentialMode = false;
+  final bool _isSequentialMode = false;
   final ScreenshotController _screenshotController = ScreenshotController();
 
   static const List<String> _bookmarkColors = [
@@ -54,6 +50,8 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     '#EF5350',
     '#8D6E63',
   ];
+
+  StreamSubscription<int>? _navSubscription;
 
   @override
   void initState() {
@@ -73,6 +71,14 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     };
     _audioPlayer.currentSurah.addListener(_ayahListener);
     _audioPlayer.currentAyah.addListener(_ayahListener);
+
+    // Listen for centralized navigation events
+    _navSubscription = widget.controller.navigationStream.listen((page) {
+      if (_pageController.hasClients) {
+        _pageController.jumpToPage(page - 1);
+      }
+    });
+
     widget.controller.addListener(_onControllerChanged);
     _scheduleAutoHide();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -82,6 +88,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
 
   @override
   void dispose() {
+    _navSubscription?.cancel();
     _audioPlayer.currentSurah.removeListener(_ayahListener);
     _audioPlayer.currentAyah.removeListener(_ayahListener);
     widget.controller.removeListener(_onControllerChanged);
@@ -93,6 +100,9 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   void _onControllerChanged() {
     final targetPage = widget.controller.currentPage - 1;
     if (!_isSliderActive && _pageController.hasClients) {
+      // Don't interrupt user scrolling with external updates
+      if (_pageController.position.isScrollingNotifier.value) return;
+
       if ((_pageController.page?.round() ?? -1) != targetPage) {
         _sliderValue = null;
         _isSliderActive = false;
@@ -114,11 +124,10 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final maxWidth = min(constraints.maxWidth, 900.0);
-              final topMargin =
-                  MediaQuery.of(context).padding.top + kToolbarHeight + 8;
+              final topMargin = MediaQuery.of(context).padding.top + 12;
               return Center(
                 child: Padding(
-                  padding: EdgeInsets.only(top: topMargin),
+                  padding: EdgeInsets.only(top: topMargin, left: 5, right: 5),
                   child: SizedBox(
                     width: maxWidth,
                     height: constraints.maxHeight - topMargin,
@@ -151,11 +160,6 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
           ),
         ),
         _buildPageOverlay(),
-        Positioned(
-          top: MediaQuery.of(context).padding.top + 8,
-          right: 12,
-          child: _buildRibbon(bookmarkState),
-        ),
       ],
     );
   }
@@ -172,66 +176,6 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
       return color.withValues(alpha: 0.25);
     }
     return null;
-  }
-
-  Widget _buildRibbon(BookmarkNotesNotifier state) {
-    final currentPage = widget.controller.currentPage;
-    bool isPinned = false;
-    final pin = state.khatmahPin;
-    if (pin != null) {
-      try {
-        final pinPage = getPageNumber(pin.surahId, pin.ayahId);
-        isPinned = pinPage == currentPage;
-      } catch (_) {}
-    }
-    final color = Theme.of(context).colorScheme.primary;
-    final onColor = Theme.of(context).colorScheme.onPrimary;
-    return Material(
-      color: color.withValues(alpha: 0.9),
-      borderRadius: BorderRadius.circular(6),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(6),
-        onTap: () => _bookmarkCurrentPageAsLastRead(state),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          child: Icon(
-            isPinned ? Icons.bookmark : Icons.bookmark_border,
-            size: 20,
-            color: onColor,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _bookmarkCurrentPageAsLastRead(
-      BookmarkNotesNotifier state) async {
-    final page = widget.controller.currentPage;
-    final data = getPageData(page);
-    if (data.isEmpty) return;
-    final surah = int.tryParse(data.first['surah'].toString()) ?? 1;
-    final ayah = int.tryParse(data.first['start'].toString()) ?? 1;
-    final pin = state.khatmahPin;
-    if (pin != null) {
-      try {
-        final pinPage = getPageNumber(pin.surahId, pin.ayahId);
-        if (pinPage == page) {
-          await state.clearKhatmahPin();
-          if (!mounted) return;
-          _showSnack('Removed last read for page $page');
-          return;
-        }
-      } catch (_) {}
-    }
-    await state.setKhatmahPin(
-      surahId: surah,
-      ayahId: ayah,
-      colorHex: '#4DB6AC',
-      category: 'Last read',
-    );
-    if (!mounted) return;
-    final name = getSurahName(surah);
-    _showSnack('Saved last read: Page $page • $name:$ayah');
   }
 
   Widget _buildPageOverlay() {
@@ -314,8 +258,8 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                     borderRadius: BorderRadius.circular(0),
                   ),
                   child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                    padding: EdgeInsets.fromLTRB(
+                        12, 2, 12, MediaQuery.of(context).padding.bottom + 8),
                     child: Directionality(
                       textDirection: TextDirection.rtl,
                       child: Slider(
@@ -363,234 +307,11 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     return AudioPlayerCard(controller: widget.controller);
   }
 
-  Future<void> _togglePlayPause() async {
-    _showOverlay();
-    final recitation = await _ensureReciterSelected();
-    if (recitation == null) return;
-    if (_audioPlayer.isPlaying.value) {
-      await _audioPlayer.pause();
-      return;
-    }
-    if (_isSequentialMode && _audioPlayer.hasSource) {
-      await _audioPlayer.resume();
-      return;
-    }
-    await _cancelSequence();
-    // Decide what to play: highlighted verse or current surah
-    final hs = widget.controller.highlightedSurah;
-    final hv = widget.controller.highlightedVerse;
-    if (hs != null && hv != null) {
-      try {
-        await _audioPlayer.playAyahPreferLocal(
-          surah: hs,
-          ayah: hv,
-          surahName: getSurahName(hs),
-          reciterName: recitation.reciterName,
-        );
-        return;
-      } catch (_) {
-        // fallthrough to surah logic
-      }
-    }
-    // No verse selected: attempt local surah; if not downloaded, navigate to downloads
-    final recitationId = recitation.id;
-    await AudioService.instance.initialize();
-    final currentPage = widget.controller.currentPage;
-    final pd = getPageData(currentPage);
-    int surah = 1;
-    if (pd.isNotEmpty) {
-      surah = int.tryParse(pd.first['surah'].toString()) ?? 1;
-    }
-    final surahLabel = getSurahName(surah);
-    final hasLocal =
-        await AudioService.instance.isSurahDownloaded(recitationId, surah);
-    if (!hasLocal) {
-      _navigateToDownloadSurah(recitationId);
-      return;
-    }
-    try {
-      _startSurahSequence(
-        surah: surah,
-        surahLabel: surahLabel,
-        reciterName: recitation.reciterName,
-      );
-    } catch (e) {
-      _showSnack('Audio failed to start: $e');
-    }
-  }
-
   void _showSnack(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
-  }
-
-  Future<void> _updateKhatmahPinForPage(
-      BookmarkNotesNotifier state, int page) async {
-    final pin = state.khatmahPin;
-    final data = getPageData(page);
-    if (data.isEmpty) return;
-    final surah = int.tryParse(data.first['surah'].toString()) ?? 1;
-    final ayah = int.tryParse(data.first['start'].toString()) ?? 1;
-    if (pin != null && pin.surahId == surah && pin.ayahId == ayah) return;
-    await state.setKhatmahPin(
-      surahId: surah,
-      ayahId: ayah,
-      colorHex: '#4DB6AC',
-      category: 'Last read',
-    );
-  }
-
-  void _openAudioPicker() async {
-    _showOverlay();
-    final recitation = await _ensureReciterSelected();
-    if (recitation == null) return;
-    final recitationId = recitation.id;
-    await AudioService.instance.initialize();
-    final downloaded =
-        await AudioService.instance.getDownloadedSurahs(recitationId);
-    if (!mounted) return;
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        final maxHeight = min(MediaQuery.of(context).size.height * 0.7, 520.0);
-        return SafeArea(
-          child: SizedBox(
-            height: maxHeight,
-            child: Column(
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.all(12.0),
-                  child: Text('Downloaded Audios',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-                Expanded(
-                  child: downloaded.isEmpty
-                      ? const Center(child: Text('No downloaded surahs'))
-                      : ListView.builder(
-                          itemCount: downloaded.length,
-                          itemBuilder: (context, index) {
-                            final s = downloaded[index];
-                            final n = int.tryParse(s) ?? 0;
-                            final name = getSurahName(n);
-                            return ListTile(
-                              title: Text('${s.padLeft(3, '0')} - $name'),
-                              subtitle: Text(_audioPlayer.recitationName),
-                              trailing: ValueListenableBuilder<int?>(
-                                valueListenable: AudioPlayerService
-                                    .instance.downloadingSurah,
-                                builder: (context, downloading, _) {
-                                  final isThis = downloading != null &&
-                                      downloading == n &&
-                                      AudioPlayerService
-                                          .instance.isDownloading.value;
-                                  if (isThis) {
-                                    return const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2.5),
-                                    );
-                                  }
-                                  return const Icon(Icons.play_arrow);
-                                },
-                              ),
-                              onTap: () async {
-                                Navigator.pop(context);
-                                await _cancelSequence();
-                                _startSurahSequence(
-                                  surah: n,
-                                  surahLabel: name,
-                                  reciterName: _audioPlayer.recitationName,
-                                );
-                              },
-                            );
-                          },
-                        ),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.switch_account),
-                  title: const Text('Change Reciter'),
-                  onTap: () async {
-                    Navigator.pop(context);
-                    _selectedRecitation = null;
-                    final recitation =
-                        await _ensureReciterSelected(force: true);
-                    if (!mounted) return;
-                    if (recitation != null) {
-                      _openAudioPicker();
-                    }
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.download),
-                  title: const Text('Open Audio Downloads'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _navigateToDownloadSurah(recitationId);
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _cancelSequence() async {
-    _isSequentialMode = false;
-    widget.controller.clearHighlight();
-    await _audioPlayer.stop();
-  }
-
-  void _startSurahSequence({
-    required int surah,
-    required String surahLabel,
-    required String reciterName,
-    int startAyah = 1,
-  }) {
-    _isSequentialMode = true;
-    // Fire-and-forget so UI remains responsive; highlight updates via _ayahListener.
-    unawaited(
-      _audioPlayer
-          .playSurahSequence(
-        surah: surah,
-        startAyah: startAyah,
-        surahLabel: surahLabel,
-        reciterName: reciterName,
-      )
-          .whenComplete(() {
-        if (!mounted) return;
-        if (_isSequentialMode) {
-          _isSequentialMode = false;
-          widget.controller.clearHighlight();
-        }
-      }),
-    );
-  }
-
-  Future<void> _navigateToDownloadSurah(int recitationId) async {
-    await navigateToMushafAudioDownloads(
-      context,
-      recitationId: recitationId,
-      reciterName:
-          _selectedRecitation?.reciterName ?? _audioPlayer.recitationName,
-    );
-  }
-
-  Future<AudioRecitation?> _ensureReciterSelected({bool force = false}) async {
-    final chosen = await ensureMushafReciterSelected(
-      context,
-      _audioPlayer,
-      selected: _selectedRecitation,
-      force: force,
-    );
-    if (chosen != null) _selectedRecitation = chosen;
-    return _selectedRecitation;
   }
 
   String _surahNameForPage(int page) {
@@ -613,9 +334,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   // Navigation buttons and page number removed in favor of slider
 
   void _navigateToPage(int page) {
-    if (page >= 1 && page <= 604) {
-      widget.controller.setPage(page);
-    }
+    widget.controller.navigateToPage(page);
   }
 
   void _scheduleAutoHide() {
@@ -675,19 +394,60 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     }
   }
 
+  Future<void> _toggleLastReadAt(
+      BookmarkNotesNotifier state, int surah, int verse) async {
+    int? page;
+    try {
+      page = getPageNumber(surah, verse);
+    } catch (_) {}
+
+    final pin = state.khatmahPin;
+    final isSameLastRead = pin != null &&
+        pin.surahId == surah &&
+        pin.ayahId == verse &&
+        (pin.categoryName == 'Last read' || pin.categoryName == null);
+
+    if (isSameLastRead) {
+      await state.clearKhatmahPin();
+      if (!mounted) return;
+      _showSnack(page != null
+          ? 'Removed last read for page $page'
+          : 'Removed last read');
+      return;
+    }
+
+    await state.setKhatmahPin(
+      surahId: surah,
+      ayahId: verse,
+      colorHex: '#4DB6AC',
+      category: 'Last read',
+    );
+
+    if (!mounted) return;
+    final name = getSurahName(surah);
+    final pageLabel = page != null ? 'Page $page • ' : '';
+    _showSnack('$pageLabel$name:$verse set as last read');
+  }
+
   void _showVerseOptions(
     BuildContext context,
     BookmarkNotesNotifier bookmarkState,
     int surah,
     int verse,
   ) {
+    final rootContext = context;
     final isBookmarked = bookmarkState.isBookmarked(surah, verse);
     final hasNote = bookmarkState.hasNote(surah, verse);
+    final pin = bookmarkState.khatmahPin;
+    final isLastReadPin = pin != null &&
+        pin.surahId == surah &&
+        pin.ayahId == verse &&
+        (pin.categoryName == 'Last read' || pin.categoryName == null);
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => SafeArea(
+      builder: (sheetContext) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: SingleChildScrollView(
@@ -697,17 +457,29 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                 _buildOptionTile(
                   icon: Icons.push_pin,
                   title: 'Pin here (Khatmah)',
-                  onTap: () async {
-                    await bookmarkState.setKhatmahPin(
-                      surahId: surah,
-                      ayahId: verse,
-                      colorHex: '#4DB6AC',
-                      category: 'Khatmah',
-                    );
-                    if (mounted) {
-                      Navigator.pop(context);
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    unawaited(() async {
+                      await bookmarkState.setKhatmahPin(
+                        surahId: surah,
+                        ayahId: verse,
+                        colorHex: '#4DB6AC',
+                        category: 'Khatmah',
+                      );
+                      if (!mounted) return;
                       _showSnack('Pinned Surah $surah:$verse for Khatmah');
-                    }
+                    }());
+                  },
+                ),
+                _buildOptionTile(
+                  icon: isLastReadPin
+                      ? Icons.bookmark_remove
+                      : Icons.bookmark_added,
+                  title:
+                      isLastReadPin ? 'Remove last read' : 'Set as last read',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    unawaited(_toggleLastReadAt(bookmarkState, surah, verse));
                   },
                 ),
                 _buildOptionTile(
@@ -715,37 +487,45 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                       isBookmarked ? Icons.bookmark_remove : Icons.bookmark_add,
                   title:
                       isBookmarked ? 'Remove bookmark' : 'Add colored bookmark',
-                  onTap: () async {
-                    Navigator.pop(context);
+                  onTap: () {
+                    Navigator.pop(sheetContext);
                     if (isBookmarked) {
-                      await bookmarkState.toggleBookmark(
-                          surahId: surah, ayahId: verse);
-                      _showBookmarkSnackbar(context, true);
+                      unawaited(() async {
+                        await bookmarkState.toggleBookmark(
+                            surahId: surah, ayahId: verse);
+                        if (!rootContext.mounted) return;
+                        _showBookmarkSnackbar(rootContext, true);
+                      }());
                     } else {
-                      await _openBookmarkDialog(
-                        context,
+                      unawaited(_openBookmarkDialog(
+                        rootContext,
                         bookmarkState,
                         surah,
                         verse,
-                      );
+                      ));
                     }
                   },
                 ),
                 _buildOptionTile(
                   icon: hasNote ? Icons.edit_note : Icons.note_add,
                   title: hasNote ? 'Edit note' : 'Write note',
-                  onTap: () async {
-                    Navigator.pop(context);
-                    await _openNoteSheet(context, bookmarkState, surah, verse);
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    unawaited(_openNoteSheet(
+                      rootContext,
+                      bookmarkState,
+                      surah,
+                      verse,
+                    ));
                   },
                 ),
                 _buildOptionTile(
                   icon: Icons.volume_up,
                   title: 'Play Audio',
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.pop(sheetContext);
                     AudioPlayerService.instance.playSurahSequenceWithDownload(
-                      context,
+                      rootContext,
                       surah,
                       verse,
                     );
@@ -755,8 +535,8 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                   icon: Icons.menu_book,
                   title: 'View Tafsir',
                   onTap: () {
-                    Navigator.pop(context);
-                    _viewTafsir(context, surah, verse);
+                    Navigator.pop(sheetContext);
+                    _viewTafsir(rootContext, surah, verse);
                   },
                 ),
                 _buildOptionTile(
@@ -921,7 +701,8 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
       colorHex: color,
       category: category,
     );
-    _showBookmarkSnackbar(context, false);
+    if (!mounted) return;
+    _showBookmarkSnackbar(this.context, false);
   }
 
   Future<void> _openNoteSheet(
@@ -1030,33 +811,6 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     }
   }
 
-  Future<void> _playAudio(int surah, int verse) async {
-    final recitation = await _ensureReciterSelected();
-    if (recitation == null) return;
-    // Ensure storage initialized and surah downloaded; UI shows inline spinner
-    final ok = await AudioPlayerService.instance
-        .downloadSurahIfNeeded(recitation, surah);
-    if (!ok) {
-      _showSnack('Could not download audio for Surah $surah');
-      return;
-    }
-    // Start sequential playback from this ayah
-    try {
-      await _cancelSequence();
-      _startSurahSequence(
-        surah: surah,
-        surahLabel: getSurahName(surah),
-        reciterName: recitation.reciterName,
-        startAyah: verse,
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Audio not available for this verse')),
-      );
-    }
-  }
-
   void _viewTafsir(BuildContext context, int surah, int verse) {
     Navigator.push(
       context,
@@ -1067,10 +821,6 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
         ),
       ),
     );
-  }
-
-  void _shareVerse(int surah, int verse) {
-    _shareVerseCard(surah, verse);
   }
 
   void _copyVerseText(int surah, int verse) {

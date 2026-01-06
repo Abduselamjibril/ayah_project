@@ -328,8 +328,8 @@ class _SearchScreenState extends State<SearchScreen>
     );
   }
 
-  void _openVerse(int surah, int ayah) {
-    Navigator.push(
+  void _openVerse(int surah, int ayah) async {
+    final result = await Navigator.push(
       context,
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
@@ -351,5 +351,9 @@ class _SearchScreenState extends State<SearchScreen>
         transitionDuration: const Duration(milliseconds: 300),
       ),
     );
+
+    if (result != null && result is Map<String, int> && mounted) {
+      Navigator.pop(context, result);
+    }
   }
 }
