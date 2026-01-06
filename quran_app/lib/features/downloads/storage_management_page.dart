@@ -1,6 +1,8 @@
 // lib/features/downloads/storage_management_page.dart
 import 'package:flutter/material.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/services/translation_service.dart';
+
 import '../../core/services/tafsir_service.dart';
 import '../../core/services/audio_service.dart';
 
@@ -67,16 +69,22 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete All Translations'),
-        content: const Text(
+        title: Text(AppLocalizations.of(context)
+                ?.translate('delete_all_translations_title') ??
+            'Delete All Translations'),
+        content: Text(AppLocalizations.of(context)
+                ?.translate('delete_all_translations_confirm') ??
             'Are you sure you want to delete all downloaded translations?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
+              child: Text(AppLocalizations.of(context)?.translate('cancel') ??
+                  'Cancel')),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Delete')),
+              child: Text(
+                  AppLocalizations.of(context)?.translate('delete_action') ??
+                      'Delete')),
         ],
       ),
     );
@@ -87,7 +95,10 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     await _load();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('All translations deleted')),
+      SnackBar(
+          content: Text(AppLocalizations.of(context)
+                  ?.translate('all_translations_deleted') ??
+              'All translations deleted')),
     );
   }
 
@@ -95,16 +106,22 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete All Tafsir'),
-        content: const Text(
+        title: Text(AppLocalizations.of(context)
+                ?.translate('delete_all_tafsir_title') ??
+            'Delete All Tafsir'),
+        content: Text(AppLocalizations.of(context)
+                ?.translate('delete_all_tafsir_confirm') ??
             'Are you sure you want to delete all downloaded tafsir?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
+              child: Text(AppLocalizations.of(context)?.translate('cancel') ??
+                  'Cancel')),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Delete')),
+              child: Text(
+                  AppLocalizations.of(context)?.translate('delete_action') ??
+                      'Delete')),
         ],
       ),
     );
@@ -115,7 +132,10 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     await _load();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('All tafsir deleted')),
+      SnackBar(
+          content: Text(
+              AppLocalizations.of(context)?.translate('all_tafsir_deleted') ??
+                  'All tafsir deleted')),
     );
   }
 
@@ -123,16 +143,22 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete All Audio'),
-        content: const Text(
+        title: Text(
+            AppLocalizations.of(context)?.translate('delete_all_audio_title') ??
+                'Delete All Audio'),
+        content: Text(AppLocalizations.of(context)
+                ?.translate('delete_all_audio_confirm') ??
             'Are you sure you want to delete all downloaded audio recitations?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
+              child: Text(AppLocalizations.of(context)?.translate('cancel') ??
+                  'Cancel')),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Delete')),
+              child: Text(
+                  AppLocalizations.of(context)?.translate('delete_action') ??
+                      'Delete')),
         ],
       ),
     );
@@ -143,7 +169,10 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     await _load();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('All audio deleted')),
+      SnackBar(
+          content: Text(
+              AppLocalizations.of(context)?.translate('all_audio_deleted') ??
+                  'All audio deleted')),
     );
   }
 
@@ -179,14 +208,17 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Storage'),
+        title: Text(AppLocalizations.of(context)?.translate('storage_title') ??
+            'Storage'),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               children: [
                 _buildCategory(
-                  title: 'Translations',
+                  title: AppLocalizations.of(context)
+                          ?.translate('tab_translations') ??
+                      'Translations',
                   items: _downloadedTranslations,
                   nameForId: (id) => _translationNames[id] ?? 'ID: $id',
                   onBulkDelete: _bulkDeleteTranslations,
@@ -197,7 +229,9 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                   },
                 ),
                 _buildCategory(
-                  title: 'Tafsir',
+                  title:
+                      AppLocalizations.of(context)?.translate('tab_tafsir') ??
+                          'Tafsir',
                   items: _downloadedTafsirs,
                   nameForId: (id) => _tafsirNames[id] ?? 'ID: $id',
                   onBulkDelete: _bulkDeleteTafsirs,
@@ -208,7 +242,8 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                   },
                 ),
                 _buildCategory(
-                  title: 'Audio',
+                  title: AppLocalizations.of(context)?.translate('tab_audio') ??
+                      'Audio',
                   items: _downloadedRecitations,
                   nameForId: (id) => _recitationNames[id] ?? 'Recitation $id',
                   onBulkDelete: _bulkDeleteAudios,
@@ -248,14 +283,19 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                 TextButton.icon(
                   onPressed: onBulkDelete,
                   icon: const Icon(Icons.delete_outline),
-                  label: const Text('Delete All'),
+                  label: Text(
+                      AppLocalizations.of(context)?.translate('delete_all') ??
+                          'Delete All'),
                 ),
             ],
           ),
           const SizedBox(height: 8),
           if (items.isEmpty)
-            const Text('No downloads in this category',
-                style: TextStyle(color: Colors.grey))
+            Text(
+                AppLocalizations.of(context)
+                        ?.translate('no_downloads_category') ??
+                    'No downloads in this category',
+                style: const TextStyle(color: Colors.grey))
           else
             Card(
               child: ListView.separated(
@@ -272,7 +312,10 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                       final size = snapshot.data ?? '…';
                       return ListTile(
                         title: Text(displayName),
-                        subtitle: Text('Size: $size'),
+                        subtitle: Text((AppLocalizations.of(context)
+                                    ?.translate('size_label') ??
+                                'Size: {size}')
+                            .replaceAll('{size}', size)),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete),
                           onPressed: () => onDeleteItem(id),

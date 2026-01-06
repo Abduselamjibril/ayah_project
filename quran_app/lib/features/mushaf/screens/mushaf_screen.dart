@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:quran_app/core/quran/qcf_quran.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
 import '../../settings/settings_screen.dart';
 import '../controller/mushaf_controller.dart';
+
 import '../widgets/horizontal_mushaf_view.dart';
 import '../widgets/surah_drawer.dart';
 import '../widgets/vertical_mushaf_view.dart';
@@ -115,7 +117,9 @@ class _MushafScreenState extends State<MushafScreen> {
                                     IconButton(
                                       icon:
                                           const Icon(Icons.arrow_back_rounded),
-                                      tooltip: 'Back',
+                                      tooltip: AppLocalizations.of(context)
+                                              ?.translate('back') ??
+                                          'Back',
                                       onPressed: _exitSearchMode,
                                     ),
                                     Expanded(
@@ -127,7 +131,9 @@ class _MushafScreenState extends State<MushafScreen> {
                                             .textTheme
                                             .bodyLarge,
                                         decoration: InputDecoration(
-                                          hintText: 'Search verses or keywords',
+                                          hintText: AppLocalizations.of(context)
+                                                  ?.translate('search_hint') ??
+                                              'Search verses or keywords',
                                           border: InputBorder.none,
                                           hintStyle: TextStyle(
                                             color: Theme.of(context)
@@ -142,12 +148,16 @@ class _MushafScreenState extends State<MushafScreen> {
                                     ),
                                     IconButton(
                                       icon: const Icon(Icons.tune_rounded),
-                                      tooltip: 'Advanced search',
+                                      tooltip: AppLocalizations.of(context)
+                                              ?.translate('advanced_search') ??
+                                          'Advanced search',
                                       onPressed: _openAdvancedSearch,
                                     ),
                                     IconButton(
                                       icon: const Icon(Icons.close_rounded),
-                                      tooltip: 'Close search',
+                                      tooltip: AppLocalizations.of(context)
+                                              ?.translate('close_search') ??
+                                          'Close search',
                                       onPressed: _exitSearchMode,
                                     ),
                                   ],
@@ -157,13 +167,17 @@ class _MushafScreenState extends State<MushafScreen> {
                                   children: [
                                     IconButton(
                                       icon: const Icon(Icons.menu_rounded),
-                                      tooltip: 'Surahs',
+                                      tooltip: AppLocalizations.of(context)
+                                              ?.translate('surahs_tooltip') ??
+                                          'Surahs',
                                       onPressed: () => _scaffoldKey.currentState
                                           ?.openDrawer(),
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
-                                      'Al-Quran',
+                                      AppLocalizations.of(context)
+                                              ?.translate('app_title') ??
+                                          'Al-Quran',
                                       style: Theme.of(context)
                                           .textTheme
                                           .titleMedium
@@ -175,7 +189,10 @@ class _MushafScreenState extends State<MushafScreen> {
                                     IconButton(
                                       icon: const Icon(
                                           Icons.calendar_month_rounded),
-                                      tooltip: 'Verse of the Day',
+                                      tooltip: AppLocalizations.of(context)
+                                              ?.translate(
+                                                  'verse_of_the_day_tooltip') ??
+                                          'Verse of the Day',
                                       onPressed: () async {
                                         final result = await Navigator.push(
                                           context,
@@ -194,12 +211,16 @@ class _MushafScreenState extends State<MushafScreen> {
                                     ),
                                     IconButton(
                                       icon: const Icon(Icons.search_rounded),
-                                      tooltip: 'Search',
+                                      tooltip: AppLocalizations.of(context)
+                                              ?.translate('search_tooltip') ??
+                                          'Search',
                                       onPressed: _enterSearchMode,
                                     ),
                                     IconButton(
                                       icon: const Icon(Icons.settings_rounded),
-                                      tooltip: 'Settings',
+                                      tooltip: AppLocalizations.of(context)
+                                              ?.translate('settings_tooltip') ??
+                                          'Settings',
                                       onPressed: () => Navigator.push(
                                         context,
                                         MaterialPageRoute(
@@ -327,34 +348,49 @@ class _MushafScreenState extends State<MushafScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Advanced Search',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+              Text(
+                AppLocalizations.of(context)
+                        ?.translate('advanced_search_title') ??
+                    'Advanced Search',
+                style:
+                    const TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: queryController,
                 textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'Keyword',
-                  hintText: 'Type a word or phrase',
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)
+                          ?.translate('keyword_label') ??
+                      'Keyword',
+                  hintText:
+                      AppLocalizations.of(context)?.translate('keyword_hint') ??
+                          'Type a word or phrase',
                 ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: surahController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Surah (optional)',
-                  hintText: 'e.g. 1 - 114',
+                decoration: InputDecoration(
+                  labelText:
+                      AppLocalizations.of(context)?.translate('surah_label') ??
+                          'Surah (optional)',
+                  hintText:
+                      AppLocalizations.of(context)?.translate('surah_hint') ??
+                          'e.g. 1 - 114',
                 ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: verseRangeController,
-                decoration: const InputDecoration(
-                  labelText: 'Verse range (optional)',
-                  hintText: 'e.g. 1-7',
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)
+                          ?.translate('verse_range_label') ??
+                      'Verse range (optional)',
+                  hintText: AppLocalizations.of(context)
+                          ?.translate('verse_range_hint') ??
+                      'e.g. 1-7',
                 ),
               ),
               const SizedBox(height: 16),
@@ -363,7 +399,9 @@ class _MushafScreenState extends State<MushafScreen> {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
+                    child: Text(
+                        AppLocalizations.of(context)?.translate('cancel') ??
+                            'Cancel'),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
@@ -372,7 +410,9 @@ class _MushafScreenState extends State<MushafScreen> {
                       Navigator.pop(context);
                       _onSearchSubmitted(queryController.text);
                     },
-                    child: const Text('Apply'),
+                    child: Text(
+                        AppLocalizations.of(context)?.translate('apply') ??
+                            'Apply'),
                   ),
                 ],
               ),

@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/i18n/app_localizations.dart';
 import 'storage_management_page.dart';
 
 class DownloadSettingsPage extends StatefulWidget {
@@ -76,7 +77,9 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
     if (_isLoading) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Download Settings'),
+          title: Text(AppLocalizations.of(context)
+                  ?.translate('download_settings_title') ??
+              'Download Settings'),
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -84,7 +87,9 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Download Settings'),
+        title: Text(AppLocalizations.of(context)
+                ?.translate('download_settings_title') ??
+            'Download Settings'),
       ),
       body: ListView(
         children: [
@@ -125,9 +130,13 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
             ),
           ),
           SwitchListTile(
-            title: const Text('Allow Background Downloads'),
-            subtitle: const Text(
-              'Keep downloads running when you switch apps. On iOS the app must stay in foreground for reliability.',
+            title: Text(AppLocalizations.of(context)
+                    ?.translate('allow_background_downloads') ??
+                'Allow Background Downloads'),
+            subtitle: Text(
+              AppLocalizations.of(context)
+                      ?.translate('background_downloads_subtitle') ??
+                  'Keep downloads running when you switch apps. On iOS the app must stay in foreground for reliability.',
             ),
             value: _backgroundDownload,
             onChanged: _saveBackgroundDownload,
@@ -139,8 +148,9 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'About Downloads',
+                Text(
+                  AppLocalizations.of(context)?.translate('about_downloads') ??
+                      'About Downloads',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -160,8 +170,11 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
                   },
                   child: _buildInfoCard(
                     icon: Icons.storage,
-                    title: 'Storage',
-                    description:
+                    title: AppLocalizations.of(context)
+                            ?.translate('storage_title') ??
+                        'Storage',
+                    description: AppLocalizations.of(context)
+                            ?.translate('storage_subtitle') ??
                         'View downloaded items by category, sizes, and bulk delete.',
                   ),
                 ),
@@ -231,11 +244,18 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
     };
 
     final label = switch (active) {
-      ConnectivityResult.wifi => 'Connected to WiFi',
-      ConnectivityResult.ethernet => 'Ethernet connection',
-      ConnectivityResult.vpn => 'VPN connection',
-      ConnectivityResult.mobile => 'Mobile data',
-      _ => 'Offline',
+      ConnectivityResult.wifi =>
+        AppLocalizations.of(context)?.translate('connected_to_wifi') ??
+            'Connected to WiFi',
+      ConnectivityResult.ethernet =>
+        AppLocalizations.of(context)?.translate('ethernet_connection') ??
+            'Ethernet connection',
+      ConnectivityResult.vpn =>
+        AppLocalizations.of(context)?.translate('vpn_connection') ??
+            'VPN connection',
+      ConnectivityResult.mobile =>
+        AppLocalizations.of(context)?.translate('mobile_data') ?? 'Mobile data',
+      _ => AppLocalizations.of(context)?.translate('offline') ?? 'Offline',
     };
 
     return Container(
@@ -256,9 +276,11 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
                     style:
                         TextStyle(color: color, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
-                const Text(
-                  'Network preference is applied before downloads.',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                Text(
+                  AppLocalizations.of(context)
+                          ?.translate('network_preference_note') ??
+                      'Network preference is applied before downloads.',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),

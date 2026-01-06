@@ -7,6 +7,7 @@ import '../../../core/quran/data/suwar.dart';
 import '../../../core/quran/data/juzs.dart';
 import '../../khatmah/widgets/khatmah_tab.dart';
 import '../../../core/quran/qcf_quran.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
 
 enum NavigationMode { surah, juz }
 
@@ -112,7 +113,8 @@ class _SurahDrawerState extends State<SurahDrawer>
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    'Al-Quran',
+                    AppLocalizations.of(context)?.translate('drawer_title') ??
+                        'Al-Quran',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           color: Theme.of(context).colorScheme.onPrimary,
                           fontWeight: FontWeight.bold,
@@ -144,11 +146,23 @@ class _SurahDrawerState extends State<SurahDrawer>
                 unselectedLabelStyle: const TextStyle(
                     fontWeight: FontWeight.normal, fontSize: 13),
                 dividerColor: Colors.transparent,
-                tabs: const [
-                  Tab(text: 'Surah'),
-                  Tab(text: 'Bookmarks'),
-                  Tab(text: 'Khatmah'),
-                  Tab(text: 'Notes'),
+                tabs: [
+                  Tab(
+                      text: AppLocalizations.of(context)
+                              ?.translate('tab_surah') ??
+                          'Surah'),
+                  Tab(
+                      text: AppLocalizations.of(context)
+                              ?.translate('tab_bookmarks') ??
+                          'Bookmarks'),
+                  Tab(
+                      text: AppLocalizations.of(context)
+                              ?.translate('tab_khatmah') ??
+                          'Khatmah'),
+                  Tab(
+                      text: AppLocalizations.of(context)
+                              ?.translate('tab_notes') ??
+                          'Notes'),
                 ],
               ),
             ),
@@ -169,6 +183,30 @@ class _SurahDrawerState extends State<SurahDrawer>
         _buildNotesTab(),
       ],
     );
+  }
+
+  String _getLocalizedSurahName(Map<String, dynamic> surahInfo) {
+    // If context is not available for some reason, fallback
+    if (!mounted) return surahInfo['name'];
+
+    final locale = AppLocalizations.of(context)?.locale.languageCode;
+    if (locale == 'ar' || locale == 'ur') {
+      return surahInfo['arabic'] ?? surahInfo['name'];
+    }
+    return surahInfo['name'];
+  }
+
+  String _getLocalizedSurahMeaning(Map<String, dynamic> surahInfo) {
+    if (!mounted) return surahInfo['english'] ?? '';
+
+    int surahNumber = surahInfo['id'];
+    String meaningKey = 'surah_meaning_$surahNumber';
+    String? localizedMeaning =
+        AppLocalizations.of(context)?.translate(meaningKey);
+    if (localizedMeaning != null && localizedMeaning != meaningKey) {
+      return localizedMeaning;
+    }
+    return surahInfo['english'] ?? '';
   }
 
   Widget _buildSurahList() {
@@ -192,21 +230,37 @@ class _SurahDrawerState extends State<SurahDrawer>
   }
 
   Widget _buildSurahItem(int surahNumber, Map<String, dynamic> surahInfo) {
+    String surahName = _getLocalizedSurahName(surahInfo);
+    String surahMeaning = _getLocalizedSurahMeaning(surahInfo);
+
+    String versesText =
+        AppLocalizations.of(context)?.translate('verses_suffix') ?? 'verses';
+    String subtitle = surahMeaning.isNotEmpty
+        ? '$surahMeaning • ${surahInfo['aya']} $versesText'
+        : '${surahInfo['aya']} $versesText';
+
+    // Avoid duplicating Arabic text if it's already the main title
+    final locale = AppLocalizations.of(context)?.locale.languageCode;
+    String trailingText = surahInfo['arabic'] ?? '';
+    if (locale == 'ar' || locale == 'ur') {
+      trailingText = '';
+    }
+
     return ListTile(
       leading: _buildSurahAvatar(surahNumber, context),
       title: Text(
-        surahInfo['name'] ?? 'Unknown',
+        surahName,
         style: const TextStyle(fontWeight: FontWeight.w500),
       ),
       subtitle: Text(
-        '${surahInfo['english']} • ${surahInfo['aya']} verses',
+        subtitle,
         style: TextStyle(
           fontSize: 12,
           color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
         ),
       ),
       trailing: Text(
-        surahInfo['arabic'] ?? '',
+        trailingText,
         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
       ),
       onTap: () {
@@ -254,24 +308,24 @@ class _SurahDrawerState extends State<SurahDrawer>
     final startingSurah = surahs.first as int;
 
     final surahInfo = surah[startingSurah - 1];
-    final surahName = surahInfo['name'] ?? 'Unknown';
-    final surahNameEnglish = surahInfo['english'] ?? '';
+    final surahName = _getLocalizedSurahName(surahInfo);
+    final surahNameEnglish = _getLocalizedSurahMeaning(surahInfo);
 
     return ListTile(
       leading: _buildJuzAvatar(juzNumber, context),
       title: Text(
-        'Juz $juzNumber',
+        '${AppLocalizations.of(context)?.translate('juz_prefix') ?? 'Juz'} $juzNumber',
         style: const TextStyle(fontWeight: FontWeight.w500),
       ),
       subtitle: Text(
-        'Starts: $surahName ($surahNameEnglish)',
+        '${AppLocalizations.of(context)?.translate('starts_at') ?? 'Starts:'} $surahName ($surahNameEnglish)',
         style: TextStyle(
           fontSize: 12,
           color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
         ),
       ),
       trailing: Text(
-        'ﺟ $juzNumber',
+        '${AppLocalizations.of(context)?.translate('juz_prefix') ?? 'Juz'} $juzNumber',
         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
       ),
       onTap: () {
@@ -325,7 +379,8 @@ class _SurahDrawerState extends State<SurahDrawer>
         children: [
           Expanded(
             child: _buildToggleButton(
-              label: 'Surahs',
+              label: AppLocalizations.of(context)?.translate('toggle_surahs') ??
+                  'Surahs',
               icon: Icons.menu_book_rounded,
               isSelected: _navigationMode == NavigationMode.surah,
               onTap: () {
@@ -338,7 +393,8 @@ class _SurahDrawerState extends State<SurahDrawer>
           const SizedBox(width: 4),
           Expanded(
             child: _buildToggleButton(
-              label: 'Juz',
+              label: AppLocalizations.of(context)?.translate('toggle_juz') ??
+                  'Juz',
               icon: Icons.book_outlined,
               isSelected: _navigationMode == NavigationMode.juz,
               onTap: () {
@@ -402,7 +458,8 @@ class _SurahDrawerState extends State<SurahDrawer>
         if (state.bookmarks.isEmpty) {
           return _buildEmptyState(
             icon: Icons.bookmark_border,
-            message: 'No bookmarks yet',
+            message: AppLocalizations.of(context)?.translate('no_bookmarks') ??
+                'No bookmarks yet',
           );
         }
 
@@ -497,7 +554,8 @@ class _SurahDrawerState extends State<SurahDrawer>
         if (notes.isEmpty && !_isSearchingNotes) {
           return _buildEmptyState(
             icon: Icons.note_alt_outlined,
-            message: 'No notes yet',
+            message: AppLocalizations.of(context)?.translate('no_notes') ??
+                'No notes yet',
           );
         }
 
@@ -509,7 +567,9 @@ class _SurahDrawerState extends State<SurahDrawer>
                 controller: _noteSearchController,
                 decoration: InputDecoration(
                   prefixIcon: const Icon(Icons.search),
-                  hintText: 'Search notes',
+                  hintText: AppLocalizations.of(context)
+                          ?.translate('search_notes_hint') ??
+                      'Search notes',
                   suffixIcon: _noteSearchController.text.isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.clear),

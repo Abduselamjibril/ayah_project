@@ -4,6 +4,7 @@ import 'package:quran_app/features/mushaf/screens/verse_details_screen.dart';
 import 'package:quran_app/core/ui/glassmorphic_card.dart';
 import 'package:quran_app/core/ui/loading_indicator.dart';
 import 'package:quran_app/core/ui/empty_state.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
 
 class SearchScreen extends StatefulWidget {
   final String query;
@@ -54,7 +55,8 @@ class _SearchScreenState extends State<SearchScreen>
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Search Results'),
+            Text(AppLocalizations.of(context)?.translate('search_results') ??
+                'Search Results'),
             Text(
               '"${widget.query}"',
               style: theme.textTheme.bodySmall?.copyWith(
@@ -83,10 +85,23 @@ class _SearchScreenState extends State<SearchScreen>
                 fontSize: 15,
               ),
               tabs: [
-                _buildTab(Icons.text_fields_rounded, 'Arabic'),
-                _buildTab(Icons.translate_rounded, 'Translations'),
-                _buildTab(Icons.menu_book_rounded, 'Tafsir'),
-                _buildTab(Icons.label_rounded, 'Topics'),
+                _buildTab(
+                    Icons.text_fields_rounded,
+                    AppLocalizations.of(context)?.translate('tab_arabic') ??
+                        'Arabic'),
+                _buildTab(
+                    Icons.translate_rounded,
+                    AppLocalizations.of(context)
+                            ?.translate('tab_translations') ??
+                        'Translations'),
+                _buildTab(
+                    Icons.menu_book_rounded,
+                    AppLocalizations.of(context)?.translate('tab_tafsir') ??
+                        'Tafsir'),
+                _buildTab(
+                    Icons.label_rounded,
+                    AppLocalizations.of(context)?.translate('tab_topics') ??
+                        'Topics'),
               ],
             ),
           ),
@@ -95,7 +110,8 @@ class _SearchScreenState extends State<SearchScreen>
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             onPressed: _runSearch,
-            tooltip: 'Refresh',
+            tooltip:
+                AppLocalizations.of(context)?.translate('refresh') ?? 'Refresh',
           ),
         ],
       ),
@@ -133,8 +149,10 @@ class _SearchScreenState extends State<SearchScreen>
     if (items.isEmpty) {
       return EmptyState(
         icon: Icons.search_off_rounded,
-        title: 'No Results Found',
-        message: 'Try different keywords or filters',
+        title: AppLocalizations.of(context)?.translate('no_results') ??
+            'No Results Found',
+        message: AppLocalizations.of(context)?.translate('search_hint_sub') ??
+            'Try different keywords or filters',
       );
     }
 
@@ -194,7 +212,11 @@ class _SearchScreenState extends State<SearchScreen>
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            'Surah ${r.surah}:${r.ayah}',
+                            (AppLocalizations.of(context)
+                                        ?.translate('surah_ref') ??
+                                    'Surah {surah}:{ayah}')
+                                .replaceAll('{surah}', '${r.surah}')
+                                .replaceAll('{ayah}', '${r.ayah}'),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onPrimaryContainer,
                               fontWeight: FontWeight.w600,

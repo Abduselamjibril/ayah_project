@@ -8,6 +8,7 @@ import 'package:quran_app/core/services/translation_service.dart';
 import 'package:quran_app/data/models/tafsir_model.dart';
 import 'package:quran_app/data/models/translation_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
 
 class TafsirScreen extends StatefulWidget {
   final int surahNumber;
@@ -331,7 +332,8 @@ class _TafsirScreenState extends State<TafsirScreen>
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    'Selected',
+                    AppLocalizations.of(context)?.translate('selected') ??
+                        'Selected',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: Theme.of(context).primaryColor,
                           fontWeight: FontWeight.w600,
@@ -353,7 +355,13 @@ class _TafsirScreenState extends State<TafsirScreen>
               ),
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              hintText: 'Select ${isTafsir ? 'Tafsir' : 'Translation'}',
+              hintText: isTafsir
+                  ? (AppLocalizations.of(context)
+                          ?.translate('select_tafsir_placeholder') ??
+                      'Select Tafsir')
+                  : (AppLocalizations.of(context)
+                          ?.translate('select_trans_placeholder') ??
+                      'Select Translation'),
               hintStyle: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
               ),
@@ -387,7 +395,10 @@ class _TafsirScreenState extends State<TafsirScreen>
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            e.languageName ?? 'Unknown Language',
+                            e.languageName ??
+                                (AppLocalizations.of(context)
+                                        ?.translate('unknown_lang') ??
+                                    'Unknown Language'),
                             style: Theme.of(context)
                                 .textTheme
                                 .labelSmall
@@ -493,7 +504,13 @@ class _TafsirScreenState extends State<TafsirScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _activeType == 'tafsir' ? 'Tafsir' : 'Translation',
+                  _activeType == 'tafsir'
+                      ? (AppLocalizations.of(context)
+                              ?.translate('tab_tafsir') ??
+                          'Tafsir')
+                      : (AppLocalizations.of(context)
+                              ?.translate('tab_translations') ??
+                          'Translation'),
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: Theme.of(context)
                             .colorScheme
@@ -557,7 +574,8 @@ class _TafsirScreenState extends State<TafsirScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Content',
+                AppLocalizations.of(context)?.translate('content_header') ??
+                    'Content',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -573,7 +591,13 @@ class _TafsirScreenState extends State<TafsirScreen>
                           : Icons.fullscreen,
                       color: Theme.of(context).colorScheme.primary,
                     ),
-                    tooltip: _showFullContent ? 'Compact view' : 'Full view',
+                    tooltip: _showFullContent
+                        ? (AppLocalizations.of(context)
+                                ?.translate('compact_view') ??
+                            'Compact view')
+                        : (AppLocalizations.of(context)
+                                ?.translate('full_view') ??
+                            'Full view'),
                   ),
                   IconButton(
                     onPressed: () {
@@ -587,7 +611,9 @@ class _TafsirScreenState extends State<TafsirScreen>
                       Icons.vertical_align_top,
                       color: Theme.of(context).colorScheme.primary,
                     ),
-                    tooltip: 'Scroll to top',
+                    tooltip:
+                        AppLocalizations.of(context)?.translate('scroll_top') ??
+                            'Scroll to top',
                   ),
                 ],
               ),
@@ -612,7 +638,8 @@ class _TafsirScreenState extends State<TafsirScreen>
           ),
           const SizedBox(height: 20),
           Text(
-            'No content available',
+            AppLocalizations.of(context)?.translate('no_content') ??
+                'No content available',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color:
                       Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
@@ -620,7 +647,8 @@ class _TafsirScreenState extends State<TafsirScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            'Please select a tafsir or translation to view content',
+            AppLocalizations.of(context)?.translate('select_content_msg') ??
+                'Please select a tafsir or translation to view content',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
@@ -686,7 +714,9 @@ class _TafsirScreenState extends State<TafsirScreen>
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Tafsir & Translation'),
+        title: Text(
+            AppLocalizations.of(context)?.translate('tafsir_trans_title') ??
+                'Tafsir & Translation'),
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         centerTitle: true,
@@ -727,14 +757,18 @@ class _TafsirScreenState extends State<TafsirScreen>
                         physics: const BouncingScrollPhysics(),
                         children: [
                           _buildEditionSelector(
-                            title: 'Tafsir Selection',
+                            title: AppLocalizations.of(context)
+                                    ?.translate('tafsir_select') ??
+                                'Tafsir Selection',
                             icon: Icons.menu_book,
                             editions: _tafsirEditions,
                             selectedEdition: _selectedTafsir,
                             isTafsir: true,
                           ),
                           _buildEditionSelector(
-                            title: 'Translation Selection',
+                            title: AppLocalizations.of(context)
+                                    ?.translate('trans_select') ??
+                                'Translation Selection',
                             icon: Icons.translate,
                             editions: _translationEditions,
                             selectedEdition: _selectedTranslation,
@@ -752,19 +786,21 @@ class _TafsirScreenState extends State<TafsirScreen>
                 ),
               ),
       ),
-      floatingActionButton:
-          _selectedTafsir != null || _selectedTranslation != null
-              ? FloatingActionButton.extended(
-                  onPressed: () => _openDownloadedPicker(
-                    _activeType == 'tafsir' ? 'tafsir' : 'translation',
-                  ),
-                  icon: const Icon(Icons.download_for_offline),
-                  label: const Text('Downloaded'),
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
-                  elevation: 4,
-                )
-              : null,
+      floatingActionButton: _selectedTafsir != null ||
+              _selectedTranslation != null
+          ? FloatingActionButton.extended(
+              onPressed: () => _openDownloadedPicker(
+                _activeType == 'tafsir' ? 'tafsir' : 'translation',
+              ),
+              icon: const Icon(Icons.download_for_offline),
+              label: Text(
+                  AppLocalizations.of(context)?.translate('downloaded_btn') ??
+                      'Downloaded'),
+              backgroundColor: Theme.of(context).primaryColor,
+              foregroundColor: Colors.white,
+              elevation: 4,
+            )
+          : null,
     );
   }
 
@@ -787,7 +823,8 @@ class _TafsirScreenState extends State<TafsirScreen>
           ),
           const SizedBox(height: 20),
           Text(
-            'Loading Content...',
+            AppLocalizations.of(context)?.translate('loading_msg') ??
+                'Loading Content...',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color:
                       Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
@@ -795,7 +832,8 @@ class _TafsirScreenState extends State<TafsirScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            'Preparing tafsir and translation data',
+            AppLocalizations.of(context)?.translate('preparing_msg') ??
+                'Preparing tafsir and translation data',
             style: TextStyle(
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
             ),

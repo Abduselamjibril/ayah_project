@@ -2,7 +2,9 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/services/notification_service.dart';
+
 import '../../core/services/translation_service.dart';
 import '../../core/services/tafsir_service.dart';
 import '../../core/services/audio_service.dart';
@@ -84,7 +86,11 @@ class _DownloadsScreenState extends State<DownloadsScreen>
       setState(() => _isLoadingTranslations = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading translations: $e')),
+          SnackBar(
+              content: Text((AppLocalizations.of(context)
+                          ?.translate('error_loading_translations') ??
+                      'Error loading translations: {error}')
+                  .replaceAll('{error}', '$e'))),
         );
       }
     }
@@ -102,7 +108,11 @@ class _DownloadsScreenState extends State<DownloadsScreen>
       setState(() => _isLoadingTafsirs = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading tafsirs: $e')),
+          SnackBar(
+              content: Text((AppLocalizations.of(context)
+                          ?.translate('error_loading_tafsirs') ??
+                      'Error loading tafsirs: {error}')
+                  .replaceAll('{error}', '$e'))),
         );
       }
     }
@@ -120,7 +130,10 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     } catch (e) {
       setState(() => _isLoadingAudio = false);
       if (mounted) {
-        _showSnack('Error loading audio recitations: $e');
+        _showSnack(
+            (AppLocalizations.of(context)?.translate('error_loading_audio') ??
+                    'Error loading audio recitations: {error}')
+                .replaceAll('{error}', '$e'));
       }
     }
   }
@@ -161,7 +174,8 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     final hasConnection = connectivity.isNotEmpty &&
         connectivity.any((e) => e != ConnectivityResult.none);
     if (!hasConnection) {
-      _showSnack('No internet connection. Please connect and retry.');
+      _showSnack(AppLocalizations.of(context)?.translate('no_internet') ??
+          'No internet connection. Please connect and retry.');
       return false;
     }
 
@@ -170,7 +184,8 @@ class _DownloadsScreenState extends State<DownloadsScreen>
 
     // If WiFi-only is enabled, block downloads when on mobile data without prompts
     if (wifiOnly && !onWifi && onMobile) {
-      _showSnack('WiFi-only enabled. Connect to WiFi to download.');
+      _showSnack(AppLocalizations.of(context)?.translate('wifi_only_warning') ??
+          'WiFi-only enabled. Connect to WiFi to download.');
       return false;
     }
 
@@ -302,16 +317,24 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Translation'),
-        content: Text('Are you sure you want to delete $name?'),
+        title: Text(AppLocalizations.of(context)
+                ?.translate('delete_translation_title') ??
+            'Delete Translation'),
+        content: Text((AppLocalizations.of(context)
+                    ?.translate('delete_translation_confirm') ??
+                'Are you sure you want to delete {name}?')
+            .replaceAll('{name}', name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(
+                AppLocalizations.of(context)?.translate('cancel') ?? 'Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
+            child: Text(
+                AppLocalizations.of(context)?.translate('delete_action') ??
+                    'Delete'),
           ),
         ],
       ),
@@ -334,16 +357,24 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Tafsir'),
-        content: Text('Are you sure you want to delete $name?'),
+        title: Text(
+            AppLocalizations.of(context)?.translate('delete_tafsir_title') ??
+                'Delete Tafsir'),
+        content: Text(
+            (AppLocalizations.of(context)?.translate('delete_tafsir_confirm') ??
+                    'Are you sure you want to delete {name}?')
+                .replaceAll('{name}', name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(
+                AppLocalizations.of(context)?.translate('cancel') ?? 'Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
+            child: Text(
+                AppLocalizations.of(context)?.translate('delete_action') ??
+                    'Delete'),
           ),
         ],
       ),
@@ -383,10 +414,17 @@ class _DownloadsScreenState extends State<DownloadsScreen>
         ],
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Translations'),
-            Tab(text: 'Tafsir'),
-            Tab(text: 'Audio'),
+          tabs: [
+            Tab(
+                text: AppLocalizations.of(context)
+                        ?.translate('tab_translations') ??
+                    'Translations'),
+            Tab(
+                text: AppLocalizations.of(context)?.translate('tab_tafsir') ??
+                    'Tafsir'),
+            Tab(
+                text: AppLocalizations.of(context)?.translate('tab_audio') ??
+                    'Audio'),
           ],
         ),
       ),
@@ -411,11 +449,14 @@ class _DownloadsScreenState extends State<DownloadsScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Unable to load translations'),
+            Text(AppLocalizations.of(context)
+                    ?.translate('unable_load_translations') ??
+                'Unable to load translations'),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _loadAvailableTranslations,
-              child: const Text('Retry'),
+              child: Text(
+                  AppLocalizations.of(context)?.translate('retry') ?? 'Retry'),
             ),
           ],
         ),
@@ -457,7 +498,9 @@ class _DownloadsScreenState extends State<DownloadsScreen>
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           subtitle: Text(
-              '${translations.length} translation${translations.length > 1 ? 's' : ''}'),
+              (AppLocalizations.of(context)?.translate('translation_count') ??
+                      '{count} translation{s}')
+                  .replaceAll('{count}', '${translations.length}')),
           children: translations.map((edition) {
             final isDownloaded =
                 _downloadedTranslations.contains(edition.id.toString());
@@ -517,11 +560,14 @@ class _DownloadsScreenState extends State<DownloadsScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Unable to load tafsirs'),
+            Text(AppLocalizations.of(context)
+                    ?.translate('unable_load_tafsirs') ??
+                'Unable to load tafsirs'),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _loadAvailableTafsirs,
-              child: const Text('Retry'),
+              child: Text(
+                  AppLocalizations.of(context)?.translate('retry') ?? 'Retry'),
             ),
           ],
         ),
@@ -562,8 +608,10 @@ class _DownloadsScreenState extends State<DownloadsScreen>
             displayName,
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
-          subtitle:
-              Text('${tafsirs.length} tafsir${tafsirs.length > 1 ? 's' : ''}'),
+          subtitle: Text(
+              (AppLocalizations.of(context)?.translate('tafsir_count') ??
+                      '{count} tafsir{s}')
+                  .replaceAll('{count}', '${tafsirs.length}')),
           children: tafsirs.map((edition) {
             final isDownloaded =
                 _downloadedTafsirs.contains(edition.id.toString());
@@ -624,11 +672,13 @@ class _DownloadsScreenState extends State<DownloadsScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Unable to load audio recitations'),
+            Text(AppLocalizations.of(context)?.translate('unable_load_audio') ??
+                'Unable to load audio recitations'),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _loadAvailableRecitations,
-              child: const Text('Retry'),
+              child: Text(
+                  AppLocalizations.of(context)?.translate('retry') ?? 'Retry'),
             ),
           ],
         ),
@@ -645,7 +695,10 @@ class _DownloadsScreenState extends State<DownloadsScreen>
         final downloadedSurahs = _downloadedAudioSurahs[r.id] ?? [];
         return ListTile(
           title: Text(r.reciterName),
-          subtitle: Text('Downloaded surahs: ${downloadedSurahs.join(', ')}'),
+          subtitle: Text((AppLocalizations.of(context)
+                      ?.translate('downloaded_surahs_label') ??
+                  'Downloaded surahs: {list}')
+              .replaceAll('{list}', downloadedSurahs.join(', '))),
           trailing: isAnyDownloading
               ? SizedBox(
                   width: 100,
