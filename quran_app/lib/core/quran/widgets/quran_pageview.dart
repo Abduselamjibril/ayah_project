@@ -254,9 +254,6 @@ class _PageviewQuranState extends State<PageviewQuran> {
   }
 
   Widget _buildVerticalList(BuildContext context) {
-    // We still use constraints to ensure full height, but ScrollablePositionedList handles the jumping
-    final viewportHeight = MediaQuery.of(context).size.height;
-
     return ColoredBox(
       color: widget.pageBackgroundColor,
       child: MediaQuery.withNoTextScaling(
@@ -270,34 +267,30 @@ class _PageviewQuranState extends State<PageviewQuran> {
           itemBuilder: (context, index) {
             final pageNumber = index + 1;
             final header = _headerForPage(pageNumber);
-            final isLandscape =
-                MediaQuery.of(context).orientation == Orientation.landscape;
 
-            return SizedBox(
-              height: isLandscape ? null : viewportHeight,
-              child: RepaintBoundary(
-                child: _PageWithNumber(
-                  backgroundColor: widget.pageBackgroundColor,
+            return RepaintBoundary(
+              child: _PageWithNumber(
+                isVertical: true,
+                backgroundColor: widget.pageBackgroundColor,
+                pageNumber: pageNumber,
+                pageNumberTextStyle: widget.pageNumberTextStyle,
+                textColorFallback: widget.textColor,
+                leftLabel: header.surahName,
+                rightLabel:
+                    header.juzNumber > 0 ? "Part ${header.juzNumber}" : '',
+                child: QuranPageContent(
                   pageNumber: pageNumber,
-                  pageNumberTextStyle: widget.pageNumberTextStyle,
-                  textColorFallback: widget.textColor,
-                  leftLabel: header.surahName,
-                  rightLabel:
-                      header.juzNumber > 0 ? "Part ${header.juzNumber}" : '',
-                  child: QuranPageContent(
-                    pageNumber: pageNumber,
-                    fontSize: widget.fontSize,
-                    textColor: widget.textColor,
-                    verseBackgroundColor: widget.verseBackgroundColor,
-                    verseTrailingBuilder: widget.verseTrailingBuilder,
-                    onLongPress: widget.onLongPress,
-                    onLongPressUp: widget.onLongPressUp,
-                    onLongPressCancel: widget.onLongPressCancel,
-                    onLongPressStart: widget.onLongPressStart,
-                    sp: widget.sp,
-                    h: widget.h,
-                    allowInternalScroll: false,
-                  ),
+                  fontSize: widget.fontSize,
+                  textColor: widget.textColor,
+                  verseBackgroundColor: widget.verseBackgroundColor,
+                  verseTrailingBuilder: widget.verseTrailingBuilder,
+                  onLongPress: widget.onLongPress,
+                  onLongPressUp: widget.onLongPressUp,
+                  onLongPressCancel: widget.onLongPressCancel,
+                  onLongPressStart: widget.onLongPressStart,
+                  sp: widget.sp,
+                  h: widget.h,
+                  allowInternalScroll: false,
                 ),
               ),
             );
@@ -323,8 +316,8 @@ class _PageWithNumber extends StatelessWidget {
   final Color backgroundColor;
   final String leftLabel;
   final String rightLabel;
+  final bool isVertical;
 
-  static const double _footerBadgeExtent = 2.0;
   static const double _footerPaddingTop = 0.0;
   static const double _footerPaddingBottom = 0.0;
 
@@ -336,6 +329,7 @@ class _PageWithNumber extends StatelessWidget {
     required this.leftLabel,
     required this.rightLabel,
     this.pageNumberTextStyle,
+    this.isVertical = false,
   });
 
   @override
@@ -346,66 +340,99 @@ class _PageWithNumber extends StatelessWidget {
           fontSize: 15.0,
           fontWeight: FontWeight.w500,
         );
-    final mediaQuery = MediaQuery.of(context);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Center(
-          child: FittedBox(
-            fit: BoxFit.contain,
-            child: Container(
-              width: 430, // Reference Width
-              height: 932, // Reference Height
-              color: backgroundColor,
-              child: Column(
-                mainAxisSize: MainAxisSize.max,
-                crossAxisAlignment: CrossAxisAlignment.center,
+    final mediaQuery = MediaQuery.of(context);
+    final isLandscape = mediaQuery.orientation == Orientation.landscape;
+    final isTablet = mediaQuery.size.shortestSide >= 600;
+
+    // Widen reference for Tablet/Landscape
+    final isWideReference = isLandscape || isTablet;
+    final double referenceWidth = isWideReference ? 600.0 : 430.0;
+
+    // Layout Logic determined by User Request:
+    // 1. Wide Mode (Landscape OR Tablet): Scrollable (fitWidth), constrained to 85% of screen.
+    // 2. Phone Portrait: Fixed (contain), full width/height.
+
+    final bool isWideLayout = isLandscape || isTablet;
+
+    final bool enableScrolling = isWideLayout || isVertical;
+    final BoxFit fitMode = isWideLayout ? BoxFit.fitWidth : BoxFit.contain;
+
+    // The scalable content with fixed reference size
+    Widget scaledContent = FittedBox(
+      fit: fitMode,
+      child: Container(
+        width: referenceWidth,
+        height: 932, // Reference Height
+        color: backgroundColor,
+        child: Column(
+          mainAxisSize: MainAxisSize.max,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                textDirection: TextDirection.ltr,
                 children: [
-                  Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      textDirection: TextDirection.ltr,
-                      children: [
-                        Text(
-                          leftLabel,
-                          overflow: TextOverflow.ellipsis,
-                          style: style,
-                          textAlign: TextAlign.left,
-                        ),
-                        const Spacer(),
-                        Text(
-                          rightLabel,
-                          style: style,
-                        ),
-                      ],
+                  Expanded(
+                    child: Text(
+                      leftLabel,
+                      overflow: TextOverflow.ellipsis,
+                      style: style,
+                      textAlign: TextAlign.left,
                     ),
                   ),
-                  Expanded(child: child),
-                  SafeArea(
-                    top: false,
-                    left: false,
-                    right: false,
-                    bottom: true,
-                    child: Padding(
-                      padding: const EdgeInsets.only(
-                        bottom: _footerPaddingBottom,
-                        top: _footerPaddingTop,
-                      ),
-                      child: _PageNumberWithBackground(
-                        pageNumber: pageNumber,
-                        textStyle: style,
-                      ),
-                    ),
+                  const SizedBox(width: 16),
+                  Text(
+                    rightLabel,
+                    style: style,
                   ),
                 ],
               ),
             ),
-          ),
-        );
-      },
+            Expanded(child: child),
+            SafeArea(
+              top: false,
+              left: false,
+              right: false,
+              bottom: true,
+              child: Padding(
+                padding: const EdgeInsets.only(
+                  bottom: _footerPaddingBottom,
+                  top: _footerPaddingTop,
+                ),
+                child: _PageNumberWithBackground(
+                  pageNumber: pageNumber,
+                  textStyle: style,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
+
+    if (enableScrolling) {
+      // Wide Mode: 85% width constraint + Scrolling
+      Widget content = scaledContent;
+      if (isWideLayout && !isVertical) {
+        content = SizedBox(
+          width: mediaQuery.size.width * 0.85,
+          child: scaledContent,
+        );
+      }
+
+      return Center(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: content,
+        ),
+      );
+    } else {
+      // Phone Portrait: Contain (No Scroll)
+      return Center(child: scaledContent);
+    }
   }
 }
 

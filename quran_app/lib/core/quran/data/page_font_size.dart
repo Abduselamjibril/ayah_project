@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 enum ScreenType { small, medium, large }
 
 double getFontSize(int index, context) {
