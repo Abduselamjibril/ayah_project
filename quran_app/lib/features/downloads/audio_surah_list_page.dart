@@ -7,6 +7,7 @@ import 'package:quran_app/data/sources/remote/chapter_api.dart';
 import 'package:quran_app/core/services/audio_service.dart';
 import 'package:quran_app/core/services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
 
 class AudioSurahListPage extends StatefulWidget {
   final AudioRecitation recitation;
@@ -50,7 +51,11 @@ class _AudioSurahListPageState extends State<AudioSurahListPage> {
     } catch (e) {
       setState(() => _loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load surahs: $e')),
+        SnackBar(
+            content: Text((AppLocalizations.of(context)
+                        ?.translate('failed_load_surahs') ??
+                    'Failed to load surahs: {error}')
+                .replaceAll('{error}', '$e'))),
       );
     }
   }
@@ -63,14 +68,16 @@ class _AudioSurahListPageState extends State<AudioSurahListPage> {
     final hasConnection = connectivity.isNotEmpty &&
         connectivity.any((e) => e != ConnectivityResult.none);
     if (!hasConnection) {
-      _showSnack('No internet connection. Please connect and retry.');
+      _showSnack(AppLocalizations.of(context)?.translate('no_internet') ??
+          'No internet connection. Please connect and retry.');
       return false;
     }
 
     final onWifi = connectivity.contains(ConnectivityResult.wifi);
     final onMobile = connectivity.contains(ConnectivityResult.mobile);
     if (wifiOnly && !onWifi && onMobile) {
-      _showSnack('WiFi-only enabled. Connect to WiFi to download.');
+      _showSnack(AppLocalizations.of(context)?.translate('wifi_only_warning') ??
+          'WiFi-only enabled. Connect to WiFi to download.');
       return false;
     }
 
@@ -106,24 +113,42 @@ class _AudioSurahListPageState extends State<AudioSurahListPage> {
           setState(() => _progress[surahNumber] = p);
           AppNotificationService.instance.showProgress(
               notifId,
-              'Downloading Surah $surahNumber (${widget.recitation.reciterName})',
+              (AppLocalizations.of(context)?.translate('downloading_surah') ??
+                      'Downloading Surah {number} ({reciter})')
+                  .replaceAll('{number}', '$surahNumber')
+                  .replaceAll('{reciter}', widget.recitation.reciterName),
               p);
         },
       );
       if (ok) {
         setState(() => _downloadedSurahs.add(surahNumber));
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Downloaded Surah $surahNumber')),
+          SnackBar(
+              content: Text((AppLocalizations.of(context)
+                          ?.translate('downloaded_surah') ??
+                      'Downloaded Surah {number}')
+                  .replaceAll('{number}', '$surahNumber'))),
         );
-        await AppNotificationService.instance.complete(notifId,
-            'Downloading Surah $surahNumber (${widget.recitation.reciterName})',
+        await AppNotificationService.instance.complete(
+            notifId,
+            (AppLocalizations.of(context)?.translate('downloading_surah') ??
+                    'Downloading Surah {number} ({reciter})')
+                .replaceAll('{number}', '$surahNumber')
+                .replaceAll('{reciter}', widget.recitation.reciterName),
             success: true);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Audio download failed.')),
+          SnackBar(
+              content: Text(
+                  AppLocalizations.of(context)?.translate('download_failed') ??
+                      'Audio download failed.')),
         );
-        await AppNotificationService.instance.complete(notifId,
-            'Downloading Surah $surahNumber (${widget.recitation.reciterName})',
+        await AppNotificationService.instance.complete(
+            notifId,
+            (AppLocalizations.of(context)?.translate('downloading_surah') ??
+                    'Downloading Surah {number} ({reciter})')
+                .replaceAll('{number}', '$surahNumber')
+                .replaceAll('{reciter}', widget.recitation.reciterName),
             success: false);
       }
     } finally {
@@ -139,7 +164,9 @@ class _AudioSurahListPageState extends State<AudioSurahListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Surahs - ${widget.recitation.reciterName}'),
+        title: Text((AppLocalizations.of(context)?.translate('surahs_title') ??
+                'Surahs - {reciter}')
+            .replaceAll('{reciter}', widget.recitation.reciterName)),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -165,8 +192,13 @@ class _AudioSurahListPageState extends State<AudioSurahListPage> {
                           ],
                         )
                       : Text(isDownloaded
-                          ? 'Downloaded'
-                          : '${c.versesCount} verses'),
+                          ? (AppLocalizations.of(context)
+                                  ?.translate('downloaded') ??
+                              'Downloaded')
+                          : (AppLocalizations.of(context)
+                                      ?.translate('verses_count') ??
+                                  '{count} verses')
+                              .replaceAll('{count}', '${c.versesCount}')),
                   trailing: isDownloading
                       ? const SizedBox.shrink()
                       : isDownloaded

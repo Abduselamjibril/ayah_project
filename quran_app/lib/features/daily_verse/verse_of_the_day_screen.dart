@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
 import '../../core/quran/qcf_quran.dart';
+
 import '../../core/services/verse_of_the_day_service.dart';
 import '../../data/models/hijri_date_model.dart';
 import '../../data/repositories/hijri_date_repository.dart';
@@ -77,8 +79,14 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
 
     if (surah == null || verse == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Verse of the Day')),
-        body: const Center(child: Text('No daily verse selected yet.')),
+        appBar: AppBar(
+            title: Text(AppLocalizations.of(context)
+                    ?.translate('verse_of_the_day_title') ??
+                'Verse of the Day')),
+        body: Center(
+            child: Text(
+                AppLocalizations.of(context)?.translate('no_daily_verse') ??
+                    'No daily verse selected yet.')),
       );
     }
 
@@ -90,7 +98,9 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Daily Inspiration'),
+        title: Text(AppLocalizations.of(context)
+                ?.translate('daily_inspiration_title') ??
+            'Daily Inspiration'),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
@@ -234,7 +244,9 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
-                                        'See Translation',
+                                        AppLocalizations.of(context)?.translate(
+                                                'see_translation') ??
+                                            'See Translation',
                                         style: theme.textTheme.labelLarge
                                             ?.copyWith(
                                           color: theme.primaryColor,
@@ -307,7 +319,9 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
-                                      'Download Translation',
+                                      AppLocalizations.of(context)?.translate(
+                                              'download_translation') ??
+                                          'Download Translation',
                                       style:
                                           theme.textTheme.labelLarge?.copyWith(
                                         color: theme.colorScheme.secondary,
@@ -327,7 +341,7 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                             IconButton(
                               onPressed: () {
                                 Share.share(
-                                  '$verseText\n\n$surahName ($surah:$verse)\nShared via Quran App',
+                                  '$verseText\n\n$surahName ($surah:$verse)\n${AppLocalizations.of(context)?.translate('shared_via') ?? 'Shared via Quran App'}',
                                 );
                               },
                               icon: const Icon(Icons.share_rounded),
@@ -342,7 +356,9 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                                 });
                               },
                               icon: const Icon(Icons.menu_book_rounded),
-                              label: const Text('Read in Mushaf'),
+                              label: Text(AppLocalizations.of(context)
+                                      ?.translate('read_in_mushaf') ??
+                                  'Read in Mushaf'),
                             ),
                           ],
                         ),

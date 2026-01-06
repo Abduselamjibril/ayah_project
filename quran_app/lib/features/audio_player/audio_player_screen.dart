@@ -4,6 +4,8 @@ import 'package:quran_app/core/services/audio_service.dart';
 import 'package:quran_app/data/models/audio_model.dart';
 import 'package:quran_app/features/downloads/audio_surah_list_page.dart';
 import 'package:quran_app/core/services/audio_player_service.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
+
 import '../../core/quran/qcf_quran.dart';
 import '../mushaf/controller/mushaf_controller.dart';
 
@@ -26,7 +28,8 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   late final VoidCallback _verseListener;
 
   bool _isPlaying = false;
-  String _audioName = 'Select audio';
+  String _audioName = '';
+
   AudioRecitation? _selectedRecitation;
   bool _isDownloading = false;
   double _downloadProgress = 0.0;
@@ -37,7 +40,11 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     super.initState();
     _audioPlayer = AudioPlayerService.instance;
     _isPlaying = _audioPlayer.isPlaying.value;
-    _audioName = _audioPlayer.currentLabel.value;
+    _audioName = _audioPlayer.currentLabel.value.isEmpty
+        ? (AppLocalizations.of(context)?.translate('select_audio') ??
+            'Select audio')
+        : _audioPlayer.currentLabel.value;
+
     _reciterName = _audioPlayer.recitationName;
 
     _playerStateListener = () {
@@ -46,7 +53,10 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     };
     _labelListener = () {
       if (!mounted) return;
-      setState(() => _audioName = _audioPlayer.currentLabel.value);
+      setState(() => _audioName = _audioPlayer.currentLabel.value.isEmpty
+          ? (AppLocalizations.of(context)?.translate('select_audio') ??
+              'Select audio')
+          : _audioPlayer.currentLabel.value);
     };
     _downloadingListener = () {
       if (!mounted) return;
@@ -197,7 +207,9 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                         .withOpacity(0.7),
                   ),
                   onPressed: _openAudioPicker,
-                  tooltip: 'Select reciter',
+                  tooltip: AppLocalizations.of(context)
+                          ?.translate('select_reciter_tooltip') ??
+                      'Select reciter',
                 ),
               ],
             ),
@@ -262,7 +274,11 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     if (!hasLocal) {
       final ok = await _audioPlayer.downloadSurahIfNeeded(recitation, surah);
       if (!ok) {
-        _showSnack('Could not download audio for Surah $surah');
+        _showSnack(
+            (AppLocalizations.of(context)?.translate('download_surah_error') ??
+                    'Could not download audio for Surah {surah}')
+                .replaceAll('{surah}', '$surah'));
+
         return;
       }
     }
@@ -276,7 +292,10 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         reciterName: recitation.reciterName,
       );
     } catch (e) {
-      _showSnack('Audio failed to start: $e');
+      _showSnack(
+          (AppLocalizations.of(context)?.translate('audio_start_error') ??
+                  'Audio failed to start: {error}')
+              .replaceAll('{error}', '$e'));
     }
   }
 
@@ -315,9 +334,12 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
             child: Column(
               mainAxisSize: MainAxisSize.max,
               children: [
-                const Padding(
+                Padding(
                   padding: EdgeInsets.all(12.0),
-                  child: Text('Choose Reciter',
+                  child: Text(
+                      AppLocalizations.of(context)
+                              ?.translate('choose_reciter_title') ??
+                          'Choose Reciter',
                       style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
                 Expanded(

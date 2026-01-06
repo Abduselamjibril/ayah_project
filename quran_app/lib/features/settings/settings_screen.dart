@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:quran_app/core/ui/glassmorphic_card.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
+import 'package:quran_app/core/services/language_service.dart';
 import 'theme_settings_page.dart';
 import 'notification_settings_page.dart';
 import 'daily_verse_settings_page.dart';
@@ -15,7 +17,8 @@ class SettingsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: Text(AppLocalizations.of(context)?.translate('settings_title') ??
+            'Settings'),
         centerTitle: false,
         elevation: 0,
       ),
@@ -57,13 +60,17 @@ class SettingsScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Preferences',
+                        AppLocalizations.of(context)
+                                ?.translate('preferences_title') ??
+                            'Preferences',
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
-                        'Customize your experience',
+                        AppLocalizations.of(context)
+                                ?.translate('preferences_subtitle') ??
+                            'Customize your experience',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.6),
                         ),
@@ -78,12 +85,38 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 24),
 
           // Appearance Section
-          _buildSectionHeader(context, 'Appearance', Icons.palette_rounded),
+          _buildSectionHeader(
+              context,
+              AppLocalizations.of(context)?.translate('appearance_section') ??
+                  'Appearance',
+              Icons.palette_rounded),
+
+          // Language Selector
+          _buildSettingCard(
+            context,
+            icon: Icons.language_rounded,
+            title: AppLocalizations.of(context)?.translate('language_title') ??
+                'Language',
+            subtitle:
+                AppLocalizations.of(context)?.translate('language_subtitle') ??
+                    'Change app language',
+            gradientColors: [
+              Colors.indigo.shade400,
+              Colors.indigo.shade700,
+            ],
+            onTap: () {
+              _showLanguageSelector(context);
+            },
+          ),
+
           _buildSettingCard(
             context,
             icon: Icons.palette_outlined,
-            title: 'App Theme',
-            subtitle: 'Customize colors and appearance',
+            title: AppLocalizations.of(context)?.translate('app_theme_title') ??
+                'App Theme',
+            subtitle:
+                AppLocalizations.of(context)?.translate('app_theme_subtitle') ??
+                    'Customize colors and appearance',
             gradientColors: [
               theme.colorScheme.primary,
               theme.colorScheme.primary.withOpacity(0.7),
@@ -99,12 +132,19 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 24),
 
           // Content Section
-          _buildSectionHeader(context, 'Content', Icons.library_books_rounded),
+          _buildSectionHeader(
+              context,
+              AppLocalizations.of(context)?.translate('content_section') ??
+                  'Content',
+              Icons.library_books_rounded),
           _buildSettingCard(
             context,
             icon: Icons.download_rounded,
-            title: 'Downloads',
-            subtitle: 'Manage translations and tafsir',
+            title: AppLocalizations.of(context)?.translate('downloads_title') ??
+                'Downloads',
+            subtitle:
+                AppLocalizations.of(context)?.translate('downloads_subtitle') ??
+                    'Manage translations and tafsir',
             gradientColors: [
               Colors.teal,
               Colors.teal.shade300,
@@ -121,12 +161,19 @@ class SettingsScreen extends StatelessWidget {
 
           // Notifications Section
           _buildSectionHeader(
-              context, 'Notifications', Icons.notifications_rounded),
+              context,
+              AppLocalizations.of(context)
+                      ?.translate('notifications_section') ??
+                  'Notifications',
+              Icons.notifications_rounded),
           _buildSettingCard(
             context,
             icon: Icons.notifications_active_outlined,
-            title: 'Reminders',
-            subtitle: 'Khatmah reminders and alerts',
+            title: AppLocalizations.of(context)?.translate('reminders_title') ??
+                'Reminders',
+            subtitle:
+                AppLocalizations.of(context)?.translate('reminders_subtitle') ??
+                    'Khatmah reminders and alerts',
             gradientColors: [
               Colors.amber.shade700,
               Colors.amber.shade400,
@@ -141,8 +188,12 @@ class SettingsScreen extends StatelessWidget {
           _buildSettingCard(
             context,
             icon: Icons.calendar_month_outlined,
-            title: 'Daily Inspiration',
-            subtitle: 'Verse of the day settings',
+            title: AppLocalizations.of(context)
+                    ?.translate('daily_inspiration_title') ??
+                'Daily Inspiration',
+            subtitle: AppLocalizations.of(context)
+                    ?.translate('daily_inspiration_subtitle') ??
+                'Verse of the day settings',
             gradientColors: [
               Colors.blue.shade700,
               Colors.blue.shade400,
@@ -158,12 +209,19 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 24),
 
           // About Section
-          _buildSectionHeader(context, 'About', Icons.info_rounded),
+          _buildSectionHeader(
+              context,
+              AppLocalizations.of(context)?.translate('about_section') ??
+                  'About',
+              Icons.info_rounded),
           _buildSettingCard(
             context,
             icon: Icons.info_outline_rounded,
-            title: 'About App',
-            subtitle: 'Version and information',
+            title: AppLocalizations.of(context)?.translate('about_app_title') ??
+                'About App',
+            subtitle:
+                AppLocalizations.of(context)?.translate('about_app_subtitle') ??
+                    'Version and information',
             gradientColors: [
               Colors.deepPurple,
               Colors.deepPurple.shade300,
@@ -307,6 +365,60 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  void _showLanguageSelector(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Text(
+                AppLocalizations.of(context)?.translate('language_title') ??
+                    'Language',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ),
+            const Divider(),
+            _buildLanguageOption(context, 'English', const Locale('en')),
+            _buildLanguageOption(context, 'العربية', const Locale('ar')),
+            _buildLanguageOption(context, 'اردو', const Locale('ur')),
+            _buildLanguageOption(context, 'Français', const Locale('fr')),
+            _buildLanguageOption(context, 'Español', const Locale('es')),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLanguageOption(
+      BuildContext context, String name, Locale locale) {
+    final languageService = LanguageService();
+    final isSelected =
+        languageService.currentLocale.languageCode == locale.languageCode;
+
+    return ListTile(
+      title: Text(name),
+      trailing: isSelected
+          ? Icon(Icons.check_circle_rounded,
+              color: Theme.of(context).primaryColor)
+          : null,
+      onTap: () {
+        languageService.setLocale(locale);
+        Navigator.pop(context);
+      },
+    );
+  }
+
   void _showAboutDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -319,7 +431,8 @@ class SettingsScreen extends StatelessWidget {
               color: Theme.of(context).colorScheme.primary,
             ),
             const SizedBox(width: 12),
-            const Text('Quran App'),
+            Text(AppLocalizations.of(context)?.translate('app_name') ??
+                'Quran App'),
           ],
         ),
         content: Column(
@@ -332,7 +445,9 @@ class SettingsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'A beautiful and modern Quran reading app with translations, tafsir, audio, and more.',
+              AppLocalizations.of(context)
+                      ?.translate('about_dialog_description') ??
+                  'A beautiful and modern Quran reading app with translations, tafsir, audio, and more.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context)
                         .colorScheme
@@ -345,7 +460,8 @@ class SettingsScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text(
+                AppLocalizations.of(context)?.translate('close') ?? 'Close'),
           ),
         ],
       ),

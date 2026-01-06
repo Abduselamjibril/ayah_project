@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
 import '../models/khatmah.dart';
+
 import '../services/khatmah_service.dart';
 import '../../mushaf/controller/mushaf_controller.dart';
 import '../screens/khatmah_reading_screen.dart';
@@ -81,7 +83,8 @@ class _KhatmahTabState extends State<KhatmahTab> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showCustomDaysDialog,
-        label: const Text('New Plan'),
+        label: Text(
+            AppLocalizations.of(context)?.translate('new_plan') ?? 'New Plan'),
         icon: const Icon(Icons.add),
         backgroundColor: Theme.of(context).primaryColor,
       ),
@@ -97,29 +100,42 @@ class _KhatmahTabState extends State<KhatmahTab> {
           Icon(Icons.menu_book,
               size: 64, color: Theme.of(context).primaryColor.withOpacity(0.5)),
           const SizedBox(height: 16),
-          const Text(
-            'Start a New Khatmah',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          Text(
+            AppLocalizations.of(context)?.translate('start_new_khatmah') ??
+                'Start a New Khatmah',
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Select a duration to complete the Quran',
+          Text(
+            AppLocalizations.of(context)?.translate('select_duration') ??
+                'Select a duration to complete the Quran',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey),
+            style: const TextStyle(color: Colors.grey),
           ),
           const SizedBox(height: 32),
-          _buildOptionButton('1 Month (29 Days)', 29),
+          _buildOptionButton(
+              AppLocalizations.of(context)?.translate('duration_1_month') ??
+                  '1 Month (29 Days)',
+              29),
           const SizedBox(height: 12),
-          _buildOptionButton('15 Days', 15),
+          _buildOptionButton(
+              AppLocalizations.of(context)?.translate('duration_15_days') ??
+                  '15 Days',
+              15),
           const SizedBox(height: 12),
-          _buildOptionButton('10 Days', 10),
+          _buildOptionButton(
+              AppLocalizations.of(context)?.translate('duration_10_days') ??
+                  '10 Days',
+              10),
           const SizedBox(height: 12),
           OutlinedButton(
             onPressed: _showCustomDaysDialog,
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(double.infinity, 50),
             ),
-            child: const Text('Custom Duration'),
+            child: Text(
+                AppLocalizations.of(context)?.translate('custom_duration') ??
+                    'Custom Duration'),
           ),
         ],
       ),
@@ -153,7 +169,10 @@ class _KhatmahTabState extends State<KhatmahTab> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Day ${k.currentDay} of ${k.durationDays}',
+                  (AppLocalizations.of(context)?.translate('day_progress') ??
+                          'Day {current} of {total}')
+                      .replaceAll('{current}', '${k.currentDay}')
+                      .replaceAll('{total}', '${k.durationDays}'),
                   style: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.bold),
                 ),
@@ -176,7 +195,11 @@ class _KhatmahTabState extends State<KhatmahTab> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${(progress * 100).toStringAsFixed(1)}% Completed',
+                  (AppLocalizations.of(context)
+                              ?.translate('percent_completed') ??
+                          '{percent}% Completed')
+                      .replaceAll(
+                          '{percent}', (progress * 100).toStringAsFixed(1)),
                   style: const TextStyle(color: Colors.grey),
                 ),
                 Text(
@@ -192,8 +215,12 @@ class _KhatmahTabState extends State<KhatmahTab> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Today\'s Goal',
-                        style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    Text(
+                        AppLocalizations.of(context)
+                                ?.translate('todays_goal') ??
+                            'Today\'s Goal',
+                        style:
+                            const TextStyle(color: Colors.grey, fontSize: 12)),
                     const SizedBox(height: 4),
                     Text(
                       '${k.startPageForToday} - ${k.targetPageForToday}',
@@ -235,7 +262,9 @@ class _KhatmahTabState extends State<KhatmahTab> {
                     _loadKhatmahs();
                   },
                   icon: const Icon(Icons.menu_book),
-                  label: const Text('Read Now'),
+                  label: Text(
+                      AppLocalizations.of(context)?.translate('read_now') ??
+                          'Read Now'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).primaryColor,
                     foregroundColor: Colors.white,
@@ -253,19 +282,27 @@ class _KhatmahTabState extends State<KhatmahTab> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Khatmah?'),
-        content: const Text('This will delete this plan and its progress.'),
+        title: Text(
+            AppLocalizations.of(context)?.translate('delete_khatmah_title') ??
+                'Delete Khatmah?'),
+        content: Text(
+            AppLocalizations.of(context)?.translate('delete_khatmah_content') ??
+                'This will delete this plan and its progress.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(
+                AppLocalizations.of(context)?.translate('cancel') ?? 'Cancel'),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               _deleteKhatmah(id);
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(
+                AppLocalizations.of(context)?.translate('delete_action') ??
+                    'Delete',
+                style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -277,11 +314,14 @@ class _KhatmahTabState extends State<KhatmahTab> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('New Khatmah Plan'),
+        title: Text(
+            AppLocalizations.of(context)?.translate('new_khatmah_plan') ??
+                'New Khatmah Plan'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Enter duration in days:'),
+            Text(AppLocalizations.of(context)?.translate('enter_duration') ??
+                'Enter duration in days:'),
             TextField(
               controller: controller,
               keyboardType: TextInputType.number,
@@ -294,7 +334,8 @@ class _KhatmahTabState extends State<KhatmahTab> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(
+                AppLocalizations.of(context)?.translate('cancel') ?? 'Cancel'),
           ),
           TextButton(
             onPressed: () {
@@ -304,7 +345,9 @@ class _KhatmahTabState extends State<KhatmahTab> {
                 _addKhatmah(days);
               }
             },
-            child: const Text('Create'),
+            child: Text(
+                AppLocalizations.of(context)?.translate('create_action') ??
+                    'Create'),
           ),
         ],
       ),

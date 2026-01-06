@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:quran_app/core/quran/widgets/quran_pageview.dart';
+import '../../../../core/i18n/app_localizations.dart';
 import '../services/khatmah_service.dart';
 
 class KhatmahReadingScreen extends StatefulWidget {
@@ -128,7 +129,8 @@ class _KhatmahReadingScreenState extends State<KhatmahReadingScreen> {
     return IconButton(
       icon: const Icon(Icons.close),
       onPressed: () => Navigator.pop(context),
-      tooltip: 'Close',
+      tooltip:
+          AppLocalizations.of(context)?.translate('close_tooltip') ?? 'Close',
     );
   }
 
@@ -138,14 +140,18 @@ class _KhatmahReadingScreenState extends State<KhatmahReadingScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          'Khatmah Session',
+          AppLocalizations.of(context)?.translate('khatmah_session') ??
+              'Khatmah Session',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
         ),
         const SizedBox(height: 2),
         Text(
-          'Page $progress of $totalPages',
+          (AppLocalizations.of(context)?.translate('page_progress') ??
+                  'Page {current} of {total}')
+              .replaceAll('{current}', '$progress')
+              .replaceAll('{total}', '$totalPages'),
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
