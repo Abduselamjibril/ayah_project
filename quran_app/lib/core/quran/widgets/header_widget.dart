@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:quran_app/core/quran/qcf_quran.dart';
+
 import 'package:quran_app/core/services/theme_service.dart';
 
 class HeaderWidget extends StatelessWidget {
@@ -9,6 +9,15 @@ class HeaderWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final frameAsset = ThemeService().mainframeImagePath;
+
+    // logic must match _PageWithNumber in quran_pageview.dart
+    final mediaQuery = MediaQuery.of(context);
+    final isLandscape = mediaQuery.orientation == Orientation.landscape;
+    final isTablet = mediaQuery.size.shortestSide >= 600;
+    final isWideMode = isLandscape || isTablet;
+
+    final referenceWidth = isWideMode ? 600.0 : 430.0;
+    final imageWidth = referenceWidth * 0.87; // Maintain approx ratio
 
     return InkWell(
       borderRadius: BorderRadius.circular(8),
@@ -20,7 +29,7 @@ class HeaderWidget extends StatelessWidget {
           children: [
             Image.asset(
               frameAsset,
-              width: 372, // Fixed reference width
+              width: imageWidth,
             ),
             RichText(
               textAlign: TextAlign.center,
@@ -28,7 +37,8 @@ class HeaderWidget extends StatelessWidget {
                 text: "$suraNumber",
                 style: TextStyle(
                   fontFamily: "arsura",
-                  fontSize: 29, // Fixed reference font size
+                  fontSize:
+                      29, // Fixed reference font size (scales with fittedbox)
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
