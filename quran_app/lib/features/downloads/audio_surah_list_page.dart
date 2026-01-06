@@ -8,6 +8,7 @@ import 'package:quran_app/core/services/audio_service.dart';
 import 'package:quran_app/core/services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
+import 'package:quran_app/core/utils/localization_helper.dart';
 
 class AudioSurahListPage extends StatefulWidget {
   final AudioRecitation recitation;
@@ -37,7 +38,9 @@ class _AudioSurahListPageState extends State<AudioSurahListPage> {
     setState(() => _loading = true);
     try {
       await _audioService.initialize();
-      final chapters = await _chapterApi.getChapters(language: 'en');
+      final language =
+          AppLocalizations.of(context)?.locale.languageCode ?? 'en';
+      final chapters = await _chapterApi.getChapters(language: language);
       final downloaded =
           await _audioService.getDownloadedSurahs(widget.recitation.id);
       setState(() {
@@ -178,9 +181,10 @@ class _AudioSurahListPageState extends State<AudioSurahListPage> {
                 final isDownloading = _downloadingSurahs.contains(surahNumber);
                 final progress = _progress[surahNumber];
                 final isDownloaded = _downloadedSurahs.contains(surahNumber);
+                final surahName = getLocalizedSurahName(context, c.id);
                 return ListTile(
                   title: Text(
-                      '${surahNumber.toString().padLeft(3, '0')} - ${c.nameSimple}'),
+                      '${surahNumber.toString().padLeft(3, '0')} - $surahName'),
                   subtitle: isDownloading
                       ? Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

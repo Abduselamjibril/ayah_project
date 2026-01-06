@@ -5,6 +5,7 @@ import 'package:quran_app/data/models/audio_model.dart';
 import 'package:quran_app/features/downloads/audio_surah_list_page.dart';
 import 'package:quran_app/core/services/audio_player_service.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
+import 'package:quran_app/core/utils/localization_helper.dart';
 
 import '../../core/quran/qcf_quran.dart';
 import '../mushaf/controller/mushaf_controller.dart';
@@ -266,13 +267,20 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     }
 
     final recitationId = recitation.id;
-    final surahLabel = getSurahName(surah);
+    final surahLabel = getLocalizedSurahName(context, surah);
 
     // Step 3: Check if audio is downloaded, if not download it
     final hasLocal =
         await AudioService.instance.isSurahDownloaded(recitationId, surah);
     if (!hasLocal) {
-      final ok = await _audioPlayer.downloadSurahIfNeeded(recitation, surah);
+      final downloadTitle =
+          (AppLocalizations.of(context)?.translate('downloading_surah') ??
+                  'Downloading Surah {number} ({reciter})')
+              .replaceAll('{number}', '$surah')
+              .replaceAll('{reciter}', recitation.reciterName);
+
+      final ok = await _audioPlayer.downloadSurahIfNeeded(recitation, surah,
+          notificationTitle: downloadTitle);
       if (!ok) {
         _showSnack(
             (AppLocalizations.of(context)?.translate('download_surah_error') ??

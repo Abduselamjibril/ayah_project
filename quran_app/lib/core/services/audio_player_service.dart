@@ -332,8 +332,8 @@ class AudioPlayerService {
   }
 
   /// Ensure surah is downloaded; starts download as early as possible for faster feedback.
-  Future<bool> downloadSurahIfNeeded(
-      AudioRecitation recitation, int surah) async {
+  Future<bool> downloadSurahIfNeeded(AudioRecitation recitation, int surah,
+      {String? notificationTitle}) async {
     // Set UI state immediately for responsiveness
     isDownloading.value = true;
     downloadingSurah.value = surah;
@@ -355,7 +355,8 @@ class AudioPlayerService {
           // Update the system notification progress so the user sees download progress
           try {
             AudioNotificationService.instance.showDownloadProgress(
-              title: 'Downloading Surah ${surah.toString().padLeft(3, '0')}',
+              title: notificationTitle ??
+                  'Downloading Surah ${surah.toString().padLeft(3, '0')}',
               reciterName: recitation.reciterName,
               progress: p,
             );
