@@ -1,13 +1,11 @@
-import 'dart:async';
-import 'dart:convert';
 import 'dart:collection';
-
-import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:quran_app/core/database/app_database.dart';
+import 'package:quran_app/core/utils/arabic_normalizer.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:quran_app/core/quran/data/suwar.dart' as suwar_data;
 
 /// Types of content the search can target
-enum SearchType { arabic, translation, tafsir, topic }
+enum SearchType { arabic, translation, tafsir, topic, navigation }
 
 /// Optional filters for narrowing results
 class SearchFilters {
@@ -26,6 +24,20 @@ class SearchFilters {
     },
     this.language,
   });
+
+  SearchFilters copyWith({
+    int? surah,
+    (int, int)? verseRange,
+    Set<SearchType>? types,
+    String? language,
+  }) {
+    return SearchFilters(
+      surah: surah ?? this.surah,
+      verseRange: verseRange ?? this.verseRange,
+      types: types ?? this.types,
+      language: language ?? this.language,
+    );
+  }
 }
 
 /// A single search hit
@@ -65,6 +77,9 @@ class SearchRepository {
 
   final SearchConfig config;
   SearchRepository._(this.config);
+
+  static const String _historyKey = 'search_history';
+  static const int _maxHistory = 5;
 
   // Simple LRU caches with TTL for performance
   static const Duration _cacheTtl = Duration(minutes: 10);
@@ -113,146 +128,182 @@ class SearchRepository {
 
   /// Perform a multi-content search across Arabic, translations, tafsir, topics.
   Future<List<SearchResultItem>> search(String query,
-      {SearchFilters? filters, int limit = 50}) async {
+      {SearchFilters? filters, int limit = 50, int offset = 0}) async {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return [];
 
-    final cacheKey = _searchCacheKey(trimmed, filters, limit);
+    // 1. Check for Numerical Jump (FR1)
+    final jump = _parseNumericalJump(trimmed);
+    if (jump != null) {
+      _addToHistory(trimmed);
+      return [
+        SearchResultItem(
+          type: SearchType.navigation,
+          surah: jump.$1,
+          ayah: jump.$2,
+          text: 'Jump to Surah ${jump.$1}, Ayah ${jump.$2}',
+        )
+      ];
+    }
+
+    // 2. Check for Surah Jump (Name or Number)
+    final surahJump = _parseSurahJump(trimmed);
+    if (surahJump != null) {
+      _addToHistory(trimmed);
+      return [surahJump];
+    }
+
+    final cacheKey = _searchCacheKey(trimmed, filters, limit, offset);
     final cached = _getResultCache(cacheKey);
     if (cached != null) return cached;
 
-    // Try remote ElasticSearch if configured
-    if (config.elasticUrl != null && config.elasticUrl!.isNotEmpty) {
-      try {
-        final remote =
-            await _searchElastic(trimmed, filters: filters, limit: limit);
-        if (remote.isNotEmpty) return remote;
-      } catch (e) {
-        debugPrint('Elastic search failed: $e');
-      }
-    }
+    _addToHistory(trimmed);
 
-    // Fallback to local SQLite content
-    final local = await _searchLocal(trimmed, filters: filters, limit: limit);
+    // Fallback to local SQLite content using FTS5
+    final local = await _searchLocal(trimmed,
+        filters: filters, limit: limit, offset: offset);
     _setResultCache(cacheKey, local);
     return local;
+  }
+
+  (int, int)? _parseNumericalJump(String query) {
+    // Matches "18:10", "18 10", "سورة 18 آية 10" etc.
+    final reg = RegExp(r'(\d+)\s*[:\s-]\s*(\d+)');
+    final match = reg.firstMatch(query);
+    if (match != null) {
+      final s = int.tryParse(match.group(1)!);
+      final a = int.tryParse(match.group(2)!);
+      if (s != null && s >= 1 && s <= 114 && a != null && a >= 1) {
+        return (s, a);
+      }
+    }
+    return null;
+  }
+
+  SearchResultItem? _parseSurahJump(String query) {
+    // 1. Try parsing as number
+    final num = int.tryParse(query);
+    if (num != null && num >= 1 && num <= 114) {
+      final name = suwar_data.surah.firstWhere((s) => s['id'] == num)['name'];
+      return SearchResultItem(
+        type: SearchType.navigation,
+        surah: num,
+        ayah: 1,
+        text: 'Go to Surah $name',
+      );
+    }
+
+    // 2. Search by name
+    final q = query.toLowerCase();
+    for (var s in suwar_data.surah) {
+      final id = s['id'] as int;
+      final name = s['name'].toString();
+      final english = s['english'].toString().toLowerCase();
+      final arabic = s['arabic'].toString();
+      final turkish = s['turkish'].toString().toLowerCase();
+
+      // Exact or close match
+      if (name.toLowerCase() == q ||
+          english == q ||
+          arabic == query ||
+          turkish == q) {
+        return SearchResultItem(
+          type: SearchType.navigation,
+          surah: id,
+          ayah: 1,
+          text: 'Go to Surah $name',
+        );
+      }
+    }
+    return null;
+  }
+
+  Future<void> _addToHistory(String query) async {
+    final prefs = await SharedPreferences.getInstance();
+    final history = prefs.getStringList(_historyKey) ?? [];
+    history.remove(query); // Remove if exists to move to top
+    history.insert(0, query);
+    if (history.length > _maxHistory) {
+      history.removeRange(_maxHistory, history.length);
+    }
+    await prefs.setStringList(_historyKey, history);
+  }
+
+  Future<List<String>> getSearchHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_historyKey) ?? [];
   }
 
   /// Provide suggestive search for auto-complete.
   Future<List<String>> suggestions(String prefix, {int limit = 8}) async {
     final p = prefix.trim();
-    if (p.isEmpty) return [];
-
-    // Do not hit remote providers for very short prefixes
-    final useRemote = p.length >= 2;
+    if (p.isEmpty) {
+      // Return recent history if empty prefix
+      return await getSearchHistory();
+    }
 
     final cacheKey = 's:$p:$limit';
     final sc = _getSuggestCache(cacheKey);
     if (sc != null) return sc;
 
-    // Priority: remote API suggestions if available (Quran.com or Elastic)
-    final List<String> remote = [];
-    if (useRemote && config.quranComApiBase != null) {
-      try {
-        final s = await _quranComSuggestions(p, limit: limit);
-        remote.addAll(s);
-      } catch (e) {
-        debugPrint('Quran.com suggestions failed: $e');
+    final out = <String>[];
+
+    try {
+      // 1. Surah Discovery (search names in suwar.dart)
+      out.addAll(_surahNameSuggestions(p));
+
+      // 2. Local DB Snippets (using FTS4/5 for speed)
+      final db = await AppDatabase.instance.database;
+      final normalized = ArabicNormalizer.normalize(p);
+
+      // Arabic suggestions
+      final aRows = await db.rawQuery('''
+        SELECT substr(ayahs.text, 1, 60) as snippet 
+        FROM ayahs_fts 
+        JOIN ayahs ON ayahs.id = ayahs_fts.docid
+        WHERE ayahs_fts.text MATCH ? 
+        LIMIT 3
+      ''', [normalized]);
+      out.addAll(aRows.map((r) => r['snippet'] as String));
+
+      // Translation suggestions
+      final tRows = await db.rawQuery('''
+        SELECT substr(text, 1, 60) as snippet 
+        FROM translations_fts 
+        WHERE text MATCH ? 
+        LIMIT 3
+      ''', [p]);
+      out.addAll(tRows.map((r) => r['snippet'] as String));
+
+      // 3. Topic suggestions
+      out.addAll(_topicSuggestions(p));
+    } catch (e) {
+      // Fail silently for suggestions, just return what we have (e.g. Surah names which are memory based)
+      // If DB failed, we still want Surah names if they were processed first.
+      // But _surahNameSuggestions is memory, so it's safe.
+      // The crash likely happens at DB await.
+      print('Suggestion error: $e');
+    }
+
+    // Deduplicate while preserving order
+    final seen = <String>{};
+    final deduped = <String>[];
+    for (final s in out) {
+      final clean = s.trim();
+      if (clean.isNotEmpty && seen.add(clean.toLowerCase())) {
+        deduped.add(clean);
       }
     }
-    if (remote.isNotEmpty) {
-      final r = remote.take(limit).toList();
-      _setSuggestCache(cacheKey, r);
-      return r;
-    }
 
-    // Fallback: local DB and heuristic suggestions
-    final local = await _localSuggestions(p, limit: limit);
-    final r = local.take(limit).toList();
-    _setSuggestCache(cacheKey, r);
-    return r;
-  }
-
-  // -------- Remote providers ---------
-
-  Future<List<SearchResultItem>> _searchElastic(String query,
-      {SearchFilters? filters, int limit = 50}) async {
-    final url = Uri.parse(config.elasticUrl!);
-    // Minimal example Elastic query; tailor to your index mapping
-    final body = {
-      'size': limit,
-      'query': {
-        'multi_match': {
-          'query': query,
-          'fields': ['arabic^3', 'translation^2', 'tafsir']
-        }
-      }
-    };
-    final headers = {
-      'Content-Type': 'application/json',
-      if (config.elasticApiKey?.isNotEmpty == true)
-        'Authorization': 'ApiKey ${config.elasticApiKey}'
-    };
-    final resp = await http
-        .post(url, headers: headers, body: jsonEncode(body))
-        .timeout(const Duration(seconds: 10));
-    if (resp.statusCode < 200 || resp.statusCode >= 300) {
-      throw Exception('Elastic status ${resp.statusCode}');
-    }
-    final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
-    final hits =
-        ((decoded['hits'] as Map<String, dynamic>?)?['hits'] as List?) ?? [];
-    return hits.map<SearchResultItem>((h) {
-      final src = h['_source'] as Map<String, dynamic>? ?? {};
-      final type = src['type'] as String? ?? 'arabic';
-      final t = switch (type) {
-        'translation' => SearchType.translation,
-        'tafsir' => SearchType.tafsir,
-        'topic' => SearchType.topic,
-        _ => SearchType.arabic,
-      };
-      return SearchResultItem(
-        type: t,
-        surah: (src['surah'] as num?)?.toInt() ?? 1,
-        ayah: (src['ayah'] as num?)?.toInt() ?? 1,
-        text: (src['text'] as String?) ?? '',
-        source: src['source'] as String?,
-      );
-    }).toList(growable: false);
-  }
-
-  Future<List<String>> _quranComSuggestions(String prefix,
-      {int limit = 8}) async {
-    // Note: Quran.com API endpoints may change; this is a placeholder.
-    final base = config.quranComApiBase!;
-    final url = Uri.parse(
-        '$base/search?query=${Uri.encodeQueryComponent(prefix)}&size=$limit');
-    final resp = await http.get(url).timeout(const Duration(seconds: 10));
-    if (resp.statusCode < 200 || resp.statusCode >= 300) {
-      throw Exception('Quran.com status ${resp.statusCode}');
-    }
-    final decoded = jsonDecode(resp.body);
-    if (decoded is Map && decoded['suggestions'] is List) {
-      return (decoded['suggestions'] as List).whereType<String>().toList();
-    }
-    // Fallback: extract verse text snippets if available
-    final List<String> out = [];
-    final results = decoded['results'];
-    if (results is List) {
-      for (final r in results) {
-        if (r is Map && r['text'] is String) out.add(r['text'] as String);
-      }
-    }
-    return out;
+    return deduped;
   }
 
   // -------- Local providers ---------
 
   Future<List<SearchResultItem>> _searchLocal(String query,
-      {SearchFilters? filters, int limit = 50}) async {
+      {SearchFilters? filters, int limit = 50, int offset = 0}) async {
     final db = await AppDatabase.instance.database;
     final out = <SearchResultItem>[];
-    final like = '%${query.replaceAll('%', '')}%';
 
     bool includeArabic =
         filters == null || filters.types.contains(SearchType.arabic);
@@ -261,20 +312,28 @@ class SearchRepository {
     bool includeTafsir =
         filters == null || filters.types.contains(SearchType.tafsir);
 
+    // Normalize Arabic query
+    final normalizedArabic = ArabicNormalizer.normalize(query);
+
     final surahCond = filters?.surah != null ? 'AND surah_number = ?' : '';
     final verseCond =
         filters?.verseRange != null ? 'AND ayah_number BETWEEN ? AND ?' : '';
 
     if (includeArabic) {
-      final args = <Object?>[like];
+      // Use FTS5 for Arabic search
+      final args = <Object?>[normalizedArabic];
       if (filters?.surah != null) args.add(filters!.surah);
       if (filters?.verseRange != null) {
         args.add(filters!.verseRange!.$1);
         args.add(filters.verseRange!.$2);
       }
-      final rows = await db.rawQuery(
-          'SELECT surah_number, ayah_number, text FROM ayahs WHERE text LIKE ? $surahCond $verseCond LIMIT $limit',
-          args);
+      final rows = await db.rawQuery('''
+          SELECT ayahs.surah_number, ayahs.ayah_number, ayahs.text 
+          FROM ayahs 
+          JOIN ayahs_fts ON ayahs_fts.rowid = ayahs.id
+          WHERE ayahs_fts MATCH ? $surahCond $verseCond 
+          LIMIT $limit OFFSET $offset
+          ''', args);
       out.addAll(rows.map((r) => SearchResultItem(
             type: SearchType.arabic,
             surah: (r['surah_number'] as num).toInt(),
@@ -284,7 +343,7 @@ class SearchRepository {
     }
 
     if (includeTranslation) {
-      final args = <Object?>[like];
+      final args = <Object?>[query];
       if (filters?.surah != null) args.add(filters!.surah);
       if (filters?.verseRange != null) {
         args.add(filters!.verseRange!.$1);
@@ -292,9 +351,14 @@ class SearchRepository {
       }
       if (filters?.language != null) args.add(filters!.language);
       final langCond = filters?.language != null ? 'AND language = ?' : '';
-      final rows = await db.rawQuery(
-          'SELECT surah_number, ayah_number, text, translator FROM translations WHERE text LIKE ? $surahCond $verseCond $langCond LIMIT $limit',
-          args);
+
+      final rows = await db.rawQuery('''
+          SELECT translations.surah_number, translations.ayah_number, translations.text, translations.translator 
+          FROM translations 
+          JOIN translations_fts ON translations_fts.rowid = translations.id
+          WHERE translations_fts MATCH ? $surahCond $verseCond $langCond 
+          LIMIT $limit OFFSET $offset
+          ''', args);
       out.addAll(rows.map((r) => SearchResultItem(
             type: SearchType.translation,
             surah: (r['surah_number'] as num).toInt(),
@@ -304,7 +368,9 @@ class SearchRepository {
           )));
     }
 
+    // Tafsir search (not using FTS yet for simplicity, or we can add it later)
     if (includeTafsir) {
+      final like = '%${query.replaceAll('%', '')}%';
       final args = <Object?>[like];
       if (filters?.surah != null) args.add(filters!.surah);
       if (filters?.verseRange != null) {
@@ -314,7 +380,7 @@ class SearchRepository {
       if (filters?.language != null) args.add(filters!.language);
       final langCond = filters?.language != null ? 'AND language = ?' : '';
       final rows = await db.rawQuery(
-          'SELECT surah_number, ayah_number, text, scholar FROM tafsir WHERE text LIKE ? $surahCond $verseCond $langCond LIMIT $limit',
+          'SELECT surah_number, ayah_number, text, scholar FROM tafsir WHERE text LIKE ? $surahCond $verseCond $langCond LIMIT $limit OFFSET $offset',
           args);
       out.addAll(rows.map((r) => SearchResultItem(
             type: SearchType.tafsir,
@@ -325,58 +391,66 @@ class SearchRepository {
           )));
     }
 
+    // Special Topic Search (FR1)
+    if (filters == null || filters.types.contains(SearchType.topic)) {
+      final topicResults = await _searchTopics(query, limit, offset);
+      out.addAll(topicResults);
+    }
+
     return out;
   }
 
-  Future<List<String>> _localSuggestions(String prefix, {int limit = 8}) async {
+  Future<List<SearchResultItem>> _searchTopics(
+      String query, int limit, int offset) async {
+    // Thematic search: maps keywords to potential concepts
+    final topicMap = {
+      'parents': ['parent', 'father', 'mother', 'bequest', 'kindness'],
+      'faith': ['believe', 'faith', 'iman', 'trust'],
+      'prayer': ['salah', 'pray', 'prostrate', 'bow'],
+      'charity': ['zakat', 'charity', 'alms', 'spend'],
+    };
+
+    final q = query.toLowerCase();
+    final relatedKeywords = topicMap[q] ?? [q];
+
     final db = await AppDatabase.instance.database;
-    final like = '%${prefix.replaceAll('%', '')}%';
-    final out = <String>[];
+    final out = <SearchResultItem>[];
 
-    // Suggest surah names by heuristic
-    out.addAll(_surahNameSuggestions(prefix));
+    for (final kw in relatedKeywords) {
+      final rows = await db.rawQuery('''
+        SELECT translations.surah_number, translations.ayah_number, translations.text 
+        FROM translations 
+        JOIN translations_fts ON translations_fts.rowid = translations.id
+        WHERE translations_fts MATCH ? 
+        LIMIT ${limit ~/ relatedKeywords.length}
+      ''', [kw]);
 
-    // Suggest snippets from Arabic verses
-    final rows = await db.rawQuery(
-        'SELECT substr(text, 1, 120) AS text FROM ayahs WHERE text LIKE ? LIMIT $limit',
-        [like]);
-    out.addAll(rows.map((r) => (r['text'] as String)));
-
-    // Add topic suggestions
-    out.addAll(_topicSuggestions(prefix));
-
-    // Deduplicate while preserving order
-    final seen = <String>{};
-    final deduped = <String>[];
-    for (final s in out) {
-      if (seen.add(s)) deduped.add(s);
+      out.addAll(rows.map((r) => SearchResultItem(
+            type: SearchType.topic,
+            surah: (r['surah_number'] as num).toInt(),
+            ayah: (r['ayah_number'] as num).toInt(),
+            text: (r['text'] as String),
+            source: 'Thematic Search',
+          )));
     }
-    return deduped.take(limit).toList();
+
+    return out;
   }
 
   List<String> _surahNameSuggestions(String prefix) {
-    // Minimal list; production should read from qcf_quran or localized assets
-    const names = [
-      'Al-Fatihah',
-      'Al-Baqarah',
-      'Ali Imran',
-      'An-Nisa',
-      'Al-Ma’idah',
-      'Al-An’am',
-      'Al-A’raf',
-      'Al-Anfal',
-      'At-Tawbah',
-      'Yunus',
-      'Hud',
-      'Yusuf',
-      'Ar-Ra’d',
-      'Ibrahim',
-      'Al-Hijr'
-    ];
     final p = prefix.toLowerCase();
-    return names
-        .where((n) => n.toLowerCase().contains(p))
-        .toList(growable: false);
+    final List<String> matches = [];
+
+    for (var s in suwar_data.surah) {
+      final name = s['name'].toString().toLowerCase();
+      final english = s['english'].toString().toLowerCase();
+      final arabic = s['arabic'].toString();
+
+      if (name.contains(p) || english.contains(p) || arabic.contains(prefix)) {
+        matches.add(s['name'].toString());
+      }
+    }
+    return matches;
   }
 
   List<String> _topicSuggestions(String prefix) {
@@ -405,11 +479,11 @@ class _CacheEntry<T> {
   _CacheEntry(this.data) : ts = DateTime.now();
 }
 
-String _searchCacheKey(String query, SearchFilters? f, int limit) {
+String _searchCacheKey(String query, SearchFilters? f, int limit, int offset) {
   final types = f?.types.map((t) => t.name).join(',') ?? 'all';
   final sr = f?.surah?.toString() ?? '-';
   final vr =
       f?.verseRange != null ? '${f!.verseRange!.$1}-${f.verseRange!.$2}' : '-';
   final lang = f?.language ?? '-';
-  return 'q:$query|t:$types|s:$sr|v:$vr|l:$lang|n:$limit';
+  return 'q:$query|t:$types|s:$sr|v:$vr|l:$lang|n:$limit|o:$offset';
 }

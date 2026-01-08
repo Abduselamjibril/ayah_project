@@ -7,6 +7,8 @@ import 'notification_settings_page.dart';
 import 'daily_verse_settings_page.dart';
 import '../downloads/downloads_screen.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -128,6 +130,8 @@ class SettingsScreen extends StatelessWidget {
               );
             },
           ),
+
+          _buildGestureToggle(context),
 
           const SizedBox(height: 24),
 
@@ -465,6 +469,88 @@ class SettingsScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildGestureToggle(BuildContext context) {
+    final theme = Theme.of(context);
+    // Note: In a real app, this should be managed by a SettingsNotifier/Provider
+    // For now, using a local state or SharedPreferences directly if needed.
+    // Using ValueNotifier for demonstration, but ideally it's in the app state.
+    bool enabled = false; // Mock; would read from SharedPreferences
+
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return GlassmorphicCard(
+          blur: 12.0,
+          opacity: 0.1,
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.deepOrange, Colors.orange],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(Icons.gesture_rounded,
+                        color: Colors.white, size: 24),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Two-finger Search',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          'Drag down with two fingers to search',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Switch.adaptive(
+                    value: enabled,
+                    onChanged: (val) {
+                      setState(() => enabled = val);
+                      // Save to SharedPreferences
+                      SharedPreferences.getInstance().then((prefs) {
+                        prefs.setBool('search_gesture_enabled', val);
+                      });
+                    },
+                    activeColor: theme.colorScheme.primary,
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: 56, top: 4),
+                child: Text(
+                  'Enabled only in horizontal view.',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.primary.withOpacity(0.7),
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
