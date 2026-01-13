@@ -14,6 +14,8 @@ import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart'
 import '../controller/mushaf_controller.dart';
 import '../screens/verse_details_screen.dart';
 
+const _brandGreen = Color(0xFF0B7743);
+
 class HorizontalMushafView extends StatefulWidget {
   final MushafController controller;
   final ValueChanged<bool>? onOverlayVisibilityChanged;
@@ -246,9 +248,9 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                         )
                       : const SizedBox.shrink(),
                 ),
-                const SizedBox(height: 8),
-                _buildAudioPlayerCard(),
                 const SizedBox(height: 4),
+                _buildAudioPlayerCard(),
+                const SizedBox(height: 2),
                 Card(
                   elevation: 16,
                   margin: EdgeInsets.zero,
@@ -259,38 +261,95 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                   ),
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(
-                        12, 2, 12, MediaQuery.of(context).padding.bottom + 8),
+                      12, 4, 12, MediaQuery.of(context).padding.bottom + 8),
                     child: Directionality(
-                      textDirection: TextDirection.rtl,
-                      child: Slider(
-                        min: 1,
-                        max: 604,
-                        divisions: 603,
-                        value: currentDouble,
-                        onChangeStart: (value) {
-                          setState(() {
-                            _isSliderActive = true;
-                            _sliderValue = value;
-                            _overlayVisible = true;
-                          });
-                          _scheduleAutoHide();
-                        },
-                        onChanged: (value) {
-                          setState(() {
-                            _overlayVisible = true;
-                            _sliderValue = value;
-                          });
-                          _scheduleAutoHide();
-                        },
-                        onChangeEnd: (value) {
-                          final page = value.round();
-                          setState(() {
-                            _isSliderActive = false;
-                            _sliderValue = null;
-                          });
-                          _navigateToPage(page);
-                          _scheduleAutoHide();
-                        },
+                      textDirection: TextDirection.ltr,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          _NavPill(
+                            icon: Icons.subdirectory_arrow_left,
+                            label: currentPage > 1 ? '${currentPage - 1}' : '',
+                            enabled: currentPage > 1,
+                            onTap: () => _navigateToPage(currentPage - 1),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                SliderTheme(
+                                  data: SliderTheme.of(context).copyWith(
+                                  trackHeight: 8,
+                                  inactiveTrackColor: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.2),
+                                  activeTrackColor: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.2),
+                                    thumbShape: const RoundSliderThumbShape(
+                                        enabledThumbRadius: 0.0),
+                                    overlayShape:
+                                        const RoundSliderOverlayShape(overlayRadius: 0),
+                                  ),
+                                  child: Slider(
+                                    min: 1,
+                                    max: 604,
+                                    divisions: 603,
+                                    value: currentDouble,
+                                    onChangeStart: (value) {
+                                      setState(() {
+                                        _isSliderActive = true;
+                                        _sliderValue = value;
+                                        _overlayVisible = true;
+                                      });
+                                      _scheduleAutoHide();
+                                    },
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _overlayVisible = true;
+                                        _sliderValue = value;
+                                      });
+                                      _scheduleAutoHide();
+                                    },
+                                    onChangeEnd: (value) {
+                                      final page = value.round();
+                                      setState(() {
+                                        _isSliderActive = false;
+                                        _sliderValue = null;
+                                      });
+                                      _navigateToPage(page);
+                                      _scheduleAutoHide();
+                                    },
+                                  ),
+                                ),
+                                IgnorePointer(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: _brandGreen,
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Text(
+                                      '$currentPage',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          _NotesIcon(
+                            onTap: () => _openCurrentPageNote(currentPage),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -334,7 +393,17 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   // Navigation buttons and page number removed in favor of slider
 
   void _navigateToPage(int page) {
-    widget.controller.navigateToPage(page);
+    widget.controller.navigateToPage(page.clamp(1, 604));
+  }
+
+  void _openCurrentPageNote(int page) {
+    final pd = getPageData(page);
+    if (pd.isEmpty) return;
+    final first = pd.first;
+    final surah = int.tryParse(first['surah'].toString()) ?? 1;
+    final ayah = int.tryParse(first['ayah'].toString()) ?? 1;
+    final state = context.read<BookmarkNotesNotifier>();
+    unawaited(_openNoteSheet(context, state, surah, ayah));
   }
 
   void _scheduleAutoHide() {
@@ -827,6 +896,98 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     final text = getVerseQCF(surah, verse, verseEndSymbol: true);
     Clipboard.setData(ClipboardData(text: text));
     _showSnack('Copied Surah $surah:$verse');
+  }
+}
+
+class _NavPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  const _NavPill({
+    required this.icon,
+    required this.label,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color iconColor = enabled
+        ? _brandGreen
+        : Theme.of(context).colorScheme.onSurface.withOpacity(0.25);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Material(
+          color: Colors.transparent,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          child: IconButton(
+            onPressed: enabled ? onTap : null,
+            iconSize: 28,
+            padding: const EdgeInsets.all(8),
+            icon: Icon(icon, color: iconColor),
+          ),
+        ),
+        if (label.isNotEmpty)
+          Text(
+            label,
+            style: TextStyle(
+              color: iconColor,
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _NotesIcon extends StatelessWidget {
+  final VoidCallback onTap;
+  const _NotesIcon({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Material(
+              color: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
+              child: IconButton(
+                onPressed: onTap,
+                icon: const Icon(Icons.note_alt_outlined, color: _brandGreen),
+              ),
+            ),
+            Positioned(
+              right: 6,
+              bottom: 4,
+              child: Container(
+                width: 9,
+                height: 9,
+                decoration: const BoxDecoration(
+                  color: _brandGreen,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          '',
+          style: TextStyle(fontSize: 12),
+        ),
+      ],
+    );
   }
 }
 

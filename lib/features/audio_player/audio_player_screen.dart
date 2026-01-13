@@ -1,14 +1,18 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:quran_app/core/services/audio_service.dart';
 import 'package:quran_app/data/models/audio_model.dart';
 import 'package:quran_app/features/downloads/audio_surah_list_page.dart';
 import 'package:quran_app/core/services/audio_player_service.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
 import 'package:quran_app/core/utils/localization_helper.dart';
+import 'package:quran_app/features/mushaf/widgets/mushaf_audio_navigation.dart';
 
 import '../../core/quran/qcf_quran.dart';
 import '../mushaf/controller/mushaf_controller.dart';
+
+const _brandGreen = Color(0xFF0B7743);
 
 /// Reusable audio player card used by mushaf views.
 class AudioPlayerCard extends StatefulWidget {
@@ -36,15 +40,17 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   double _downloadProgress = 0.0;
   String _reciterName = '';
 
+    String get _labelText => _audioName.isEmpty
+      ? (AppLocalizations.of(context)?.translate('select_recitation') ??
+        'Select Recitation')
+      : _audioName;
+
   @override
   void initState() {
     super.initState();
     _audioPlayer = AudioPlayerService.instance;
     _isPlaying = _audioPlayer.isPlaying.value;
-    _audioName = _audioPlayer.currentLabel.value.isEmpty
-        ? (AppLocalizations.of(context)?.translate('select_audio') ??
-            'Select audio')
-        : _audioPlayer.currentLabel.value;
+    _audioName = _audioPlayer.currentLabel.value;
 
     _reciterName = _audioPlayer.recitationName;
 
@@ -54,10 +60,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     };
     _labelListener = () {
       if (!mounted) return;
-      setState(() => _audioName = _audioPlayer.currentLabel.value.isEmpty
-          ? (AppLocalizations.of(context)?.translate('select_audio') ??
-              'Select audio')
-          : _audioPlayer.currentLabel.value);
+      setState(() => _audioName = _audioPlayer.currentLabel.value);
     };
     _downloadingListener = () {
       if (!mounted) return;
@@ -108,112 +111,80 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
-          colors: [
-            Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
-            Theme.of(context).colorScheme.surface.withOpacity(0.95),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-            blurRadius: 15,
-            offset: const Offset(0, 4),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface.withOpacity(0.92),
+            borderRadius: BorderRadius.circular(20),
           ),
-        ],
-      ),
-      child: Card(
-        elevation: 0,
-        color: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        margin: EdgeInsets.zero,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Directionality(
-            textDirection: TextDirection.rtl,
-            child: Row(
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color:
-                        Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                  ),
-                  child: IconButton(
-                    iconSize: 30,
-                    icon: _isDownloading
-                        ? SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              value: _downloadProgress > 0
-                                  ? _downloadProgress
-                                  : null,
-                              strokeWidth: 3,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          )
-                        : Icon(
-                            _isPlaying
-                                ? Icons.pause_rounded
-                                : Icons.play_arrow_rounded,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                    onPressed: _togglePlayPause,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: _openAudioPicker,
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        _audioName,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                      if (_reciterName.isNotEmpty)
-                        Text(
-                          _reciterName,
+                      Flexible(
+                        child: Text(
+                          _labelText,
                           overflow: TextOverflow.ellipsis,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withOpacity(0.7),
-                                  ),
+                          style: const TextStyle(
+                            color: _brandGreen,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                          ),
                         ),
+                      ),
+                      const SizedBox(width: 6),
+                      const Icon(
+                        Icons.expand_more_rounded,
+                        color: _brandGreen,
+                        size: 22,
+                      ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: Icon(
-                    Icons.queue_music_rounded,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withOpacity(0.7),
-                  ),
-                  onPressed: _openAudioPicker,
-                  tooltip: AppLocalizations.of(context)
-                          ?.translate('select_reciter_tooltip') ??
-                      'Select reciter',
+              ),
+              const SizedBox(width: 12),
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .surfaceVariant
+                      .withOpacity(0.5),
                 ),
-              ],
-            ),
+                child: IconButton(
+                  iconSize: 26,
+                  padding: const EdgeInsets.all(10),
+                  icon: _isDownloading
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            value:
+                                _downloadProgress > 0 ? _downloadProgress : null,
+                            strokeWidth: 3,
+                            color: _brandGreen,
+                          ),
+                        )
+                      : Icon(
+                          _isPlaying
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
+                          color: _brandGreen,
+                        ),
+                  onPressed: _togglePlayPause,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -330,45 +301,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     await AudioService.instance.initialize();
     final recitations = await AudioService.instance.getAvailableRecitations();
     if (!mounted) return null;
-    final chosen = await showModalBottomSheet<AudioRecitation>(
-      context: context,
-      builder: (context) {
-        final maxHeight = MediaQuery.of(context).size.height * 0.7 > 520.0
-            ? 520.0
-            : MediaQuery.of(context).size.height * 0.7;
-        return SafeArea(
-          child: SizedBox(
-            height: maxHeight,
-            child: Column(
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                Padding(
-                  padding: EdgeInsets.all(12.0),
-                  child: Text(
-                      AppLocalizations.of(context)
-                              ?.translate('choose_reciter_title') ??
-                          'Choose Reciter',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: recitations.length,
-                    itemBuilder: (context, index) {
-                      final r = recitations[index];
-                      return ListTile(
-                        title: Text(r.reciterName),
-                        subtitle: r.style != null ? Text(r.style!) : null,
-                        onTap: () => Navigator.pop(context, r),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+    final chosen = await showReciterPickerSheet(context, recitations);
     if (chosen != null) {
       _selectedRecitation = chosen;
       _audioPlayer.setRecitationInfo(id: chosen.id, name: chosen.reciterName);

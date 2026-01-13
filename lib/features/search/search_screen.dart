@@ -7,6 +7,8 @@ import 'package:quran_app/core/ui/empty_state.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
 import 'package:quran_app/core/utils/arabic_normalizer.dart';
 
+const _brandGreen = Color(0xFF0B7743);
+
 class SearchScreen extends StatefulWidget {
   final String query;
   final SearchFilters? filters;
@@ -122,13 +124,33 @@ class _SearchScreenState extends State<SearchScreen>
         (_searchController.text.isNotEmpty && _results.isEmpty && !_searching);
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        titleSpacing: 0,
-        title: _buildSearchBar(context),
-        elevation: 0,
-        backgroundColor: theme.scaffoldBackgroundColor,
-        iconTheme: IconThemeData(color: theme.colorScheme.onSurface),
+      backgroundColor: theme.colorScheme.surface,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(72),
+        child: SafeArea(
+          bottom: false,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
+            color: theme.colorScheme.surface,
+            child: Row(
+              children: [
+                Expanded(child: _buildSearchBar(context)),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  style: TextButton.styleFrom(
+                    foregroundColor: _brandGreen,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                  ),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
       body: showSuggestions ? _buildSuggestionsList() : _buildResultsBody(),
     );
@@ -199,34 +221,34 @@ class _SearchScreenState extends State<SearchScreen>
   Widget _buildSearchBar(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.only(right: 16),
+      padding: EdgeInsets.zero,
       child: Container(
         height: 44,
         decoration: BoxDecoration(
-          color: theme.colorScheme.surface.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: theme.colorScheme.onSurface.withOpacity(0.05),
-          ),
+          color: theme.colorScheme.onSurface.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(14),
         ),
         child: TextField(
           controller: _searchController,
           focusNode: _focusNode,
+          autofocus: true,
           onChanged: _updateSuggestions,
           onSubmitted: (v) {
             _runSearch(initial: true);
             _focusNode.unfocus();
           },
+          textInputAction: TextInputAction.search,
           decoration: InputDecoration(
-            hintText: AppLocalizations.of(context)?.translate('search_hint') ??
-                'Search Quran...',
+            hintText: AppLocalizations.of(context)
+                    ?.translate('search_hint') ??
+                'Type a word or page number',
             hintStyle: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.4),
+              color: theme.colorScheme.onSurface.withOpacity(0.55),
             ),
             prefixIcon: Icon(
               Icons.search_rounded,
-              color: theme.colorScheme.primary,
-              size: 20,
+              color: theme.colorScheme.onSurface.withOpacity(0.6),
+              size: 22,
             ),
             suffixIcon: _searchController.text.isNotEmpty
                 ? IconButton(
@@ -238,7 +260,7 @@ class _SearchScreenState extends State<SearchScreen>
                   )
                 : null,
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+            contentPadding: const EdgeInsets.symmetric(vertical: 12),
           ),
         ),
       ),
