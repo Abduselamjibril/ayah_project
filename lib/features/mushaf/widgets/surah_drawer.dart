@@ -35,6 +35,7 @@ class _SurahDrawerState extends State<SurahDrawer>
   bool _isSearchingNotes = false;
   NavigationMode _navigationMode = NavigationMode.surah;
   final Map<int, String> _verseTextCache = {};
+  bool _isEditingBookmarks = false;
 
   @override
   void dispose() {
@@ -231,9 +232,9 @@ class _SurahDrawerState extends State<SurahDrawer>
       case 0:
         return _buildSurahList();
       case 1:
-        return _buildBookmarksList();
-      case 2:
         return KhatmahTab(controller: widget.controller);
+      case 2:
+        return _buildBookmarksList();
       case 3:
         return _buildNotesTab();
       default:
@@ -422,35 +423,30 @@ class _SurahDrawerState extends State<SurahDrawer>
             _selectedTabIndex = index;
           });
         },
-        selectedItemColor: const Color(0xFF388E3C),
-        unselectedItemColor: const Color(0xFF388E3C),
+        selectedItemColor: const Color(0xFF0B7743),
+        unselectedItemColor:
+            Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
         items: [
           BottomNavigationBarItem(
-            icon: const Icon(Icons.menu_book_rounded, color: Color(0xFF388E3C)),
+            icon: const Icon(Icons.menu_book_rounded),
             label:
                 AppLocalizations.of(context)?.translate('tab_surah') ??
                 'Contents',
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.bookmark, color: Color(0xFF388E3C)),
+            icon: const Icon(Icons.check_circle_outline),
             label:
-                AppLocalizations.of(context)?.translate('tab_bookmarks') ??
+                AppLocalizations.of(context)?.translate('tab_khatmah') ??
                 'Khatmah',
           ),
           BottomNavigationBarItem(
-            icon: const Icon(
-              Icons.check_circle_outline,
-              color: Color(0xFF388E3C),
-            ),
+            icon: const Icon(Icons.bookmark),
             label:
-                AppLocalizations.of(context)?.translate('tab_khatmah') ??
+                AppLocalizations.of(context)?.translate('tab_bookmarks') ??
                 'Bookmarks',
           ),
           BottomNavigationBarItem(
-            icon: const Icon(
-              Icons.sticky_note_2_outlined,
-              color: Color(0xFF388E3C),
-            ),
+            icon: const Icon(Icons.sticky_note_2_outlined),
             label:
                 AppLocalizations.of(context)?.translate('tab_notes') ??
                 'Highlights',
@@ -464,106 +460,164 @@ class _SurahDrawerState extends State<SurahDrawer>
   }
 
   Widget _buildBookmarksList() {
+    const brandGreen = Color(0xFF20d684);
     return Consumer<BookmarkNotesNotifier>(
       builder: (context, state, _) {
+        // Header + Title
+        final header = Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Row(
+            children: [
+              TextButton(
+                onPressed: () {
+                  setState(() => _isEditingBookmarks = !_isEditingBookmarks);
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: brandGreen,
+                  padding: EdgeInsets.zero,
+                  textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                ),
+                child: Text(_isEditingBookmarks ? 'Done' : 'Edit'),
+              ),
+              const Spacer(),
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(Icons.arrow_forward_ios, size: 18, color: brandGreen),
+                  onPressed: () => Navigator.of(context).maybePop(),
+                ),
+              ),
+            ],
+          ),
+        );
+
+        final title = Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Text(
+            'Bookmarks',
+            style: TextStyle(
+              fontSize: 34,
+              fontWeight: FontWeight.w800,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+        );
+
+        // Categories card (Red, Yellow, Green, Blue)
+        final categories = Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: 4,
+            separatorBuilder: (_, __) => Divider(
+              height: 1,
+              indent: 56,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
+            ),
+            itemBuilder: (context, index) {
+              const labels = ['Red', 'Yellow', 'Green', 'Blue'];
+              const colors = [0xFFF44336, 0xFFFFC107, 0xFF4CAF50, 0xFF2196F3];
+              return ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                leading: Icon(
+                  Icons.bookmark_border_rounded,
+                  color: Color(colors[index]),
+                  size: 24,
+                ),
+                title: Text(
+                  labels[index],
+                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                ),
+                onTap: () {
+                  // Optional: Implement filter by color
+                },
+              );
+            },
+          ),
+        );
+
+        // Actual bookmarks list (below categories)
+        Widget bookmarksSection;
         if (state.bookmarks.isEmpty) {
-          return _buildEmptyState(
-            icon: Icons.bookmark_border,
-            message:
-                AppLocalizations.of(context)?.translate('no_bookmarks') ??
-                'No bookmarks yet',
+          bookmarksSection = Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: _buildEmptyState(
+              icon: Icons.bookmark_border,
+              message: AppLocalizations.of(context)?.translate('no_bookmarks') ?? 'No bookmarks yet',
+            ),
+          );
+        } else {
+          bookmarksSection = ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: state.bookmarks.length,
+            separatorBuilder: (_, __) => Divider(
+              height: 1,
+              indent: 72,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06),
+            ),
+            itemBuilder: (context, index) {
+              final bookmark = state.bookmarks[index];
+              final surahName = surah[bookmark.surahId - 1]['name'] ?? 'Surah';
+              final verseText = _getVerseTextCached(bookmark.surahId, bookmark.ayahId);
+              final color = Color(_parseColor(bookmark.colorHex));
+
+              return ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                leading: Icon(
+                  bookmark.isKhatmahPin ? Icons.push_pin : Icons.bookmark_outline_rounded,
+                  color: color,
+                ),
+                title: Text(
+                  '$surahName • ${bookmark.surahId}:${bookmark.ayahId}',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                subtitle: Directionality(
+                  textDirection: TextDirection.rtl,
+                  child: Text(
+                    verseText,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                trailing: _isEditingBookmarks
+                    ? IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: () => state.toggleBookmark(
+                          surahId: bookmark.surahId,
+                          ayahId: bookmark.ayahId,
+                        ),
+                      )
+                    : null,
+                onTap: () {
+                  widget.controller.navigateToVerse(bookmark.surahId, bookmark.ayahId);
+                  Navigator.pop(context);
+                },
+              );
+            },
           );
         }
 
-        return ListView.builder(
-          itemCount: state.bookmarks.length,
-          itemBuilder: (context, index) {
-            final bookmark = state.bookmarks[index];
-            final surahName = surah[bookmark.surahId - 1]['name'] ?? 'Surah';
-            final verseText = _getVerseTextCached(
-              bookmark.surahId,
-              bookmark.ayahId,
-            );
-
-            return ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 8,
-              ),
-              leading: CircleAvatar(
-                backgroundColor: Color(
-                  _parseColor(bookmark.colorHex),
-                ).withOpacity(0.2),
-                child: Icon(
-                  bookmark.isKhatmahPin ? Icons.push_pin : Icons.bookmark,
-                  color: Color(_parseColor(bookmark.colorHex)),
-                ),
-              ),
-              title: Text(
-                '$surahName • ${bookmark.surahId}:${bookmark.ayahId}',
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Directionality(
-                    textDirection: TextDirection.rtl,
-                    child: Text(
-                      verseText,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (bookmark.categoryName != null &&
-                      bookmark.categoryName!.trim().isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Color(
-                          _parseColor(bookmark.colorHex),
-                        ).withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: Color(
-                            _parseColor(bookmark.colorHex),
-                          ).withOpacity(0.3),
-                          width: 1,
-                        ),
-                      ),
-                      child: Text(
-                        bookmark.categoryName!.trim(),
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: Color(_parseColor(bookmark.colorHex)),
-                        ),
-                        // Show full text without truncation
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete_outline),
-                onPressed: () => state.toggleBookmark(
-                  surahId: bookmark.surahId,
-                  ayahId: bookmark.ayahId,
-                ),
-              ),
-              onTap: () {
-                widget.controller.navigateToVerse(
-                  bookmark.surahId,
-                  bookmark.ayahId,
-                );
-                Navigator.pop(context);
-              },
-            );
-          },
+        return ListView(
+          children: [
+            header,
+            title,
+            categories,
+            const SizedBox(height: 16),
+            bookmarksSection,
+            const SizedBox(height: 12),
+          ],
         );
       },
     );

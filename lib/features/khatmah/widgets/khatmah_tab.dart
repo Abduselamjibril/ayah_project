@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:quran_app/core/i18n/app_localizations.dart'; // Make sure this import path is correct
+import 'package:quran_app/core/i18n/app_localizations.dart';
 import '../models/khatmah.dart';
 import '../services/khatmah_service.dart';
 import '../../mushaf/controller/mushaf_controller.dart';
@@ -15,6 +15,7 @@ class KhatmahTab extends StatefulWidget {
 }
 
 class _KhatmahTabState extends State<KhatmahTab> {
+  static const Color _brandGreen = Color(0xFF20d684);
   final KhatmahService _service = KhatmahService();
   List<Khatmah> _khatmahs = [];
   bool _isLoading = true;
@@ -53,6 +54,10 @@ class _KhatmahTabState extends State<KhatmahTab> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final background = theme.scaffoldBackgroundColor;
+    final onBackground = theme.colorScheme.onSurface;
+
     Widget bodyContent;
     Widget? floatingActionButton;
 
@@ -82,80 +87,92 @@ class _KhatmahTabState extends State<KhatmahTab> {
       );
     }
 
-    // Main Scaffold that provides the AppBar
     return Scaffold(
-      appBar: AppBar(
-        // The title as seen in the image
-        title: const Text(
-          'Khatmah',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 34,
-            color: Color(0xFF388E3C), // Always primary color
-          ),
-        ),
-        iconTheme: const IconThemeData(color: Color(0xFF388E3C)),
-        backgroundColor: Colors.transparent, // Make it blend with the body
-        elevation: 0,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: CircleAvatar(
-              backgroundColor: Colors.grey.withOpacity(0.2),
-              child: IconButton(
-                icon: const Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: Color(0xFF388E3C),
-                ),
-                onPressed: () {
-                  // TODO: Implement the action for this button if needed
-                },
+      backgroundColor: background,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Khatmah',
+                      style: TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.w800,
+                        color: onBackground,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: onBackground.withOpacity(0.08),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      icon: Icon(
+                        Icons.arrow_forward_ios,
+                        size: 18,
+                        color: _brandGreen,
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).maybePop();
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
+            Expanded(child: bodyContent),
+          ],
+        ),
       ),
-      body: bodyContent,
       floatingActionButton: floatingActionButton,
     );
   }
 
   /// Builds the initial screen when no Khatmahs are active, matching the screenshot.
   Widget _buildStartScreen() {
+    final theme = Theme.of(context);
+    final onBackground = theme.colorScheme.onSurface;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          const SizedBox(height: 12),
           Text(
             "Choose a period to complete the Quran, and continue your Khatmah during Ramadan and throughout the year.",
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[400], // A lighter text color
+              fontSize: 18,
+              color: onBackground.withOpacity(0.82),
               height: 1.5,
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 36),
           ElevatedButton(
-            onPressed: _showDurationOptions, // This will open the choices
+            onPressed: _showDurationOptions,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xff20d684), // Specific green color
+              backgroundColor: _brandGreen,
               minimumSize: const Size(double.infinity, 56),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-            ),
-            child: const Text(
-              'Start New Khatmah',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
+              foregroundColor: Colors.black,
+              textStyle: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
               ),
             ),
+            child: const Text('Start New Khatmah'),
           ),
         ],
       ),

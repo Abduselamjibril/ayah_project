@@ -126,11 +126,11 @@ class _MushafScreenState extends State<MushafScreen> {
                                       ?.translate('verse_of_the_day_tooltip') ??
                                   'Verse of the Day',
                               onPressed: () async {
-                                final result = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) =>
-                                          const VerseOfTheDayScreen()),
+                                final result = await showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (ctx) => const VerseOfTheDayScreen(),
                                 );
                                 if (result != null &&
                                     result is Map<String, int> &&
