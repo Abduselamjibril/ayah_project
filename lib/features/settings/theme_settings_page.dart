@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:quran_app/app/app.dart';
 import '../../core/quran/widgets/quran_pageview.dart';
 import '../../core/services/mushaf_settings_service.dart';
 import '../../core/services/theme_service.dart';
@@ -10,10 +11,29 @@ class ThemeSettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeService = ThemeService();
     final mushafSettings = MushafSettingsService();
+    final theme = Theme.of(context);
+    final accent = BrandColors.accent;
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('App Appearance'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        leadingWidth: 100,
+        leading: TextButton.icon(
+          onPressed: () => Navigator.of(context).pop(),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: accent, size: 18),
+          label: Text(
+            'Settings',
+            style: TextStyle(color: accent, fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          style: TextButton.styleFrom(padding: const EdgeInsets.only(left: 8)),
+        ),
+        title: Text(
+          'App Appearance',
+          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
       ),
       body: AnimatedBuilder(
         animation: Listenable.merge([themeService, mushafSettings]),

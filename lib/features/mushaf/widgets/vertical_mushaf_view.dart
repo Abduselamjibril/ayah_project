@@ -12,7 +12,11 @@ import 'package:quran_app/features/audio_player/audio_player_screen.dart';
 import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart';
 import 'package:quran_app/features/mushaf/controller/mushaf_controller.dart';
 import 'package:quran_app/features/mushaf/screens/verse_details_screen.dart';
+import 'package:quran_app/core/services/mushaf_settings_service.dart';
+import 'package:quran_app/core/services/theme_service.dart';
 import 'package:screenshot/screenshot.dart';
+import 'package:quran_app/core/services/language_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:quran_app/app/app.dart';
@@ -218,6 +222,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
             },
           ),
         ),
+        _buildSideSlider(),
         _buildPageIndicator(),
       ],
     );
@@ -324,117 +329,73 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
+                              _NotesIcon(
+                                onTap: _openPageSettingsSheet,
+                              ),
+                              const Spacer(),
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: const [
+                                      Text(
+                                        'Auto-Scroll',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      SizedBox(width: 6),
+                                      Icon(Icons.lock_outline, size: 16),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(22),
+                                      onTap: () {
+                                        setState(() {
+                                          _overlayVisible = true;
+                                        });
+                                        if (_isAutoScrolling) {
+                                          _stopAutoScroll();
+                                        } else {
+                                          _startAutoScroll();
+                                        }
+                                        _scheduleAutoHide();
+                                      },
+                                      onLongPress: _showAutoScrollSpeedSheet,
+                                      child: Container(
+                                        width: 92,
+                                        height: 44,
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .surfaceVariant
+                                              .withOpacity(0.35),
+                                          borderRadius:
+                                              BorderRadius.circular(22),
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Icon(
+                                          Icons.arrow_downward,
+                                          color: BrandColors.accent.withOpacity(
+                                              _isAutoScrolling ? 1.0 : 0.7),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const Spacer(),
                               _NavPill(
                                 icon: Icons.subdirectory_arrow_left,
                                 label:
                                     currentPage > 1 ? '${currentPage - 1}' : '',
                                 enabled: currentPage > 1,
                                 onTap: () => _navigateToPage(currentPage - 1),
-                              ),
-                              const SizedBox(width: 12),
-                              SizedBox(
-                                width: 260,
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    SliderTheme(
-                                      data: SliderTheme.of(context).copyWith(
-                                        trackHeight: 8,
-                                        inactiveTrackColor:
-                                            Colors.black.withOpacity(0.2),
-                                        activeTrackColor:
-                                            Colors.black.withOpacity(0.2),
-                                        thumbShape: const RoundSliderThumbShape(
-                                            enabledThumbRadius: 0.0),
-                                        overlayShape:
-                                            const RoundSliderOverlayShape(
-                                                overlayRadius: 0),
-                                      ),
-                                      child: Slider(
-                                        min: 1,
-                                        max: 604,
-                                        divisions: 603,
-                                        value: currentDouble,
-                                        onChangeStart: (value) {
-                                          _stopAutoScroll();
-                                          setState(() {
-                                            _isSliderActive = true;
-                                            _sliderValue = value;
-                                            _overlayVisible = true;
-                                          });
-                                          _scheduleAutoHide();
-                                        },
-                                        onChanged: (value) {
-                                          setState(() {
-                                            _overlayVisible = true;
-                                            _sliderValue = value;
-                                          });
-                                          _scheduleAutoHide();
-                                        },
-                                        onChangeEnd: (value) {
-                                          _stopAutoScroll();
-                                          final page = value.round();
-                                          setState(() {
-                                            _isSliderActive = false;
-                                            _sliderValue = null;
-                                          });
-                                          _navigateToPage(page);
-                                          _scheduleAutoHide();
-                                        },
-                                      ),
-                                    ),
-                                    IgnorePointer(
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 14, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          color: BrandColors.accent,
-                                          borderRadius:
-                                              BorderRadius.circular(16),
-                                        ),
-                                        child: Text(
-                                          '$currentPage',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              _NavPill(
-                                icon: Icons.arrow_forward_rounded,
-                                label: currentPage < 604
-                                    ? '${currentPage + 1}'
-                                    : '',
-                                enabled: currentPage < 604,
-                                onTap: () => _navigateToPage(currentPage + 1),
-                              ),
-                              const SizedBox(width: 8),
-                              SizedBox(
-                                width: 44,
-                                child: IconButton(
-                                  tooltip:
-                                      'Auto-scroll (tap to start/stop, long press to set speed)',
-                                  icon: const Icon(Icons.arrow_upward),
-                                  color: BrandColors.accent.withOpacity(
-                                      _isAutoScrolling ? 1.0 : 0.35),
-                                  onPressed: () {
-                                    setState(() {
-                                      _overlayVisible = true;
-                                    });
-                                    if (_isAutoScrolling) {
-                                      _stopAutoScroll();
-                                    } else {
-                                      _startAutoScroll();
-                                    }
-                                    _scheduleAutoHide();
-                                  },
-                                  onLongPress: _showAutoScrollSpeedSheet,
-                                ),
                               ),
                             ],
                           ),
@@ -444,6 +405,101 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                   ),
                 ),
               ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSideSlider() {
+    if (!_overlayVisible) return const SizedBox.shrink();
+    final media = MediaQuery.of(context);
+    // Leave breathing room near header/footer so the slider doesn't collide with UI chrome
+    final top = media.padding.top + 64;
+    // Leave extra clearance above the bottom audio bar
+    final bottom = media.padding.bottom + 170;
+
+    final currentDouble = ((_isSliderActive && _sliderValue != null)
+            ? _sliderValue!
+            : widget.controller.currentPage.toDouble())
+        .clamp(1.0, 604.0);
+    final currentPage = currentDouble.round();
+
+    return Positioned(
+      left: 10,
+      top: top,
+      bottom: bottom,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final height = constraints.maxHeight;
+          const pillHeight = 26.0;
+          final trackHeight = (height - pillHeight).clamp(1.0, double.infinity);
+
+          void handleDrag(double dy) {
+            final clamped = (dy - pillHeight / 2).clamp(0, trackHeight);
+            final t = clamped / trackHeight;
+            final value = 1 + t * 603;
+            _stopAutoScroll();
+            setState(() {
+              _isSliderActive = true;
+              _sliderValue = value;
+              _overlayVisible = true;
+            });
+            _scheduleAutoHide();
+          }
+
+          void handleEnd() {
+            final value = (_sliderValue ?? currentDouble).clamp(1.0, 604.0);
+            final page = value.round();
+            setState(() {
+              _isSliderActive = false;
+              _sliderValue = null;
+            });
+            _navigateToPage(page);
+            _scheduleAutoHide();
+          }
+
+          final t = (currentDouble - 1) / 603;
+          final pillTop = (trackHeight * t).clamp(0, trackHeight);
+
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onPanDown: (details) => handleDrag(details.localPosition.dy),
+            onPanUpdate: (details) => handleDrag(details.localPosition.dy),
+            onPanEnd: (_) => handleEnd(),
+            onTapDown: (details) => handleDrag(details.localPosition.dy),
+            onTapUp: (_) => handleEnd(),
+            child: Container(
+              width: 32,
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.18),
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Stack(
+                children: [
+                  Positioned(
+                    left: 4,
+                    right: 4,
+                    top: pillTop.toDouble(),
+                    child: Container(
+                      height: pillHeight,
+                      decoration: BoxDecoration(
+                        color: BrandColors.accent,
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '$currentPage',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         },
@@ -698,6 +754,234 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
 
   void _navigateToPage(int page) {
     widget.controller.navigateToPage(page.clamp(1, 604));
+  }
+
+  void _openCurrentPageNote(int page) {
+    final pd = getPageData(page);
+    if (pd.isEmpty) return;
+    final first = pd.first;
+    final surah = int.tryParse(first['surah'].toString()) ?? 1;
+    final ayah = int.tryParse(first['ayah'].toString()) ?? 1;
+    final state = context.read<BookmarkNotesNotifier>();
+    unawaited(_openNoteSheet(context, state, surah, ayah));
+  }
+
+  Future<void> _openPageSettingsSheet() async {
+    final mushafSettings = MushafSettingsService();
+    final themeService = ThemeService();
+    final prefs = await SharedPreferences.getInstance();
+    bool searchGesture = prefs.getBool('search_gesture_enabled') ?? false;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        ScrollMode mode = mushafSettings.scrollMode;
+        AppTheme theme = themeService.currentTheme;
+
+        return DraggableScrollableSheet(
+          minChildSize: 0.5,
+          initialChildSize: 0.5,
+          maxChildSize: 0.8,
+          builder: (context, controller) {
+            return StatefulBuilder(
+              builder: (context, setStateSheet) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(24)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.25),
+                        blurRadius: 20,
+                        offset: const Offset(0, -6),
+                      ),
+                    ],
+                  ),
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Page Settings',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                              ),
+                              const Spacer(),
+                              IconButton(
+                                icon: Icon(Icons.close_rounded,
+                                    color: BrandColors.accent),
+                                onPressed: () => Navigator.pop(context),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Expanded(
+                            child: ListView(
+                              controller: controller,
+                              children: [
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Scroll Direction',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleSmall
+                                      ?.copyWith(fontWeight: FontWeight.w700),
+                                ),
+                                const SizedBox(height: 10),
+                                Row(
+                                  children: [
+                                    _SettingOptionTile(
+                                      label: 'Horizontal',
+                                      icon: Icons.view_day,
+                                      selected: mode == ScrollMode.horizontal,
+                                      onTap: () {
+                                        mushafSettings
+                                            .setScrollMode(ScrollMode.horizontal);
+                                        setStateSheet(() => mode =
+                                            ScrollMode.horizontal);
+                                      },
+                                    ),
+                                    const SizedBox(width: 12),
+                                    _SettingOptionTile(
+                                      label: 'Vertical',
+                                      icon: Icons.view_stream,
+                                      selected: mode == ScrollMode.vertical,
+                                      onTap: () {
+                                        mushafSettings
+                                            .setScrollMode(ScrollMode.vertical);
+                                        setStateSheet(
+                                            () => mode = ScrollMode.vertical);
+                                      },
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 18),
+                                Text(
+                                  'Theme',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleSmall
+                                      ?.copyWith(fontWeight: FontWeight.w700),
+                                ),
+                                const SizedBox(height: 10),
+                                Wrap(
+                                  spacing: 12,
+                                  runSpacing: 12,
+                                  children: AppTheme.values.map((t) {
+                                    final selected = t == theme;
+                                    return _ThemeCardTile(
+                                      theme: t,
+                                      selected: selected,
+                                      onTap: () {
+                                        themeService.setTheme(t);
+                                        setStateSheet(() => theme = t);
+                                      },
+                                    );
+                                  }).toList(),
+                                ),
+                                const SizedBox(height: 18),
+                                Text(
+                                  'Language',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleSmall
+                                      ?.copyWith(fontWeight: FontWeight.w700),
+                                ),
+                                const SizedBox(height: 10),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: const [Locale('en'), Locale('ar')]
+                                      .map((loc) {
+                                    final isSel = LanguageService()
+                                            .currentLocale
+                                            .languageCode ==
+                                        loc.languageCode;
+                                    final label = loc.languageCode == 'ar'
+                                        ? 'العربية'
+                                        : 'English';
+                                    return ChoiceChip(
+                                      selected: isSel,
+                                      label: Text(label),
+                                      selectedColor:
+                                          BrandColors.accent.withOpacity(0.18),
+                                      onSelected: (v) async {
+                                        await LanguageService().setLocale(loc);
+                                        setStateSheet(() {});
+                                      },
+                                    );
+                                  }).toList(),
+                                ),
+                                const SizedBox(height: 18),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Two-finger Search',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleSmall
+                                                ?.copyWith(
+                                                    fontWeight:
+                                                        FontWeight.w700),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Drag down to search',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withOpacity(0.6),
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Switch.adaptive(
+                                      value: searchGesture,
+                                      onChanged: (val) async {
+                                        setStateSheet(() =>
+                                            searchGesture = val);
+                                        await prefs.setBool(
+                                            'search_gesture_enabled', val);
+                                      },
+                                      activeColor:
+                                          Theme.of(context).colorScheme.primary,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 24),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
   }
 
   int _parseColor(String value) {
@@ -1209,6 +1493,175 @@ class _NavPill extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _NotesIcon extends StatelessWidget {
+  final VoidCallback onTap;
+  const _NotesIcon({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 44,
+          height: 44,
+          child: Material(
+            color: Colors.transparent,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: onTap,
+              child: Center(
+                child: Icon(
+                  Icons.menu_book_rounded,
+                  color: BrandColors.accent,
+                  size: 26,
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+      ],
+    );
+  }
+}
+
+class _SettingOptionTile extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _SettingOptionTile({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final border = RoundedRectangleBorder(borderRadius: BorderRadius.circular(14));
+    return Expanded(
+      child: Material(
+        color: selected
+            ? BrandColors.accent.withOpacity(0.12)
+            : Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.35),
+        shape: border,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: BrandColors.accent),
+                const SizedBox(width: 10),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                if (selected) ...[
+                  const SizedBox(width: 8),
+                  Icon(Icons.check_circle, color: BrandColors.accent, size: 18),
+                ]
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ThemeCardTile extends StatelessWidget {
+  final AppTheme theme;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ThemeCardTile({
+    required this.theme,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final imagePath = ThemeService.getMainframeImagePath(theme);
+    final name = ThemeService.getThemeName(theme);
+    return SizedBox(
+      width: 160,
+      height: 84,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Ink(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: selected
+                    ? BrandColors.accent
+                    : Theme.of(context).dividerColor.withOpacity(0.4),
+                width: selected ? 2 : 1,
+              ),
+              image: DecorationImage(
+                image: AssetImage(imagePath),
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
+                colorFilter: ColorFilter.mode(
+                  Colors.black.withOpacity(0.06),
+                  BlendMode.srcATop,
+                ),
+              ),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).scaffoldBackgroundColor.withOpacity(0.9),
+                    Theme.of(context).scaffoldBackgroundColor.withOpacity(0.35),
+                    Colors.transparent,
+                  ],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      name,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (selected)
+                    Icon(Icons.check_circle, color: BrandColors.accent),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

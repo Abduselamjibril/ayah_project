@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:quran_app/app/app.dart';
 import '../khatmah/services/khatmah_service.dart';
 
 class NotificationSettingsPage extends StatefulWidget {
@@ -42,9 +43,28 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent = BrandColors.accent;
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Notification Settings'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        leadingWidth: 100,
+        leading: TextButton.icon(
+          onPressed: () => Navigator.of(context).pop(),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: accent, size: 18),
+          label: Text(
+            'Settings',
+            style: TextStyle(color: accent, fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          style: TextButton.styleFrom(padding: const EdgeInsets.only(left: 8)),
+        ),
+        title: Text(
+          'Notification Settings',
+          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

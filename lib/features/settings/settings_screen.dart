@@ -6,9 +6,11 @@ import 'package:quran_app/app/app.dart';
 
 // Assuming these pages exist in your project structure
 import 'daily_verse_settings_page.dart';
+import 'about_screen.dart';
 import '../downloads/downloads_screen.dart';
 import 'notification_settings_page.dart';
 import 'theme_settings_page.dart';
+import 'language_settings_page.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -81,7 +83,10 @@ class SettingsScreen extends StatelessWidget {
                         context,
                       )?.translate('language_title') ??
                       'Language',
-                  onTap: () => _showLanguageSelector(context),
+                  onTap: () => Navigator.push(
+                    context,
+                    _createRoute(const LanguageSettingsPage()),
+                  ),
                 ),
                 _divider(context),
                 _settingsTile(
@@ -183,7 +188,10 @@ class SettingsScreen extends StatelessWidget {
                         context,
                       )?.translate('about_app_title') ??
                       'About App',
-                  onTap: () => _showAboutDialog(context),
+                  onTap: () => Navigator.push(
+                    context,
+                    _createRoute(const AboutScreen()),
+                  ),
                 ),
               ],
             ),

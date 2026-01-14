@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:quran_app/app/app.dart';
 import '../../core/services/verse_of_the_day_service.dart';
 
 class DailyVerseSettingsPage extends StatefulWidget {
@@ -43,9 +44,28 @@ class _DailyVerseSettingsPageState extends State<DailyVerseSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent = BrandColors.accent;
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Daily Inspiration'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        leadingWidth: 100,
+        leading: TextButton.icon(
+          onPressed: () => Navigator.of(context).pop(),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: accent, size: 18),
+          label: Text(
+            'Settings',
+            style: TextStyle(color: accent, fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          style: TextButton.styleFrom(padding: const EdgeInsets.only(left: 8)),
+        ),
+        title: Text(
+          'Daily Inspiration',
+          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
       ),
       body: ListView(
         children: [

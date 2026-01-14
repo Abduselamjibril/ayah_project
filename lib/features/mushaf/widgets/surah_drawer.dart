@@ -51,31 +51,35 @@ class _SurahDrawerState extends State<SurahDrawer>
     return verseText;
   }
 
-  // Sidebar for Surah numbers with scroll/jump effect
-  Widget _buildSurahSidebar(BuildContext context) {
+  // Compact sidebar for quick Surah/Juz jumps
+  Widget _buildNumberSidebar({
+    required int itemCount,
+    required void Function(int number) onTapNumber,
+  }) {
     return SizedBox(
-      width: 22,
+      width: 18,
       child: NotificationListener<ScrollNotification>(
         onNotification: (_) => true,
         child: ListView.builder(
-          itemCount: surah.length,
+          itemCount: itemCount,
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(vertical: 2),
+          padding: const EdgeInsets.symmetric(vertical: 1),
           itemBuilder: (context, index) {
+            final number = index + 1;
             return GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () {
-                widget.controller.navigateToSurah(index + 1);
+                onTapNumber(number);
                 Navigator.pop(context);
               },
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 1),
+                padding: const EdgeInsets.symmetric(vertical: 0.5),
                 child: Center(
                   child: Text(
-                    (index + 1).toString(),
+                    number.toString(),
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      fontSize: 11,
+                      fontSize: 10,
                       color: BrandColors.accent,
                     ),
                   ),
@@ -106,13 +110,29 @@ class _SurahDrawerState extends State<SurahDrawer>
               _buildBottomBar(context),
             ],
           ),
-          // Sidebar overlay for Surah numbers (only in Surah mode)
-          if (_selectedTabIndex == 0 && _navigationMode == NavigationMode.surah)
+          // Sidebar overlay for Surah/Juz quick jumps on the main tab
+          if (_selectedTabIndex == 0)
             Positioned(
               top: 80, // below top bar
               right: 0,
               bottom: 60, // above bottom bar
-              child: _buildSurahSidebar(context),
+              child: _navigationMode == NavigationMode.surah
+                  ? _buildNumberSidebar(
+                      itemCount: surah.length,
+                      onTapNumber: (number) {
+                        widget.controller.navigateToSurah(number);
+                      },
+                    )
+                  : _buildNumberSidebar(
+                      itemCount: juz.length,
+                      onTapNumber: (number) {
+                        final targetJuz =
+                            juz.firstWhere((item) => item['id'] == number);
+                        final surahs = targetJuz['surahs'] as List<dynamic>;
+                        final startingSurah = surahs.first as int;
+                        widget.controller.navigateToSurah(startingSurah);
+                      },
+                    ),
             ),
         ],
       ),

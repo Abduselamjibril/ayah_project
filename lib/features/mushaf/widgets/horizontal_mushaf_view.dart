@@ -14,6 +14,10 @@ import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart'
 import '../controller/mushaf_controller.dart';
 import '../screens/verse_details_screen.dart';
 import 'package:quran_app/app/app.dart';
+import 'package:quran_app/core/services/mushaf_settings_service.dart';
+import 'package:quran_app/core/services/theme_service.dart';
+import 'package:quran_app/core/services/language_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HorizontalMushafView extends StatefulWidget {
   final MushafController controller;
@@ -387,7 +391,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                               ),
                               const SizedBox(width: 12),
                               _NotesIcon(
-                                onTap: () => _openCurrentPageNote(currentPage),
+                                onTap: _openPageSettingsSheet,
                               ),
                             ],
                           ),
@@ -462,6 +466,224 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     final ayah = int.tryParse(first['ayah'].toString()) ?? 1;
     final state = context.read<BookmarkNotesNotifier>();
     unawaited(_openNoteSheet(context, state, surah, ayah));
+  }
+
+  Future<void> _openPageSettingsSheet() async {
+    final mushafSettings = MushafSettingsService();
+    final themeService = ThemeService();
+    final prefs = await SharedPreferences.getInstance();
+    bool searchGesture = prefs.getBool('search_gesture_enabled') ?? false;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        ScrollMode mode = mushafSettings.scrollMode;
+        AppTheme theme = themeService.currentTheme;
+
+        return DraggableScrollableSheet(
+          minChildSize: 0.5,
+          initialChildSize: 0.5,
+          maxChildSize: 0.8,
+          builder: (context, controller) {
+            return StatefulBuilder(
+              builder: (context, setStateSheet) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(24)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.25),
+                        blurRadius: 20,
+                        offset: const Offset(0, -6),
+                      ),
+                    ],
+                  ),
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Page Settings',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                              ),
+                              const Spacer(),
+                              IconButton(
+                                icon: Icon(Icons.close_rounded,
+                                    color: BrandColors.accent),
+                                onPressed: () => Navigator.pop(context),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Expanded(
+                            child: ListView(
+                              controller: controller,
+                              children: [
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Scroll Direction',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleSmall
+                                      ?.copyWith(fontWeight: FontWeight.w700),
+                                ),
+                                const SizedBox(height: 10),
+                                Row(
+                                  children: [
+                                    _SettingOptionTile(
+                                      label: 'Horizontal',
+                                      icon: Icons.view_day,
+                                      selected: mode == ScrollMode.horizontal,
+                                      onTap: () {
+                                        mushafSettings
+                                            .setScrollMode(ScrollMode.horizontal);
+                                        setStateSheet(() => mode =
+                                            ScrollMode.horizontal);
+                                      },
+                                    ),
+                                    const SizedBox(width: 12),
+                                    _SettingOptionTile(
+                                      label: 'Vertical',
+                                      icon: Icons.view_stream,
+                                      selected: mode == ScrollMode.vertical,
+                                      onTap: () {
+                                        mushafSettings
+                                            .setScrollMode(ScrollMode.vertical);
+                                        setStateSheet(
+                                            () => mode = ScrollMode.vertical);
+                                      },
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 18),
+                                Text(
+                                  'Theme',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleSmall
+                                      ?.copyWith(fontWeight: FontWeight.w700),
+                                ),
+                                const SizedBox(height: 10),
+                                Wrap(
+                                  spacing: 12,
+                                  runSpacing: 12,
+                                  children: AppTheme.values.map((t) {
+                                    final selected = t == theme;
+                                    return _ThemeCardTile(
+                                      theme: t,
+                                      selected: selected,
+                                      onTap: () {
+                                        themeService.setTheme(t);
+                                        setStateSheet(() => theme = t);
+                                      },
+                                    );
+                                  }).toList(),
+                                ),
+                                const SizedBox(height: 18),
+                                Text(
+                                  'Language',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleSmall
+                                      ?.copyWith(fontWeight: FontWeight.w700),
+                                ),
+                                const SizedBox(height: 10),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: const [Locale('en'), Locale('ar')]
+                                      .map((loc) {
+                                    final isSel = LanguageService()
+                                            .currentLocale
+                                            .languageCode ==
+                                        loc.languageCode;
+                                    final label = loc.languageCode == 'ar'
+                                        ? 'العربية'
+                                        : 'English';
+                                    return ChoiceChip(
+                                      selected: isSel,
+                                      label: Text(label),
+                                      selectedColor:
+                                          BrandColors.accent.withOpacity(0.18),
+                                      onSelected: (v) async {
+                                        await LanguageService().setLocale(loc);
+                                        setStateSheet(() {});
+                                      },
+                                    );
+                                  }).toList(),
+                                ),
+                                const SizedBox(height: 18),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Two-finger Search',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleSmall
+                                                ?.copyWith(
+                                                    fontWeight:
+                                                        FontWeight.w700),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Drag down to search',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withOpacity(0.6),
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Switch.adaptive(
+                                      value: searchGesture,
+                                      onChanged: (val) async {
+                                        setStateSheet(() =>
+                                            searchGesture = val);
+                                        await prefs.setBool(
+                                            'search_gesture_enabled', val);
+                                      },
+                                      activeColor:
+                                          Theme.of(context).colorScheme.primary,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 24),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
   }
 
   void _scheduleAutoHide() {
@@ -1010,63 +1232,165 @@ class _NotesIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = Theme.of(context).scaffoldBackgroundColor;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
           width: 44,
           height: 44,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              // Base tap target
-              Positioned.fill(
-                child: Material(
-                  color: Colors.transparent,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: onTap,
-                    child: Center(
-                      // Document/page with lines icon
-                      child: Icon(
-                        Icons.description,
-                        color: BrandColors.accent,
-                        size: 26,
-                      ),
-                    ),
-                  ),
+          child: Material(
+            color: Colors.transparent,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: onTap,
+              child: Center(
+                child: Icon(
+                  Icons.menu_book_rounded,
+                  color: BrandColors.accent,
+                  size: 26,
                 ),
               ),
-              // Chat bubble-like circular badge with three dots
-              Positioned(
-                right: 2,
-                bottom: 2,
-                child: Container(
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: BrandColors.accent,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.more_horiz,
-                    size: 12,
-                    color: Colors.black87,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
         const SizedBox(height: 4),
-        const Text(
-          '',
-          style: TextStyle(fontSize: 12),
-        ),
       ],
+    );
+  }
+}
+
+class _SettingOptionTile extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _SettingOptionTile({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final border = RoundedRectangleBorder(borderRadius: BorderRadius.circular(14));
+    return Expanded(
+      child: Material(
+        color: selected
+            ? BrandColors.accent.withOpacity(0.12)
+            : Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.35),
+        shape: border,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: BrandColors.accent),
+                const SizedBox(width: 10),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                if (selected) ...[
+                  const SizedBox(width: 8),
+                  Icon(Icons.check_circle, color: BrandColors.accent, size: 18),
+                ]
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ThemeCardTile extends StatelessWidget {
+  final AppTheme theme;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ThemeCardTile({
+    required this.theme,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final imagePath = ThemeService.getMainframeImagePath(theme);
+    final name = ThemeService.getThemeName(theme);
+    return SizedBox(
+      width: 160,
+      height: 84,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Ink(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: selected
+                    ? BrandColors.accent
+                    : Theme.of(context).dividerColor.withOpacity(0.4),
+                width: selected ? 2 : 1,
+              ),
+              image: DecorationImage(
+                image: AssetImage(imagePath),
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
+                colorFilter: ColorFilter.mode(
+                  Colors.black.withOpacity(0.06),
+                  BlendMode.srcATop,
+                ),
+              ),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).scaffoldBackgroundColor.withOpacity(0.9),
+                    Theme.of(context).scaffoldBackgroundColor.withOpacity(0.35),
+                    Colors.transparent,
+                  ],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      name,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (selected)
+                    Icon(Icons.check_circle, color: BrandColors.accent),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

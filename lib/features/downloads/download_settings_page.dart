@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:quran_app/app/app.dart';
 import '../../core/i18n/app_localizations.dart';
 import 'storage_management_page.dart';
 
@@ -74,22 +75,57 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent = BrandColors.accent;
+    final titleText = AppLocalizations.of(context)
+            ?.translate('download_settings_title') ??
+        'Download Settings';
     if (_isLoading) {
       return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
-          title: Text(AppLocalizations.of(context)
-                  ?.translate('download_settings_title') ??
-              'Download Settings'),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          centerTitle: true,
+          leadingWidth: 100,
+          leading: TextButton.icon(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: Icon(Icons.arrow_back_ios_new_rounded, color: accent, size: 18),
+            label: Text(
+              'Settings',
+              style: TextStyle(color: accent, fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            style: TextButton.styleFrom(padding: const EdgeInsets.only(left: 8)),
+          ),
+          title: Text(
+            titleText,
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)
-                ?.translate('download_settings_title') ??
-            'Download Settings'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        leadingWidth: 100,
+        leading: TextButton.icon(
+          onPressed: () => Navigator.of(context).pop(),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: accent, size: 18),
+          label: Text(
+            'Settings',
+            style: TextStyle(color: accent, fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          style: TextButton.styleFrom(padding: const EdgeInsets.only(left: 8)),
+        ),
+        title: Text(
+          titleText,
+          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
       ),
       body: ListView(
         children: [
