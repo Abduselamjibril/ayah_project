@@ -343,12 +343,12 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
               mainAxisSize: MainAxisSize.max,
               children: [
                 Padding(
-                  padding: EdgeInsets.all(12.0),
+                  padding: const EdgeInsets.all(12.0),
                   child: Text(
                       AppLocalizations.of(context)
                               ?.translate('choose_reciter_title') ??
                           'Choose Reciter',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
                 Expanded(
                   child: ListView.builder(

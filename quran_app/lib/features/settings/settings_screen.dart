@@ -50,7 +50,7 @@ class SettingsScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.settings_rounded,
                     color: Colors.white,
                     size: 28,
@@ -494,14 +494,14 @@ class SettingsScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
+                      gradient: const LinearGradient(
                         colors: [Colors.deepOrange, Colors.orange],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: Icon(Icons.gesture_rounded,
+                    child: const Icon(Icons.gesture_rounded,
                         color: Colors.white, size: 24),
                   ),
                   const SizedBox(width: 16),

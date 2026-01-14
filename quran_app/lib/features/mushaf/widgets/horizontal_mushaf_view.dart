@@ -98,18 +98,10 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   }
 
   void _onControllerChanged() {
-    final targetPage = widget.controller.currentPage - 1;
-    if (!_isSliderActive && _pageController.hasClients) {
-      // Don't interrupt user scrolling with external updates
-      if (_pageController.position.isScrollingNotifier.value) return;
-
-      if ((_pageController.page?.round() ?? -1) != targetPage) {
-        _sliderValue = null;
-        _isSliderActive = false;
-        // Use jumpToPage instead of animateToPage to avoid lag with IndexedStack
-        _pageController.jumpToPage(targetPage);
-      }
-    }
+    // Only repaint if necessary, but DO NOT force page jumps here.
+    // Page jumps are handled exclusively by _navSubscription to avoid
+    // race conditions where setHighlightedVerse() triggers a revert to an old page.
+    setState(() {});
   }
 
   @override
