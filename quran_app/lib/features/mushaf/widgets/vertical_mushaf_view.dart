@@ -15,6 +15,7 @@ import 'package:quran_app/features/mushaf/screens/verse_details_screen.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:share_plus/share_plus.dart';
+import 'play_range_dialog.dart';
 
 class VerticalMushafView extends StatefulWidget {
   final MushafController controller;
@@ -762,6 +763,14 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                   },
                 ),
                 _buildOptionTile(
+                  icon: Icons.playlist_play,
+                  title: 'Play to...',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _showPlayToDialog(rootContext, surah, verse);
+                  },
+                ),
+                _buildOptionTile(
                   icon: Icons.menu_book,
                   title: 'View Tafsir',
                   onTap: () {
@@ -1019,6 +1028,19 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
           surahNumber: surah,
           ayahNumber: verse,
         ),
+      ),
+    );
+  }
+
+  Future<void> _showPlayToDialog(
+      BuildContext context, int startSurah, int startVerse) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => PlayRangeDialog(
+        startSurah: startSurah,
+        startVerse: startVerse,
       ),
     );
   }

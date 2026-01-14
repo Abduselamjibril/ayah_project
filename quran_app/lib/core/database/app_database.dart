@@ -29,17 +29,6 @@ class AppDatabase {
   }
 
   Future<void> _createDB(Database db, int version) async {
-    // ... (rest of createDB, no changes needed as triggers will be dropped/recreated if needed, or we rely on _rebuildFtsWithNormalization being called if we add it to onCreate as well?
-    // Actually, onCreate calls _createDB. If we start fresh, we want normalized FTS too.
-    // _createFtsTables creates empty tables and triggers.
-    // We should probably call _rebuildFtsWithNormalization in _createDB OR modify _createFtsTables to not use raw copy.
-    // Simplifying: Just let onCreate finish, and then populate.
-    // But standard onCreate usage:
-    // Let's stick to _onUpgrade for now. New installs might strictly need this too.
-    // Ideally, _createFtsTables should just create tables. Population should be separate.
-
-    // For now, let's keep _createDB structure but ensure logic works.
-
     // Create Ayah table
     await db.execute('''
       CREATE TABLE ayahs (
@@ -53,9 +42,14 @@ class AppDatabase {
       )
     ''');
 
-    // ... (Skipping full _createDB body replacement to save tokens, assuming I target _onUpgrade mainly)
-    // Wait, I cannot skip in replace_file_content.
-    // I will just modify the _initDB and _onUpgrade and _createFtsTables logic in separate chunks if possible, or one big chunk for the changed parts.
+    // Create other core tables
+    await _createTranslationsTable(db);
+    await _createTafsirTable(db);
+    await _createBookmarksTable(db);
+    await _createNotesTable(db);
+
+    // Create FTS tables
+    await _createFtsTables(db);
   }
 
   Future<void> _createFtsTables(Database db) async {
@@ -212,7 +206,44 @@ class AppDatabase {
         'CREATE INDEX IF NOT EXISTS idx_notes_created_at ON notes (created_at DESC)');
   }
 
+  Future<void> _createTranslationsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS translations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        surah_number INTEGER NOT NULL,
+        ayah_number INTEGER NOT NULL,
+        text TEXT NOT NULL,
+        language TEXT NOT NULL,
+        edition_identifier TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_translations_surah_ayah ON translations (surah_number, ayah_number)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_translations_language ON translations (language)');
+  }
+
+  Future<void> _createTafsirTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS tafsir (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        surah_number INTEGER NOT NULL,
+        ayah_number INTEGER NOT NULL,
+        text TEXT NOT NULL,
+        author TEXT,
+        edition_identifier TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_tafsir_surah_ayah ON tafsir (surah_number, ayah_number)');
+  }
+
   /// Helper method to add a column only if it doesn't already exist
+
   Future<void> _addColumnIfNotExists(
     Database db,
     String tableName,
