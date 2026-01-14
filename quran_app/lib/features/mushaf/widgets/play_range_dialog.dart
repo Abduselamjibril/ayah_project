@@ -139,7 +139,8 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
             if (pageData.isNotEmpty) {
               final last = pageData.last;
               _playTo(int.parse(last['surah'].toString()),
-                  int.parse(last['verse'].toString()));
+                  int.parse(last['end'].toString()) // Correct key: 'end'
+                  );
             }
           },
         ),
@@ -262,14 +263,15 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
       itemBuilder: (context, index) {
         final pageNum = startPage + index;
 
-        // Get page info
+        // Get page info from the LAST segment on the page, as requested
         String pageInfo = '';
         try {
           final pageData = getPageData(pageNum);
           if (pageData.isNotEmpty) {
-            final first = pageData.first;
+            final last = pageData.last;
+            // Use 'surah' and 'end' keys
             pageInfo =
-                '${getSurahName(int.parse(first['surah'].toString()))} - ${first['verse']}';
+                '${getSurahName(int.parse(last['surah'].toString()))} : ${last['end']}';
           }
         } catch (_) {}
 
@@ -279,7 +281,8 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
             if (pageData.isNotEmpty) {
               final last = pageData.last;
               _playTo(int.parse(last['surah'].toString()),
-                  int.parse(last['verse'].toString()));
+                  int.parse(last['end'].toString()) // Use correct 'end' key
+                  );
             }
           },
           leading: const Icon(Icons.auto_stories_outlined),
