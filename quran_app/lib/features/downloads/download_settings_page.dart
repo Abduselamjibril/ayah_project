@@ -151,7 +151,7 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
                 Text(
                   AppLocalizations.of(context)?.translate('about_downloads') ??
                       'About Downloads',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: Colors.grey,

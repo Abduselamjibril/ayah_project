@@ -129,9 +129,9 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
           shaderCallback: (bounds) {
             return LinearGradient(
               colors: [
-                theme.colorScheme.surfaceVariant,
+                theme.colorScheme.surfaceContainerHighest,
                 theme.colorScheme.surface,
-                theme.colorScheme.surfaceVariant,
+                theme.colorScheme.surfaceContainerHighest,
               ],
               stops: [
                 _controller.value - 0.3,

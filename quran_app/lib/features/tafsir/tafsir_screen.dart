@@ -7,7 +7,6 @@ import 'package:quran_app/core/services/tafsir_service.dart';
 import 'package:quran_app/core/services/translation_service.dart';
 import 'package:quran_app/data/models/tafsir_model.dart';
 import 'package:quran_app/data/models/translation_model.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
 
 class TafsirScreen extends StatefulWidget {
