@@ -10,8 +10,7 @@ import '../widgets/vertical_mushaf_view.dart';
 import '../../search/search_screen.dart';
 import 'package:quran_app/features/mushaf/widgets/surah_drawer.dart';
 import '../../daily_verse/verse_of_the_day_screen.dart';
-
-const _brandGreen = Color(0xFF0B7743);
+import 'package:quran_app/app/app.dart';
 
 class MushafScreen extends StatefulWidget {
   const MushafScreen({super.key});
@@ -102,7 +101,7 @@ class _MushafScreenState extends State<MushafScreen> {
                           children: [
                             IconButton(
                               icon: const Icon(Icons.menu_rounded),
-                              color: _brandGreen,
+                              color: BrandColors.accent,
                               tooltip: AppLocalizations.of(context)
                                       ?.translate('surahs_tooltip') ??
                                   'Surahs',
@@ -112,7 +111,7 @@ class _MushafScreenState extends State<MushafScreen> {
                             const SizedBox(width: 8),
                             IconButton(
                               icon: const Icon(Icons.search_rounded),
-                              color: _brandGreen,
+                              color: BrandColors.accent,
                               tooltip: AppLocalizations.of(context)
                                       ?.translate('search_tooltip') ??
                                   'Search',
@@ -121,7 +120,7 @@ class _MushafScreenState extends State<MushafScreen> {
                             const Spacer(),
                             IconButton(
                               icon: const Icon(Icons.calendar_month_rounded),
-                              color: _brandGreen,
+                              color: BrandColors.accent,
                               tooltip: AppLocalizations.of(context)
                                       ?.translate('verse_of_the_day_tooltip') ??
                                   'Verse of the Day',
@@ -142,7 +141,7 @@ class _MushafScreenState extends State<MushafScreen> {
                             ),
                             IconButton(
                               icon: const Icon(Icons.settings_rounded),
-                              color: _brandGreen,
+                              color: BrandColors.accent,
                               tooltip: AppLocalizations.of(context)
                                       ?.translate('settings_tooltip') ??
                                   'Settings',

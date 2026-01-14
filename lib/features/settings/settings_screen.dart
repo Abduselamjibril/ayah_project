@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
 import 'package:quran_app/core/services/language_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:quran_app/app/app.dart';
 
 // Assuming these pages exist in your project structure
 import 'daily_verse_settings_page.dart';
@@ -40,7 +41,7 @@ class SettingsScreen extends StatelessWidget {
               backgroundColor: cardColor,
               child: Icon(
                 Icons.arrow_back_ios_new_rounded,
-                color: theme.colorScheme.primary,
+                color: BrandColors.accent,
                 size: 22,
               ),
             ),
@@ -76,8 +77,7 @@ class SettingsScreen extends StatelessWidget {
                   context: context,
                   iconColor: iconColor,
                   icon: Icons.language_rounded,
-                  label:
-                      AppLocalizations.of(
+                  label: AppLocalizations.of(
                         context,
                       )?.translate('language_title') ??
                       'Language',
@@ -88,8 +88,7 @@ class SettingsScreen extends StatelessWidget {
                   context: context,
                   iconColor: iconColor,
                   icon: Icons.palette_outlined,
-                  label:
-                      AppLocalizations.of(
+                  label: AppLocalizations.of(
                         context,
                       )?.translate('app_theme_title') ??
                       'App Theme',
@@ -116,8 +115,7 @@ class SettingsScreen extends StatelessWidget {
                   context: context,
                   iconColor: iconColor,
                   icon: Icons.download_rounded,
-                  label:
-                      AppLocalizations.of(
+                  label: AppLocalizations.of(
                         context,
                       )?.translate('downloads_title') ??
                       'Downloads',
@@ -142,8 +140,7 @@ class SettingsScreen extends StatelessWidget {
                   context: context,
                   iconColor: iconColor,
                   icon: Icons.notifications_active_outlined,
-                  label:
-                      AppLocalizations.of(
+                  label: AppLocalizations.of(
                         context,
                       )?.translate('reminders_title') ??
                       'Reminders',
@@ -157,8 +154,7 @@ class SettingsScreen extends StatelessWidget {
                   context: context,
                   iconColor: iconColor,
                   icon: Icons.calendar_month_outlined,
-                  label:
-                      AppLocalizations.of(
+                  label: AppLocalizations.of(
                         context,
                       )?.translate('daily_inspiration_title') ??
                       'Daily Inspiration',
@@ -183,8 +179,7 @@ class SettingsScreen extends StatelessWidget {
                   context: context,
                   iconColor: iconColor,
                   icon: Icons.info_outline_rounded,
-                  label:
-                      AppLocalizations.of(
+                  label: AppLocalizations.of(
                         context,
                       )?.translate('about_app_title') ??
                       'About App',
@@ -232,12 +227,12 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Widget _divider(BuildContext context) => Divider(
-    height: 0,
-    thickness: 0.7,
-    indent: 60,
-    endIndent: 0,
-    color: Theme.of(context).dividerColor.withOpacity(0.3),
-  );
+        height: 0,
+        thickness: 0.7,
+        indent: 60,
+        endIndent: 0,
+        color: Theme.of(context).dividerColor.withOpacity(0.3),
+      );
 
   Widget _buildGestureToggleContainer(BuildContext context, Color iconColor) {
     final theme = Theme.of(context);

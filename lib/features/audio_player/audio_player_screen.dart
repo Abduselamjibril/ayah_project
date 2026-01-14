@@ -11,8 +11,7 @@ import 'package:quran_app/features/mushaf/widgets/mushaf_audio_navigation.dart';
 
 import '../../core/quran/qcf_quran.dart';
 import '../mushaf/controller/mushaf_controller.dart';
-
-const _brandGreen = Color(0xFF0B7743);
+import 'package:quran_app/app/app.dart';
 
 /// Reusable audio player card used by mushaf views.
 class AudioPlayerCard extends StatefulWidget {
@@ -40,9 +39,9 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   double _downloadProgress = 0.0;
   String _reciterName = '';
 
-    String get _labelText => _audioName.isEmpty
+  String get _labelText => _audioName.isEmpty
       ? (AppLocalizations.of(context)?.translate('select_recitation') ??
-        'Select Recitation')
+          'Select Recitation')
       : _audioName;
 
   @override
@@ -135,17 +134,17 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                         child: Text(
                           _labelText,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: _brandGreen,
+                          style: TextStyle(
+                            color: BrandColors.accent,
                             fontWeight: FontWeight.w700,
                             fontSize: 16,
                           ),
                         ),
                       ),
                       const SizedBox(width: 6),
-                      const Icon(
+                      Icon(
                         Icons.expand_more_rounded,
-                        color: _brandGreen,
+                        color: BrandColors.accent,
                         size: 22,
                       ),
                     ],
@@ -169,17 +168,18 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
-                            value:
-                                _downloadProgress > 0 ? _downloadProgress : null,
+                            value: _downloadProgress > 0
+                                ? _downloadProgress
+                                : null,
                             strokeWidth: 3,
-                            color: _brandGreen,
+                            color: BrandColors.accent,
                           ),
                         )
                       : Icon(
                           _isPlaying
                               ? Icons.pause_rounded
                               : Icons.play_arrow_rounded,
-                          color: _brandGreen,
+                          color: BrandColors.accent,
                         ),
                   onPressed: _togglePlayPause,
                 ),

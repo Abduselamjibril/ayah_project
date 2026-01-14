@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
 import '../../core/quran/qcf_quran.dart';
+import 'package:quran_app/app/app.dart';
 
 import '../../core/services/verse_of_the_day_service.dart';
 import '../../data/models/hijri_date_model.dart';
@@ -130,15 +131,12 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color:
-                            theme.colorScheme.onSurface.withOpacity(0.08),
+                        color: theme.colorScheme.onSurface.withOpacity(0.08),
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
                         padding: EdgeInsets.zero,
-                        icon: Icon(Icons.close,
-                            color:
-                                theme.colorScheme.onSurface.withOpacity(0.8)),
+                        icon: Icon(Icons.close, color: BrandColors.accent),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     ),
@@ -161,7 +159,8 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                     final hijri = data?.hijri;
                     final greg = data?.gregorian;
 
-                    Widget buildCard({required String month, required String day}) {
+                    Widget buildCard(
+                        {required String month, required String day}) {
                       return Expanded(
                         child: Container(
                           margin: const EdgeInsets.symmetric(horizontal: 6),
@@ -211,7 +210,6 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                     );
                   },
                 ),
-
                 const SizedBox(height: 28),
                 Text(
                   AppLocalizations.of(context)
@@ -266,8 +264,7 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                       const SizedBox(height: 12),
                       Divider(
                         height: 1,
-                        color:
-                            theme.colorScheme.onSurface.withOpacity(0.08),
+                        color: theme.colorScheme.onSurface.withOpacity(0.08),
                       ),
                       const SizedBox(height: 8),
                       InkWell(
@@ -306,13 +303,11 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                         ),
                       ),
                       if (!_isLoadingTranslation) ...[
-                        if (_hasSelectedTranslation &&
-                            _translationText != null)
+                        if (_hasSelectedTranslation && _translationText != null)
                           AnimatedCrossFade(
                             firstChild: const SizedBox.shrink(),
                             secondChild: Padding(
-                              padding:
-                                  const EdgeInsets.only(top: 8, bottom: 4),
+                              padding: const EdgeInsets.only(top: 8, bottom: 4),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -372,11 +367,10 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                                     );
                                     if (mounted) _loadTranslation();
                                   },
-                                  icon:
-                                      const Icon(Icons.download_for_offline),
+                                  icon: const Icon(Icons.download_for_offline),
                                   label: Text(
-                                    AppLocalizations.of(context)?.translate(
-                                            'select_translation') ??
+                                    AppLocalizations.of(context)
+                                            ?.translate('select_translation') ??
                                         'Select Translation',
                                   ),
                                 ),

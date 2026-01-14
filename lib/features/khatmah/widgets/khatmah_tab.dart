@@ -4,6 +4,7 @@ import '../models/khatmah.dart';
 import '../services/khatmah_service.dart';
 import '../../mushaf/controller/mushaf_controller.dart';
 import '../screens/khatmah_reading_screen.dart';
+import 'package:quran_app/app/app.dart';
 
 class KhatmahTab extends StatefulWidget {
   final MushafController controller;
@@ -15,7 +16,6 @@ class KhatmahTab extends StatefulWidget {
 }
 
 class _KhatmahTabState extends State<KhatmahTab> {
-  static const Color _brandGreen = Color(0xFF20d684);
   final KhatmahService _service = KhatmahService();
   List<Khatmah> _khatmahs = [];
   bool _isLoading = true;
@@ -57,6 +57,7 @@ class _KhatmahTabState extends State<KhatmahTab> {
     final theme = Theme.of(context);
     final background = theme.scaffoldBackgroundColor;
     final onBackground = theme.colorScheme.onSurface;
+    final accent = BrandColors.accent;
 
     Widget bodyContent;
     Widget? floatingActionButton;
@@ -82,7 +83,7 @@ class _KhatmahTabState extends State<KhatmahTab> {
           style: const TextStyle(color: Colors.white),
         ),
         icon: const Icon(Icons.add, color: Colors.white),
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: accent,
         foregroundColor: Colors.white,
       );
     }
@@ -94,7 +95,8 @@ class _KhatmahTabState extends State<KhatmahTab> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8),
               child: Row(
                 children: [
                   Expanded(
@@ -119,7 +121,7 @@ class _KhatmahTabState extends State<KhatmahTab> {
                       icon: Icon(
                         Icons.arrow_forward_ios,
                         size: 18,
-                        color: _brandGreen,
+                        color: BrandColors.accent,
                       ),
                       onPressed: () {
                         Navigator.of(context).maybePop();
@@ -161,12 +163,12 @@ class _KhatmahTabState extends State<KhatmahTab> {
           ElevatedButton(
             onPressed: _showDurationOptions,
             style: ElevatedButton.styleFrom(
-              backgroundColor: _brandGreen,
+              backgroundColor: BrandColors.accent,
               minimumSize: const Size(double.infinity, 56),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              foregroundColor: Colors.black,
+              foregroundColor: Colors.white,
               textStyle: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
@@ -245,7 +247,7 @@ class _KhatmahTabState extends State<KhatmahTab> {
       },
       style: ElevatedButton.styleFrom(
         minimumSize: const Size(double.infinity, 50),
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: BrandColors.accent,
         foregroundColor: Colors.white,
       ),
       child: Text(text),
@@ -302,9 +304,9 @@ class _KhatmahTabState extends State<KhatmahTab> {
                           )?.translate('percent_completed') ??
                           '{percent}% Completed')
                       .replaceAll(
-                        '{percent}',
-                        (progress * 100).toStringAsFixed(1),
-                      ),
+                    '{percent}',
+                    (progress * 100).toStringAsFixed(1),
+                  ),
                   style: const TextStyle(color: Colors.grey),
                 ),
                 Text(
@@ -367,7 +369,7 @@ class _KhatmahTabState extends State<KhatmahTab> {
                         'Read Now',
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
+                    backgroundColor: BrandColors.accent,
                     foregroundColor: Colors.white,
                   ),
                 ),

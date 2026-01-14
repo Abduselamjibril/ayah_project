@@ -15,8 +15,7 @@ import 'package:quran_app/features/mushaf/screens/verse_details_screen.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:share_plus/share_plus.dart';
-
-const _brandGreen = Color(0xFF0B7743);
+import 'package:quran_app/app/app.dart';
 
 class VerticalMushafView extends StatefulWidget {
   final MushafController controller;
@@ -304,126 +303,142 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                 const SizedBox(height: 8),
                 _buildAudioPlayerCard(),
                 const SizedBox(height: 8),
-                Card(
-                  elevation: 16,
-                  margin: EdgeInsets.zero,
-                  color:
-                      Theme.of(context).colorScheme.surface.withOpacity(0.95),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(0),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(
-                        12, 2, 12, MediaQuery.of(context).padding.bottom + 8),
-                    child: Directionality(
-                      textDirection: TextDirection.rtl,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          _NavPill(
-                            icon: Icons.arrow_back_rounded,
-                            label: currentPage > 1 ? '${currentPage - 1}' : '',
-                            enabled: currentPage > 1,
-                            onTap: () => _navigateToPage(currentPage - 1),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                SliderTheme(
-                                  data: SliderTheme.of(context).copyWith(
-                                    trackHeight: 12,
-                                    inactiveTrackColor:
-                                        Colors.black.withOpacity(0.2),
-                                    activeTrackColor:
-                                        Colors.black.withOpacity(0.2),
-                                    thumbShape: const RoundSliderThumbShape(
-                                        enabledThumbRadius: 0.0),
-                                    overlayShape:
-                                        const RoundSliderOverlayShape(overlayRadius: 0),
-                                  ),
-                                  child: Slider(
-                                    min: 1,
-                                    max: 604,
-                                    divisions: 603,
-                                    value: currentDouble,
-                                    onChangeStart: (value) {
-                                      _stopAutoScroll();
-                                      setState(() {
-                                        _isSliderActive = true;
-                                        _sliderValue = value;
-                                        _overlayVisible = true;
-                                      });
-                                      _scheduleAutoHide();
-                                    },
-                                    onChanged: (value) {
-                                      setState(() {
-                                        _overlayVisible = true;
-                                        _sliderValue = value;
-                                      });
-                                      _scheduleAutoHide();
-                                    },
-                                    onChangeEnd: (value) {
-                                      _stopAutoScroll();
-                                      final page = value.round();
-                                      setState(() {
-                                        _isSliderActive = false;
-                                        _sliderValue = null;
-                                      });
-                                      _navigateToPage(page);
-                                      _scheduleAutoHide();
-                                    },
-                                  ),
-                                ),
-                                IgnorePointer(
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 14, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: _brandGreen,
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: Text(
-                                      '$currentPage',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w700,
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 540),
+                    child: Card(
+                      elevation: 16,
+                      margin: EdgeInsets.zero,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surface
+                          .withOpacity(0.95),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(12, 2, 12,
+                            MediaQuery.of(context).padding.bottom + 8),
+                        child: Directionality(
+                          textDirection: TextDirection.rtl,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              _NavPill(
+                                icon: Icons.subdirectory_arrow_left,
+                                label:
+                                    currentPage > 1 ? '${currentPage - 1}' : '',
+                                enabled: currentPage > 1,
+                                onTap: () => _navigateToPage(currentPage - 1),
+                              ),
+                              const SizedBox(width: 12),
+                              SizedBox(
+                                width: 260,
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    SliderTheme(
+                                      data: SliderTheme.of(context).copyWith(
+                                        trackHeight: 8,
+                                        inactiveTrackColor:
+                                            Colors.black.withOpacity(0.2),
+                                        activeTrackColor:
+                                            Colors.black.withOpacity(0.2),
+                                        thumbShape: const RoundSliderThumbShape(
+                                            enabledThumbRadius: 0.0),
+                                        overlayShape:
+                                            const RoundSliderOverlayShape(
+                                                overlayRadius: 0),
+                                      ),
+                                      child: Slider(
+                                        min: 1,
+                                        max: 604,
+                                        divisions: 603,
+                                        value: currentDouble,
+                                        onChangeStart: (value) {
+                                          _stopAutoScroll();
+                                          setState(() {
+                                            _isSliderActive = true;
+                                            _sliderValue = value;
+                                            _overlayVisible = true;
+                                          });
+                                          _scheduleAutoHide();
+                                        },
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _overlayVisible = true;
+                                            _sliderValue = value;
+                                          });
+                                          _scheduleAutoHide();
+                                        },
+                                        onChangeEnd: (value) {
+                                          _stopAutoScroll();
+                                          final page = value.round();
+                                          setState(() {
+                                            _isSliderActive = false;
+                                            _sliderValue = null;
+                                          });
+                                          _navigateToPage(page);
+                                          _scheduleAutoHide();
+                                        },
                                       ),
                                     ),
-                                  ),
+                                    IgnorePointer(
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 14, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: BrandColors.accent,
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                        ),
+                                        child: Text(
+                                          '$currentPage',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(width: 12),
+                              _NavPill(
+                                icon: Icons.arrow_forward_rounded,
+                                label: currentPage < 604
+                                    ? '${currentPage + 1}'
+                                    : '',
+                                enabled: currentPage < 604,
+                                onTap: () => _navigateToPage(currentPage + 1),
+                              ),
+                              const SizedBox(width: 8),
+                              SizedBox(
+                                width: 44,
+                                child: IconButton(
+                                  tooltip:
+                                      'Auto-scroll (tap to start/stop, long press to set speed)',
+                                  icon: const Icon(Icons.arrow_upward),
+                                  color: BrandColors.accent.withOpacity(
+                                      _isAutoScrolling ? 1.0 : 0.35),
+                                  onPressed: () {
+                                    setState(() {
+                                      _overlayVisible = true;
+                                    });
+                                    if (_isAutoScrolling) {
+                                      _stopAutoScroll();
+                                    } else {
+                                      _startAutoScroll();
+                                    }
+                                    _scheduleAutoHide();
+                                  },
+                                  onLongPress: _showAutoScrollSpeedSheet,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 12),
-                          _NavPill(
-                            icon: Icons.arrow_forward_rounded,
-                            label: currentPage < 604 ? '${currentPage + 1}' : '',
-                            enabled: currentPage < 604,
-                            onTap: () => _navigateToPage(currentPage + 1),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            tooltip:
-                                'Auto-scroll (tap to start/stop, long press to set speed)',
-                            icon: const Icon(Icons.arrow_upward),
-                            color: _brandGreen.withOpacity(
-                                _isAutoScrolling ? 1.0 : 0.35),
-                            onPressed: () {
-                              setState(() {
-                                _overlayVisible = true;
-                              });
-                              if (_isAutoScrolling) {
-                                _stopAutoScroll();
-                              } else {
-                                _startAutoScroll();
-                              }
-                              _scheduleAutoHide();
-                            },
-                            onLongPress: _showAutoScrollSpeedSheet,
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
@@ -437,7 +452,23 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   }
 
   Widget _buildAudioPlayerCard() {
-    return AudioPlayerCard(controller: widget.controller);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Material(
+            elevation: 8,
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: AudioPlayerCard(controller: widget.controller),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _showSnack(String message) {
@@ -1151,7 +1182,7 @@ class _NavPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color iconColor = enabled
-        ? _brandGreen
+        ? BrandColors.accent
         : Theme.of(context).colorScheme.onSurface.withOpacity(0.25);
 
     return Column(
@@ -1163,6 +1194,8 @@ class _NavPill extends StatelessWidget {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           child: IconButton(
             onPressed: enabled ? onTap : null,
+            iconSize: 28,
+            padding: const EdgeInsets.all(8),
             icon: Icon(icon, color: iconColor),
           ),
         ),
@@ -1172,6 +1205,7 @@ class _NavPill extends StatelessWidget {
             style: TextStyle(
               color: iconColor,
               fontWeight: FontWeight.w700,
+              fontSize: 13,
             ),
           ),
       ],

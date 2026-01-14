@@ -6,8 +6,7 @@ import 'package:quran_app/core/ui/loading_indicator.dart';
 import 'package:quran_app/core/ui/empty_state.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
 import 'package:quran_app/core/utils/arabic_normalizer.dart';
-
-const _brandGreen = Color(0xFF0B7743);
+import 'package:quran_app/app/app.dart';
 
 class SearchScreen extends StatefulWidget {
   final String query;
@@ -139,7 +138,7 @@ class _SearchScreenState extends State<SearchScreen>
                 TextButton(
                   onPressed: () => Navigator.of(context).maybePop(),
                   style: TextButton.styleFrom(
-                    foregroundColor: _brandGreen,
+                    foregroundColor: BrandColors.accent,
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                   ),
                   child: const Text(
@@ -239,8 +238,7 @@ class _SearchScreenState extends State<SearchScreen>
           },
           textInputAction: TextInputAction.search,
           decoration: InputDecoration(
-            hintText: AppLocalizations.of(context)
-                    ?.translate('search_hint') ??
+            hintText: AppLocalizations.of(context)?.translate('search_hint') ??
                 'Type a word or page number',
             hintStyle: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurface.withOpacity(0.55),

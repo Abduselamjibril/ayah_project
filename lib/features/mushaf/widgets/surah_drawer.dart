@@ -8,8 +8,7 @@ import '../../../core/quran/data/juzs.dart';
 import '../../khatmah/widgets/khatmah_tab.dart';
 import '../../../core/quran/qcf_quran.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
-
-const _brandGreen = Color(0xFF0B7743);
+import 'package:quran_app/app/app.dart';
 
 enum NavigationMode { surah, juz }
 
@@ -74,10 +73,10 @@ class _SurahDrawerState extends State<SurahDrawer>
                 child: Center(
                   child: Text(
                     (index + 1).toString(),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 11,
-                      color: _brandGreen,
+                      color: BrandColors.accent,
                     ),
                   ),
                 ),
@@ -131,15 +130,17 @@ class _SurahDrawerState extends State<SurahDrawer>
                 child: Center(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.12),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.12),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         _buildTopToggleButton(
-                          label:
-                              AppLocalizations.of(
+                          label: AppLocalizations.of(
                                 context,
                               )?.translate('toggle_surahs') ??
                               'Sūrahs',
@@ -151,8 +152,8 @@ class _SurahDrawerState extends State<SurahDrawer>
                           },
                         ),
                         _buildTopToggleButton(
-                          label:
-                              AppLocalizations.of(context)?.translate('toggle_juz') ??
+                          label: AppLocalizations.of(context)
+                                  ?.translate('toggle_juz') ??
                               'Quarters',
                           isSelected: _navigationMode == NavigationMode.juz,
                           onTap: () {
@@ -171,14 +172,15 @@ class _SurahDrawerState extends State<SurahDrawer>
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.14),
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withOpacity(0.14),
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(
                   padding: EdgeInsets.zero,
                   icon: Icon(
                     Icons.chevron_right,
-                    color: _brandGreen,
+                    color: BrandColors.accent,
                   ),
                   onPressed: () => Navigator.of(context).maybePop(),
                 ),
@@ -423,32 +425,28 @@ class _SurahDrawerState extends State<SurahDrawer>
             _selectedTabIndex = index;
           });
         },
-        selectedItemColor: const Color(0xFF0B7743),
+        selectedItemColor: BrandColors.accent,
         unselectedItemColor:
             Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
         items: [
           BottomNavigationBarItem(
             icon: const Icon(Icons.menu_book_rounded),
-            label:
-                AppLocalizations.of(context)?.translate('tab_surah') ??
+            label: AppLocalizations.of(context)?.translate('tab_surah') ??
                 'Contents',
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.check_circle_outline),
-            label:
-                AppLocalizations.of(context)?.translate('tab_khatmah') ??
+            label: AppLocalizations.of(context)?.translate('tab_khatmah') ??
                 'Khatmah',
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.bookmark),
-            label:
-                AppLocalizations.of(context)?.translate('tab_bookmarks') ??
+            label: AppLocalizations.of(context)?.translate('tab_bookmarks') ??
                 'Bookmarks',
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.sticky_note_2_outlined),
-            label:
-                AppLocalizations.of(context)?.translate('tab_notes') ??
+            label: AppLocalizations.of(context)?.translate('tab_notes') ??
                 'Highlights',
           ),
         ],
@@ -460,7 +458,7 @@ class _SurahDrawerState extends State<SurahDrawer>
   }
 
   Widget _buildBookmarksList() {
-    const brandGreen = Color(0xFF20d684);
+    const brandGreen = BrandColors.accent;
     return Consumer<BookmarkNotesNotifier>(
       builder: (context, state, _) {
         // Header + Title
@@ -475,7 +473,8 @@ class _SurahDrawerState extends State<SurahDrawer>
                 style: TextButton.styleFrom(
                   foregroundColor: brandGreen,
                   padding: EdgeInsets.zero,
-                  textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                  textStyle: const TextStyle(
+                      fontSize: 17, fontWeight: FontWeight.w600),
                 ),
                 child: Text(_isEditingBookmarks ? 'Done' : 'Edit'),
               ),
@@ -484,12 +483,14 @@ class _SurahDrawerState extends State<SurahDrawer>
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(
                   padding: EdgeInsets.zero,
-                  icon: const Icon(Icons.arrow_forward_ios, size: 18, color: brandGreen),
+                  icon: const Icon(Icons.arrow_forward_ios,
+                      size: 18, color: brandGreen),
                   onPressed: () => Navigator.of(context).maybePop(),
                 ),
               ),
@@ -529,7 +530,8 @@ class _SurahDrawerState extends State<SurahDrawer>
               const labels = ['Red', 'Yellow', 'Green', 'Blue'];
               const colors = [0xFFF44336, 0xFFFFC107, 0xFF4CAF50, 0xFF2196F3];
               return ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 leading: Icon(
                   Icons.bookmark_border_rounded,
                   color: Color(colors[index]),
@@ -537,7 +539,8 @@ class _SurahDrawerState extends State<SurahDrawer>
                 ),
                 title: Text(
                   labels[index],
-                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                      fontSize: 17, fontWeight: FontWeight.w600),
                 ),
                 onTap: () {
                   // Optional: Implement filter by color
@@ -554,7 +557,9 @@ class _SurahDrawerState extends State<SurahDrawer>
             padding: const EdgeInsets.symmetric(vertical: 24),
             child: _buildEmptyState(
               icon: Icons.bookmark_border,
-              message: AppLocalizations.of(context)?.translate('no_bookmarks') ?? 'No bookmarks yet',
+              message:
+                  AppLocalizations.of(context)?.translate('no_bookmarks') ??
+                      'No bookmarks yet',
             ),
           );
         } else {
@@ -570,18 +575,23 @@ class _SurahDrawerState extends State<SurahDrawer>
             itemBuilder: (context, index) {
               final bookmark = state.bookmarks[index];
               final surahName = surah[bookmark.surahId - 1]['name'] ?? 'Surah';
-              final verseText = _getVerseTextCached(bookmark.surahId, bookmark.ayahId);
+              final verseText =
+                  _getVerseTextCached(bookmark.surahId, bookmark.ayahId);
               final color = Color(_parseColor(bookmark.colorHex));
 
               return ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 leading: Icon(
-                  bookmark.isKhatmahPin ? Icons.push_pin : Icons.bookmark_outline_rounded,
+                  bookmark.isKhatmahPin
+                      ? Icons.push_pin
+                      : Icons.bookmark_outline_rounded,
                   color: color,
                 ),
                 title: Text(
                   '$surahName • ${bookmark.surahId}:${bookmark.ayahId}',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w600),
                 ),
                 subtitle: Directionality(
                   textDirection: TextDirection.rtl,
@@ -601,7 +611,8 @@ class _SurahDrawerState extends State<SurahDrawer>
                       )
                     : null,
                 onTap: () {
-                  widget.controller.navigateToVerse(bookmark.surahId, bookmark.ayahId);
+                  widget.controller
+                      .navigateToVerse(bookmark.surahId, bookmark.ayahId);
                   Navigator.pop(context);
                 },
               );
@@ -632,8 +643,7 @@ class _SurahDrawerState extends State<SurahDrawer>
         if (notes.isEmpty && !_isSearchingNotes) {
           return _buildEmptyState(
             icon: Icons.note_alt_outlined,
-            message:
-                AppLocalizations.of(context)?.translate('no_notes') ??
+            message: AppLocalizations.of(context)?.translate('no_notes') ??
                 'No notes yet',
           );
         }
@@ -646,8 +656,7 @@ class _SurahDrawerState extends State<SurahDrawer>
                 controller: _noteSearchController,
                 decoration: InputDecoration(
                   prefixIcon: const Icon(Icons.search),
-                  hintText:
-                      AppLocalizations.of(
+                  hintText: AppLocalizations.of(
                         context,
                       )?.translate('search_notes_hint') ??
                       'Search notes',

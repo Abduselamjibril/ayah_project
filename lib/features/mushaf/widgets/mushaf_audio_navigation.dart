@@ -5,8 +5,7 @@ import 'package:quran_app/core/services/audio_player_service.dart';
 import 'package:quran_app/core/services/audio_service.dart';
 import 'package:quran_app/data/models/audio_model.dart';
 import 'package:quran_app/features/downloads/audio_surah_list_page.dart';
-
-const _brandGreen = Color(0xFF0B7743);
+import 'package:quran_app/app/app.dart';
 
 Future<AudioRecitation?> ensureMushafReciterSelected(
   BuildContext context,
@@ -79,7 +78,7 @@ Future<AudioRecitation?> showReciterPickerSheet(
                         TextButton(
                           onPressed: () {},
                           style: TextButton.styleFrom(
-                            foregroundColor: _brandGreen,
+                            foregroundColor: BrandColors.accent,
                           ),
                           child: const Text('Edit'),
                         ),
@@ -103,8 +102,7 @@ Future<AudioRecitation?> showReciterPickerSheet(
                           child: IconButton(
                             padding: EdgeInsets.zero,
                             icon: const Icon(Icons.close, size: 18),
-                            color:
-                                theme.colorScheme.onSurface.withOpacity(0.8),
+                            color: theme.colorScheme.onSurface.withOpacity(0.8),
                             onPressed: () => Navigator.of(context).pop(),
                           ),
                         ),
@@ -115,15 +113,14 @@ Future<AudioRecitation?> showReciterPickerSheet(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
-                        color:
-                            theme.colorScheme.onSurface.withOpacity(0.05),
+                        color: theme.colorScheme.onSurface.withOpacity(0.05),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
                         children: [
                           Icon(Icons.search,
-                              color: theme.colorScheme.onSurface
-                                  .withOpacity(0.6)),
+                              color:
+                                  theme.colorScheme.onSurface.withOpacity(0.6)),
                           const SizedBox(width: 8),
                           Expanded(
                             child: TextField(
@@ -223,12 +220,13 @@ Future<AudioRecitation?> showReciterPickerSheet(
                                     height: 32,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      border: Border.all(color: _brandGreen),
+                                      border:
+                                          Border.all(color: BrandColors.accent),
                                     ),
                                     child: Icon(
                                       Icons.info_outline,
                                       size: 18,
-                                      color: _brandGreen,
+                                      color: BrandColors.accent,
                                     ),
                                   ),
                                 ],

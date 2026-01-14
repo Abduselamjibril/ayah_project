@@ -13,8 +13,7 @@ import '../../audio_player/audio_player_screen.dart';
 import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart';
 import '../controller/mushaf_controller.dart';
 import '../screens/verse_details_screen.dart';
-
-const _brandGreen = Color(0xFF0B7743);
+import 'package:quran_app/app/app.dart';
 
 class HorizontalMushafView extends StatefulWidget {
   final MushafController controller;
@@ -116,6 +115,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
 
   @override
   Widget build(BuildContext context) {
+    final accent = BrandColors.accent;
     final bookmarkState = context.watch<BookmarkNotesNotifier>();
     return Stack(
       children: [
@@ -251,105 +251,147 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                 const SizedBox(height: 4),
                 _buildAudioPlayerCard(),
                 const SizedBox(height: 2),
-                Card(
-                  elevation: 16,
-                  margin: EdgeInsets.zero,
-                  color:
-                      Theme.of(context).colorScheme.surface.withOpacity(0.95),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(0),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      12, 4, 12, MediaQuery.of(context).padding.bottom + 8),
-                    child: Directionality(
-                      textDirection: TextDirection.ltr,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          _NavPill(
-                            icon: Icons.subdirectory_arrow_left,
-                            label: currentPage > 1 ? '${currentPage - 1}' : '',
-                            enabled: currentPage > 1,
-                            onTap: () => _navigateToPage(currentPage - 1),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                SliderTheme(
-                                  data: SliderTheme.of(context).copyWith(
-                                  trackHeight: 8,
-                                  inactiveTrackColor: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withOpacity(0.2),
-                                  activeTrackColor: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withOpacity(0.2),
-                                    thumbShape: const RoundSliderThumbShape(
-                                        enabledThumbRadius: 0.0),
-                                    overlayShape:
-                                        const RoundSliderOverlayShape(overlayRadius: 0),
-                                  ),
-                                  child: Slider(
-                                    min: 1,
-                                    max: 604,
-                                    divisions: 603,
-                                    value: currentDouble,
-                                    onChangeStart: (value) {
-                                      setState(() {
-                                        _isSliderActive = true;
-                                        _sliderValue = value;
-                                        _overlayVisible = true;
-                                      });
-                                      _scheduleAutoHide();
-                                    },
-                                    onChanged: (value) {
-                                      setState(() {
-                                        _overlayVisible = true;
-                                        _sliderValue = value;
-                                      });
-                                      _scheduleAutoHide();
-                                    },
-                                    onChangeEnd: (value) {
-                                      final page = value.round();
-                                      setState(() {
-                                        _isSliderActive = false;
-                                        _sliderValue = null;
-                                      });
-                                      _navigateToPage(page);
-                                      _scheduleAutoHide();
-                                    },
-                                  ),
-                                ),
-                                IgnorePointer(
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 5),
-                                    decoration: BoxDecoration(
-                                      color: _brandGreen,
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: Text(
-                                      '$currentPage',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w700,
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 540),
+                    child: Card(
+                      elevation: 16,
+                      margin: EdgeInsets.zero,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surface
+                          .withOpacity(0.95),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          12,
+                          4,
+                          12,
+                          MediaQuery.of(context).padding.bottom + 8,
+                        ),
+                        child: Directionality(
+                          textDirection: TextDirection.ltr,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              _NavPill(
+                                icon: Icons.subdirectory_arrow_left,
+                                label:
+                                    currentPage > 1 ? '${currentPage - 1}' : '',
+                                enabled: currentPage > 1,
+                                onTap: () => _navigateToPage(currentPage - 1),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: LayoutBuilder(
+                                  builder: (context, c) {
+                                    const double trackH = 28;
+                                    const double pillW = 44;
+                                    const double minV = 1.0;
+                                    const double maxV = 604.0;
+                                    final double fraction =
+                                        ((currentDouble - minV) / (maxV - minV))
+                                            .clamp(0.0, 1.0);
+                                    final double left =
+                                        (c.maxWidth - pillW) * fraction;
+                                    return SizedBox(
+                                      height: trackH,
+                                      child: Stack(
+                                        children: [
+                                          Positioned.fill(
+                                            child: SliderTheme(
+                                              data: SliderTheme.of(context)
+                                                  .copyWith(
+                                                trackHeight: trackH,
+                                                inactiveTrackColor:
+                                                    Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurface
+                                                        .withOpacity(0.2),
+                                                activeTrackColor:
+                                                    Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurface
+                                                        .withOpacity(0.2),
+                                                thumbShape:
+                                                    const RoundSliderThumbShape(
+                                                        enabledThumbRadius:
+                                                            0.0),
+                                                overlayShape:
+                                                    const RoundSliderOverlayShape(
+                                                        overlayRadius: 0),
+                                              ),
+                                              child: Slider(
+                                                min: 1,
+                                                max: 604,
+                                                divisions: 603,
+                                                value: currentDouble,
+                                                onChangeStart: (value) {
+                                                  setState(() {
+                                                    _isSliderActive = true;
+                                                    _sliderValue = value;
+                                                    _overlayVisible = true;
+                                                  });
+                                                  _scheduleAutoHide();
+                                                },
+                                                onChanged: (value) {
+                                                  setState(() {
+                                                    _overlayVisible = true;
+                                                    _sliderValue = value;
+                                                  });
+                                                  _scheduleAutoHide();
+                                                },
+                                                onChangeEnd: (value) {
+                                                  final page = value.round();
+                                                  setState(() {
+                                                    _isSliderActive = false;
+                                                    _sliderValue = null;
+                                                  });
+                                                  _navigateToPage(page);
+                                                  _scheduleAutoHide();
+                                                },
+                                              ),
+                                            ),
+                                          ),
+                                          Positioned(
+                                            left: left,
+                                            top: 0,
+                                            width: pillW,
+                                            height: trackH,
+                                            child: IgnorePointer(
+                                              child: Container(
+                                                alignment: Alignment.center,
+                                                decoration: BoxDecoration(
+                                                  color: BrandColors.accent,
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          trackH / 2),
+                                                ),
+                                                child: Text(
+                                                  '$currentPage',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                  ),
+                                    );
+                                  },
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(width: 12),
+                              _NotesIcon(
+                                onTap: () => _openCurrentPageNote(currentPage),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 12),
-                          _NotesIcon(
-                            onTap: () => _openCurrentPageNote(currentPage),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
@@ -363,7 +405,23 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   }
 
   Widget _buildAudioPlayerCard() {
-    return AudioPlayerCard(controller: widget.controller);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Material(
+            elevation: 8,
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: AudioPlayerCard(controller: widget.controller),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _showSnack(String message) {
@@ -915,7 +973,7 @@ class _NavPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color iconColor = enabled
-        ? _brandGreen
+        ? BrandColors.accent
         : Theme.of(context).colorScheme.onSurface.withOpacity(0.25);
 
     return Column(
@@ -952,34 +1010,56 @@ class _NotesIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bg = Theme.of(context).scaffoldBackgroundColor;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Material(
-              color: Colors.transparent,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
-              child: IconButton(
-                onPressed: onTap,
-                icon: const Icon(Icons.note_alt_outlined, color: _brandGreen),
-              ),
-            ),
-            Positioned(
-              right: 6,
-              bottom: 4,
-              child: Container(
-                width: 9,
-                height: 9,
-                decoration: const BoxDecoration(
-                  color: _brandGreen,
-                  shape: BoxShape.circle,
+        SizedBox(
+          width: 44,
+          height: 44,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Base tap target
+              Positioned.fill(
+                child: Material(
+                  color: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: onTap,
+                    child: Center(
+                      // Document/page with lines icon
+                      child: Icon(
+                        Icons.description,
+                        color: BrandColors.accent,
+                        size: 26,
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ],
+              // Chat bubble-like circular badge with three dots
+              Positioned(
+                right: 2,
+                bottom: 2,
+                child: Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: BrandColors.accent,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.more_horiz,
+                    size: 12,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 4),
         const Text(
