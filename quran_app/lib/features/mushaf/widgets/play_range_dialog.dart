@@ -134,13 +134,11 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
           labelLeft: 'End of Page',
           labelRight: 'Page $_currentPage',
           onTap: () {
-            // Find last ayah of current page
             final pageData = getPageData(_currentPage);
             if (pageData.isNotEmpty) {
               final last = pageData.last;
               _playTo(int.parse(last['surah'].toString()),
-                  int.parse(last['end'].toString()) // Correct key: 'end'
-                  );
+                  int.parse(last['end'].toString()));
             }
           },
         ),
@@ -156,7 +154,7 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
           icon: Icons.all_inclusive,
           labelLeft: 'Continuous Playback',
           labelRight: '∞',
-          onTap: () => _playTo(114, 6), // Play till end of Quran
+          onTap: () => _playTo(114, 6),
         ),
       ],
     );
@@ -195,16 +193,17 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
   }
 
   Widget _buildVerseList(ScrollController scrollController) {
-    // Show all verses of the surah
     final totalVerses = _endOfSurah;
+    final startVerse = widget.startVerse;
+    final count = totalVerses - startVerse + 1;
 
     return ListView.separated(
       controller: scrollController,
       padding: const EdgeInsets.all(8),
-      itemCount: totalVerses,
+      itemCount: count,
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, index) {
-        final verseNum = index + 1;
+        final verseNum = startVerse + index;
         final isStartVerse = verseNum == widget.startVerse;
 
         return Container(
@@ -231,16 +230,32 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
             ),
             subtitle: Padding(
               padding: const EdgeInsets.only(top: 8.0),
-              child: Text(
-                // Use standard text getter, NOT QCF glyphs
-                getVerse(widget.startSurah, verseNum, verseEndSymbol: true),
-                textAlign: TextAlign.right,
-                textDirection: TextDirection.rtl,
-                style: const TextStyle(
-                  fontSize: 20,
-                  // Standard arabic font if available, or system text
-                  fontFamily: 'Amiri',
-                  height: 1.5,
+              child: ShaderMask(
+                shaderCallback: (Rect bounds) {
+                  return const LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [Colors.transparent, Colors.white],
+                    stops: [
+                      0.0,
+                      0.12
+                    ], // Approx 40px fade on left side for RTL text
+                  ).createShader(bounds);
+                },
+                blendMode: BlendMode.dstIn,
+                child: Text(
+                  getVerse(widget.startSurah, verseNum, verseEndSymbol: true),
+                  textAlign: TextAlign.right,
+                  textDirection: TextDirection.rtl,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow
+                      .clip, // Using clip because mask handles the fade visual
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontFamily: 'Amiri',
+                    height: 1.5,
+                  ),
                 ),
               ),
             ),
@@ -251,8 +266,10 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
   }
 
   Widget _buildPageList(ScrollController scrollController) {
-    // List pages from current page to 604
-    final startPage = _currentPage;
+    final startPage = _currentPage + 1;
+    if (startPage > 604) {
+      return const Center(child: Text("No subsequent pages"));
+    }
     final count = 604 - startPage + 1;
 
     return ListView.separated(
@@ -262,14 +279,11 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final pageNum = startPage + index;
-
-        // Get page info from the LAST segment on the page, as requested
         String pageInfo = '';
         try {
           final pageData = getPageData(pageNum);
           if (pageData.isNotEmpty) {
             final last = pageData.last;
-            // Use 'surah' and 'end' keys
             pageInfo =
                 '${getSurahName(int.parse(last['surah'].toString()))} : ${last['end']}';
           }
@@ -281,8 +295,7 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
             if (pageData.isNotEmpty) {
               final last = pageData.last;
               _playTo(int.parse(last['surah'].toString()),
-                  int.parse(last['end'].toString()) // Use correct 'end' key
-                  );
+                  int.parse(last['end'].toString()));
             }
           },
           leading: const Icon(Icons.auto_stories_outlined),
@@ -294,8 +307,10 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
   }
 
   Widget _buildSurahList(ScrollController scrollController) {
-    // List surahs from current surah to 114
-    final startSurah = widget.startSurah;
+    final startSurah = widget.startSurah + 1;
+    if (startSurah > 114) {
+      return const Center(child: Text("No subsequent surahs"));
+    }
     final count = 114 - startSurah + 1;
 
     return ListView.separated(
@@ -305,7 +320,6 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final surahNum = startSurah + index;
-        // Find end page
         int endPage = 0;
         try {
           final totalV = getVerseCount(surahNum);
@@ -314,7 +328,6 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
 
         return ListTile(
           onTap: () {
-            // Play to end of this surah
             final totalV = getVerseCount(surahNum);
             _playTo(surahNum, totalV);
           },
