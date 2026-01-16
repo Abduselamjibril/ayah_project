@@ -27,6 +27,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   late final VoidCallback _downloadProgressListener;
   late final VoidCallback _reciterListener;
   late final VoidCallback _verseListener;
+  late final VoidCallback _hasSourceListener;
 
   bool _isPlaying = false;
   String _audioName = '';
@@ -78,6 +79,10 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         }
       }
     };
+    _hasSourceListener = () {
+      if (!mounted) return;
+      setState(() {});
+    };
 
     _audioPlayer.isPlaying.addListener(_playerStateListener);
     _audioPlayer.currentLabel.addListener(_labelListener);
@@ -86,6 +91,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     _audioPlayer.reciterNameNotifier.addListener(_reciterListener);
     _audioPlayer.currentSurah.addListener(_verseListener);
     _audioPlayer.currentAyah.addListener(_verseListener);
+    _audioPlayer.hasSourceNotifier.addListener(_hasSourceListener);
   }
 
   @override
@@ -97,6 +103,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     _audioPlayer.reciterNameNotifier.removeListener(_reciterListener);
     _audioPlayer.currentSurah.removeListener(_verseListener);
     _audioPlayer.currentAyah.removeListener(_verseListener);
+    _audioPlayer.hasSourceNotifier.removeListener(_hasSourceListener);
     super.dispose();
   }
 
@@ -270,14 +277,38 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                 shape: BoxShape.circle,
                 color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
               ),
-              child: IconButton(
-                iconSize: 36,
-                icon: Icon(
-                  _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                onPressed: _togglePlayPause,
-                tooltip: _isPlaying ? 'Pause' : 'Play',
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (_isDownloading)
+                    SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: CircularProgressIndicator(
+                        value: _downloadProgress > 0 ? _downloadProgress : null,
+                        strokeWidth: 4,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.5),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            Theme.of(context).colorScheme.primary),
+                      ),
+                    ),
+                  IconButton(
+                    iconSize: 36,
+                    icon: Icon(
+                      _isPlaying
+                          ? Icons.pause_rounded
+                          : (_isDownloading
+                              ? Icons.hourglass_bottom_rounded
+                              : Icons.play_arrow_rounded),
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    onPressed: _togglePlayPause,
+                    tooltip: _isPlaying ? 'Pause' : 'Play',
+                  ),
+                ],
               ),
             ),
             // Stop button
@@ -310,11 +341,11 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
 
   // Button handlers
   Future<void> _onPrevious() async {
-    await _audioPlayer.playPreviousSurah();
+    await _audioPlayer.playPreviousSurah(context);
   }
 
   Future<void> _onNext() async {
-    await _audioPlayer.playNextSurah();
+    await _audioPlayer.playNextSurah(context);
   }
 
   Future<void> _onStop() async {
