@@ -634,6 +634,7 @@ class _QuranPageContentState extends State<QuranPageContent>
       for (int v = start; v <= end; v++) {
         if (v == start && v == 1) {
           verseSpans.add(WidgetSpan(child: HeaderWidget(suraNumber: surah)));
+          verseSpans.add(const TextSpan(text: "\n"));
           if (widget.pageNumber != 1 && widget.pageNumber != 187) {
             if (surah != 97) {
               verseSpans.add(
