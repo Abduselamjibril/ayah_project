@@ -133,7 +133,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         margin: EdgeInsets.zero,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: _isPlaying && _audioPlayer.hasSource
+          child: _audioPlayer.hasSource
               ? _buildExpandedPlayer(context)
               : _buildCompactPlayer(context),
         ),
@@ -178,27 +178,16 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _audioName.isEmpty
-                      ? (AppLocalizations.of(context)
-                              ?.translate('select_audio') ??
-                          'Select audio')
-                      : _audioName,
+                  _reciterName.isNotEmpty
+                      ? _reciterName
+                      : (AppLocalizations.of(context)
+                              ?.translate('select_reciter_tooltip') ??
+                          'Select Reciter'),
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                 ),
-                if (_reciterName.isNotEmpty)
-                  Text(
-                    _reciterName,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withOpacity(0.7),
-                        ),
-                  ),
               ],
             ),
           ),

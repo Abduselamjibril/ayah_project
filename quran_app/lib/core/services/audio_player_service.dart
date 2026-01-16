@@ -405,7 +405,7 @@ class AudioPlayerService {
 
     currentSurah.value = surah;
     currentAyah.value = ayah;
-    currentLabel.value = '$surahLabel, Ayah $ayah • $reciterLabel';
+    currentLabel.value = '$surahLabel : $ayah';
 
     await _player.stop();
 
@@ -466,7 +466,7 @@ class AudioPlayerService {
     _currentPlayingSurah = surah;
     currentSurah.value = surah;
     currentAyah.value = startAyah;
-    currentLabel.value = '$surahLabel, Ayah $startAyah • $reciterName';
+    currentLabel.value = '$surahLabel : $startAyah';
     _hasSource = true;
 
     await _player.setSource(DeviceFileSource(surahFile.path));
@@ -581,11 +581,11 @@ class AudioPlayerService {
 
   Future<void> _completionReset() async {
     _inSequence = false;
+    _hasSource = false;
     await _stopPositionMonitoring();
     currentSurah.value = null;
     currentAyah.value = null;
     currentLabel.value = '';
-    _hasSource = false;
     isPlaying.value = false;
     _currentSegments = null;
     _currentPlayingSurah = null;
@@ -617,7 +617,7 @@ class AudioPlayerService {
     _currentPlayingSurah = surah;
     currentSurah.value = surah;
     currentAyah.value = startAyah;
-    currentLabel.value = '$surahLabel, Ayah $startAyah • $reciterName';
+    currentLabel.value = '$surahLabel : $startAyah';
     _hasSource = true;
 
     await _player.setSource(DeviceFileSource(surahFile.path));
@@ -840,8 +840,7 @@ class AudioPlayerService {
               // Update notification with current ayah
               if (_hasSource && _currentPlayingSurah != null) {
                 final surahName = getSurahName(_currentPlayingSurah!);
-                currentLabel.value =
-                    '$surahName, Ayah $newAyah • $_recitationName';
+                currentLabel.value = '$surahName : $newAyah';
                 AudioNotificationService.instance.showNowPlaying(
                   title: currentLabel.value,
                   reciterName: _recitationName,
