@@ -17,13 +17,12 @@ class HeaderWidget extends StatelessWidget {
     final isWideMode = isLandscape || isTablet;
 
     final referenceWidth = isWideMode ? 600.0 : 430.0;
-    final imageWidth = referenceWidth * 0.87; // Maintain approx ratio
+    final imageWidth = referenceWidth * 0.90;
 
     return InkWell(
       borderRadius: BorderRadius.circular(8),
       child: Container(
         decoration: const BoxDecoration(),
-        width: double.infinity,
         child: Stack(
           alignment: Alignment.center,
           children: [
