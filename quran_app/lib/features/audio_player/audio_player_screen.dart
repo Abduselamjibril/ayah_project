@@ -220,120 +220,145 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     final canGoPrevious = currentSurah != null && currentSurah > 1;
     final canGoNext = currentSurah != null && currentSurah < 114;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+    return Stack(
       children: [
-        // Info section
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                _audioName.isEmpty
-                    ? (AppLocalizations.of(context)
-                            ?.translate('select_audio') ??
-                        'Select audio')
-                    : _audioName,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-              if (_reciterName.isNotEmpty)
-                Text(
-                  _reciterName,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withOpacity(0.7),
-                      ),
-                ),
-            ],
+        // Close button (Top Right)
+        Positioned(
+          top: 0,
+          right: 0,
+          child: IconButton(
+            icon: Icon(
+              Icons.close_rounded,
+              size: 24,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+            ),
+            onPressed: _onStop,
+            tooltip: 'Close player',
           ),
         ),
-        // Controls section
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            // Previous button
-            IconButton(
-              icon: Icon(
-                Icons.skip_previous_rounded,
-                size: 32,
-                color: canGoPrevious
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-              ),
-              onPressed: canGoPrevious ? _onPrevious : null,
-              tooltip: 'Previous Surah',
-            ),
-            // Play/Pause button
-            Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  if (_isDownloading)
-                    SizedBox(
-                      width: 48,
-                      height: 48,
-                      child: CircularProgressIndicator(
-                        value: _downloadProgress > 0 ? _downloadProgress : null,
-                        strokeWidth: 4,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withOpacity(0.5),
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                            Theme.of(context).colorScheme.primary),
+
+        // Main Content (Padded to avoid close button overlap)
+        Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Info section
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 40, vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      _audioName.isEmpty
+                          ? (AppLocalizations.of(context)
+                                  ?.translate('select_audio') ??
+                              'Select audio')
+                          : _audioName,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    if (_reciterName.isNotEmpty)
+                      Text(
+                        _reciterName,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.7),
+                            ),
                       ),
-                    ),
+                  ],
+                ),
+              ),
+              // Controls section
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // Previous button
                   IconButton(
-                    iconSize: 36,
                     icon: Icon(
-                      _isPlaying
-                          ? Icons.pause_rounded
-                          : (_isDownloading
-                              ? Icons.hourglass_bottom_rounded
-                              : Icons.play_arrow_rounded),
-                      color: Theme.of(context).colorScheme.primary,
+                      Icons.skip_previous_rounded,
+                      size: 32,
+                      color: canGoPrevious
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.3),
                     ),
-                    onPressed: _togglePlayPause,
-                    tooltip: _isPlaying ? 'Pause' : 'Play',
+                    onPressed: canGoPrevious ? _onPrevious : null,
+                    tooltip: 'Previous Surah',
+                  ),
+                  // Play/Pause button
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.1),
+                    ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        if (_isDownloading)
+                          SizedBox(
+                            width: 48,
+                            height: 48,
+                            child: CircularProgressIndicator(
+                              value: _downloadProgress > 0
+                                  ? _downloadProgress
+                                  : null,
+                              strokeWidth: 4,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.5),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  Theme.of(context).colorScheme.primary),
+                            ),
+                          ),
+                        IconButton(
+                          iconSize: 36,
+                          icon: Icon(
+                            _isPlaying
+                                ? Icons.pause_rounded
+                                : (_isDownloading
+                                    ? Icons.hourglass_bottom_rounded
+                                    : Icons.play_arrow_rounded),
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          onPressed: _togglePlayPause,
+                          tooltip: _isPlaying ? 'Pause' : 'Play',
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Next button
+                  IconButton(
+                    icon: Icon(
+                      Icons.skip_next_rounded,
+                      size: 32,
+                      color: canGoNext
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.3),
+                    ),
+                    onPressed: canGoNext ? _onNext : null,
+                    tooltip: 'Next Surah',
                   ),
                 ],
               ),
-            ),
-            // Stop button
-            IconButton(
-              icon: Icon(
-                Icons.stop_rounded,
-                size: 32,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              onPressed: _onStop,
-              tooltip: 'Stop',
-            ),
-            // Next button
-            IconButton(
-              icon: Icon(
-                Icons.skip_next_rounded,
-                size: 32,
-                color: canGoNext
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-              ),
-              onPressed: canGoNext ? _onNext : null,
-              tooltip: 'Next Surah',
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
@@ -408,15 +433,26 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
       final pageEndSurah = int.tryParse(lastVerse['surah'].toString()) ?? 1;
       final pageEndAyah = int.tryParse(lastVerse['end'].toString()) ?? 1;
 
-      // If playing from specific highlighted verse
+      // Check if highlighted verse belongs to current page
+      bool isHighlightOnCurrentPage = false;
       if (hs != null && hv != null) {
+        try {
+          final p = getPageNumber(hs, hv);
+          if (p == currentPage) {
+            isHighlightOnCurrentPage = true;
+          }
+        } catch (_) {}
+      }
+
+      // If playing from specific highlighted verse ON THIS PAGE
+      if (isHighlightOnCurrentPage && hs != null && hv != null) {
         startSurah = hs;
         startAyah = hv;
         // End at the end of the page
         endSurah = pageEndSurah;
         endAyah = pageEndAyah;
       } else {
-        // Play whole page
+        // Play whole page from start
         startSurah = pageStartSurah;
         startAyah = pageStartAyah;
         endSurah = pageEndSurah;

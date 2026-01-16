@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:audio_service/audio_service.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:flutter/material.dart';
 import 'package:quran_app/data/models/audio_model.dart';
@@ -9,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'audio_service.dart' as local_audio;
 import 'quran_audio_handler.dart';
 import 'package:quran_app/core/quran/qcf_quran.dart';
+import 'notification_service.dart';
 
 class AudioPlayerService {
   static final AudioPlayerService instance = AudioPlayerService._();
@@ -35,11 +35,7 @@ class AudioPlayerService {
 
   Future<void> _init() async {
     try {
-      final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-      await flutterLocalNotificationsPlugin
-          .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()
-          ?.requestNotificationsPermission();
+      await AppNotificationService.instance.initialize();
 
       _handler = await AudioService.init(
         builder: () => QuranAudioHandler(),
@@ -47,6 +43,7 @@ class AudioPlayerService {
           androidNotificationChannelId: 'com.quran_app.audio',
           androidNotificationChannelName: 'Quran Audio',
           androidNotificationOngoing: true,
+          androidStopForegroundOnPause: true,
         ),
       );
 
@@ -254,7 +251,7 @@ class AudioPlayerService {
           album: surahName,
           title: title,
           artist: recitation.reciterName,
-          // artUri: Uri.parse('...'), // Can add app icon or specific art
+          artUri: Uri.parse('asset:///assets/images/Icon.jpg'),
           extras: {'surah': s, 'ayah': ayah},
         );
 
@@ -351,12 +348,15 @@ class AudioPlayerService {
     downloadingSurah.value = surah;
     downloadProgress.value = 0;
     try {
+      final notifId = surah; // Use surah ID as notification ID
       return await local_audio.AudioService.instance
           .downloadSurahAudio(recitation, surah, onProgress: (p) {
         downloadProgress.value = p;
-        // Note: AudioNotificationService is removed, so we rely on in-app UI
+        AppNotificationService.instance
+            .showProgress(notifId, 'Downloading Surah $surah', p);
       });
     } finally {
+      AppNotificationService.instance.cancel(surah);
       isDownloading.value = false;
       downloadingSurah.value = null;
     }
