@@ -41,10 +41,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     super.initState();
     _audioPlayer = AudioPlayerService.instance;
     _isPlaying = _audioPlayer.isPlaying.value;
-    _audioName = _audioPlayer.currentLabel.value.isEmpty
-        ? (AppLocalizations.of(context)?.translate('select_audio') ??
-            'Select audio')
-        : _audioPlayer.currentLabel.value;
+    _audioName = _audioPlayer.currentLabel.value;
 
     _reciterName = _audioPlayer.recitationName;
 
@@ -54,10 +51,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     };
     _labelListener = () {
       if (!mounted) return;
-      setState(() => _audioName = _audioPlayer.currentLabel.value.isEmpty
-          ? (AppLocalizations.of(context)?.translate('select_audio') ??
-              'Select audio')
-          : _audioPlayer.currentLabel.value);
+      setState(() => _audioName = _audioPlayer.currentLabel.value);
     };
     _downloadingListener = () {
       if (!mounted) return;
@@ -184,7 +178,11 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _audioName,
+                  _audioName.isEmpty
+                      ? (AppLocalizations.of(context)
+                              ?.translate('select_audio') ??
+                          'Select audio')
+                      : _audioName,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.w600,
@@ -236,7 +234,11 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
-                _audioName,
+                _audioName.isEmpty
+                    ? (AppLocalizations.of(context)
+                            ?.translate('select_audio') ??
+                        'Select audio')
+                    : _audioName,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -382,9 +384,9 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
       final lastVerse = pd.last;
 
       final pageStartSurah = int.tryParse(firstVerse['surah'].toString()) ?? 1;
-      final pageStartAyah = int.tryParse(firstVerse['ayah'].toString()) ?? 1;
+      final pageStartAyah = int.tryParse(firstVerse['start'].toString()) ?? 1;
       final pageEndSurah = int.tryParse(lastVerse['surah'].toString()) ?? 1;
-      final pageEndAyah = int.tryParse(lastVerse['ayah'].toString()) ?? 1;
+      final pageEndAyah = int.tryParse(lastVerse['end'].toString()) ?? 1;
 
       // If playing from specific highlighted verse
       if (hs != null && hv != null) {
