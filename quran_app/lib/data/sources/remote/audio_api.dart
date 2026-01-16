@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../models/audio_model.dart';
+import '../../models/chapter_audio.dart';
 import '../../../core/constants/api_endpoints.dart';
 
 /// API client for fetching Quran audio recitations and files
@@ -117,6 +118,28 @@ class AudioApi {
     } catch (e) {
       throw Exception(
           'Failed to fetch audio for recitation $recitationId, ayah $surah:$ayah: $e');
+    }
+  }
+
+  /// Get chapter recitation with timestamp segments for each ayah
+  /// API endpoint: GET /chapter_recitations/{reciter_id}/{chapter_id}?segments=true
+  Future<ChapterAudio?> getChapterRecitation(
+    int reciterId,
+    int chapterId,
+  ) async {
+    try {
+      final uri = Uri.parse(
+          '${ApiEndpoints.baseUrl}${ApiEndpoints.chapterRecitations(reciterId, chapterId)}?segments=true');
+      final response = await http.get(uri).timeout(_timeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return ChapterAudio.fromJson(data);
+      }
+      throw Exception('HTTP ${response.statusCode}: ${response.body}');
+    } catch (e) {
+      throw Exception(
+          'Failed to fetch chapter recitation for reciter $reciterId, chapter $chapterId: $e');
     }
   }
 }

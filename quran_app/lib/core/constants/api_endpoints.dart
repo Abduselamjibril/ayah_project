@@ -28,4 +28,7 @@ class ApiEndpoints {
       '/recitations/$recitationId/by_chapter/$chapterNumber';
   static String recitationsByAyah(int recitationId, int surah, int ayah) =>
       '/recitations/$recitationId/by_ayah/$surah:$ayah';
+  // New: Chapter recitations with timestamp segments
+  static String chapterRecitations(int reciterId, int chapterId) =>
+      '/chapter_recitations/$reciterId/$chapterId';
 }
