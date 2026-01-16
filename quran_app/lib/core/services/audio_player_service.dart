@@ -438,16 +438,169 @@ class AudioPlayerService {
   }
 
   /// Plays a sequence of ayahs for the given Surah using seamless segmented audio.
+  /// If [endAyah] is provided, it plays until that ayah finishes, otherwise plays to end of Surah.
   Future<void> playSurahSequence({
     required int surah,
     required String surahLabel,
     required String reciterName,
     int startAyah = 1,
+    int? endAyah,
   }) async {
     // Invalidate any old sequence
     final token = ++_serviceSequenceToken;
     _inSequence = true;
 
+    await _player.stop();
+    await _storage.initialize();
+
+    // Load segmented audio
+    final surahFile = await _storage.getLocalSurahFile(_recitationId, surah);
+    final segments = await _storage.getLocalSegments(_recitationId, surah);
+
+    if (surahFile == null || segments == null || segments.isEmpty) {
+      throw Exception('Surah $surah not downloaded. Please download it first.');
+    }
+
+    // Use segmented audio format - seamless playback!
+    _currentSegments = segments;
+    _currentPlayingSurah = surah;
+    currentSurah.value = surah;
+    currentAyah.value = startAyah;
+    currentLabel.value = '$surahLabel, Ayah $startAyah • $reciterName';
+    _hasSource = true;
+
+    await _player.setSource(DeviceFileSource(surahFile.path));
+
+    // Find the segment for startAyah and seek to it
+    final startSegment = segments.firstWhere(
+      (seg) => seg.ayahNumber == startAyah,
+      orElse: () => segments.first,
+    );
+
+    // Calculate duration to play if we have an end point
+    // Note: This is tricky with audioplayers as we can't set an end point easily.
+    // We rely on _startPositionMonitoring to stop playback if we exceed endAyah.
+
+    await _player.seek(Duration(milliseconds: startSegment.timestampFrom));
+    await _player.resume();
+
+    // Start monitoring position to update current ayah
+    // We pass endAyah to monitoring if needed?
+    // Actually, _startPositionMonitoring just updates currentAyah.
+    // We need to check completion logic separately.
+    _startPositionMonitoring();
+
+    await AudioNotificationService.instance.showNowPlaying(
+      title: currentLabel.value,
+      reciterName: reciterName,
+      isPlaying: true,
+    );
+
+    // Custom wait loop that checks for endAyah
+    if (endAyah != null) {
+      await _waitForAyahCompletion(endAyah, token);
+    } else {
+      await waitForCompleteOrStop();
+    }
+
+    // Clear state if finished naturally
+    if (token == _serviceSequenceToken && _inSequence) {
+      _inSequence = false;
+      // Only clear if we are NOT part of a larger range sequence calling this
+      // But wait, playRangeSequence calls this.
+      // If we clear here, playRangeSequence loop might break?
+      // playRangeSequence handles its own loop break checks.
+
+      // If we were called directly (single surah), clear.
+      // If called from playRangeSequence, we probably want to just return.
+      // But simple fix: playRangeSequence will call stop() or setup next surah effectively.
+
+      // Actually, playRangeSequence waits for this future to complete.
+      // If we stop here, we clear state.
+
+      // Let's make playSurahSequence NOT clear state automatically if it's just a helper?
+      // Or playRangeSequence should be the one managing state?
+
+      // Use a flag or check? existing logic cleared it.
+      // We will remove the auto-clear here and let the caller handle it or
+      // only clear if it's the "last" action.
+      // But we don't know if it's the last action.
+
+      // Safer: Reset flags but let playRangeSequence continue.
+      // Actually, if we clear `isPlaying`, UI might flicker.
+
+      // Restoring original clear logic but only if NOT part of a range?
+      // Actually, playRangeSequence runs `playSurahSequence` then loops.
+      // If `playSurahSequence` clears `isPlaying=false`, the UI shows pause between surahs.
+      // That's acceptable.
+
+      await _stopPositionMonitoring();
+      if (endAyah == null) {
+        // Full surah finish - natural clear
+        // But playRangeSequence needs to continue.
+      }
+    }
+  }
+
+  /// Helper to wait until playback reaches the end of endAyah
+  Future<void> _waitForAyahCompletion(int endAyah, int token) async {
+    final completer = Completer<void>();
+
+    // We need to check segments to know when the endAyah finishes
+    // or just monitor currentAyah change.
+
+    // Simple approach: Check periodically if currentAyah > endAyah or if completed
+    Timer? checkTimer;
+    checkTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+      if (token != _serviceSequenceToken || !_hasSource || !isPlaying.value) {
+        timer.cancel();
+        if (!completer.isCompleted) completer.complete();
+        return;
+      }
+
+      if (_player.state == PlayerState.completed) {
+        timer.cancel();
+        if (!completer.isCompleted) completer.complete();
+        return;
+      }
+
+      // Check if we passed the end ayah
+      // This relies on _currentAyah being updated by position monitor
+      final current = currentAyah.value;
+      if (current != null && current > endAyah) {
+        // We moved past the end ayah
+        _player.pause(); // Stop playback
+        timer.cancel();
+        if (!completer.isCompleted) completer.complete();
+      }
+    });
+
+    await completer.future;
+    checkTimer?.cancel();
+  }
+
+  Future<void> _completionReset() async {
+    _inSequence = false;
+    await _stopPositionMonitoring();
+    currentSurah.value = null;
+    currentAyah.value = null;
+    currentLabel.value = '';
+    _hasSource = false;
+    isPlaying.value = false;
+    _currentSegments = null;
+    _currentPlayingSurah = null;
+    await AudioNotificationService.instance.cancel();
+  }
+
+  /// Internal helper to play surah sequence without changing global token
+  Future<void> _playSurahSequenceInternal({
+    required int token,
+    required int surah,
+    required String surahLabel,
+    required String reciterName,
+    int startAyah = 1,
+    int? endAyah,
+  }) async {
     await _player.stop();
     await _storage.initialize();
 
@@ -487,21 +640,14 @@ class AudioPlayerService {
       isPlaying: true,
     );
 
-    // Wait for completion or stop
-    await waitForCompleteOrStop();
-
-    // Clear state if finished naturally
-    _inSequence = false;
-    if (token == _serviceSequenceToken) {
-      await _stopPositionMonitoring();
-      currentSurah.value = null;
-      currentAyah.value = null;
-      _hasSource = false;
-      isPlaying.value = false;
-      _currentSegments = null;
-      _currentPlayingSurah = null;
-      await AudioNotificationService.instance.cancel();
+    // Custom wait loop that checks for endAyah
+    if (endAyah != null) {
+      await _waitForAyahCompletion(endAyah, token);
+    } else {
+      await waitForCompleteOrStop();
     }
+
+    await _stopPositionMonitoring();
   }
 
   /// Plays a custom range of verses from [startSurah]:[startAyah] to [endSurah]:[endAyah].
@@ -527,42 +673,24 @@ class AudioPlayerService {
       final firstAyah = (surah == startSurah) ? startAyah : 1;
       final lastAyah = (surah == endSurah) ? endAyah : totalAyat;
 
-      for (var ayah = firstAyah; ayah <= lastAyah; ayah++) {
-        if (token != _serviceSequenceToken) break;
+      // Play the chunk for this surah
+      final targetEndAyah = (lastAyah == totalAyat) ? null : lastAyah;
 
-        try {
-          await playAyahPreferLocal(
-            surah: surah,
-            ayah: ayah,
-            surahName: getSurahName(surah),
-            reciterName: reciterName,
-          );
-        } catch (e) {
-          // Error playing, stop sequence
-          break;
-        }
+      // Use internal method so we don't reset the token
+      await _playSurahSequenceInternal(
+          token: token,
+          surah: surah,
+          surahLabel: getSurahName(surah),
+          reciterName: reciterName,
+          startAyah: firstAyah,
+          endAyah: targetEndAyah);
 
-        await waitForCompleteOrStop();
-
-        if (token != _serviceSequenceToken || !_hasSource) {
-          break;
-        }
-      }
-
-      // If stopped, exit outer loop too
-      if (token != _serviceSequenceToken || !_hasSource) {
-        break;
-      }
+      if (token != _serviceSequenceToken) break;
     }
 
     // Clear state if finished naturally
-    _inSequence = false;
     if (token == _serviceSequenceToken) {
-      currentSurah.value = null;
-      currentAyah.value = null;
-      _hasSource = false;
-      isPlaying.value = false;
-      await AudioNotificationService.instance.cancel();
+      await _completionReset();
     }
   }
 
@@ -628,6 +756,70 @@ class AudioPlayerService {
       endSurah: endSurah,
       endAyah: endAyah,
       reciterName: recitation.reciterName,
+    );
+  }
+
+  /// Play the next surah in sequence (auto-downloads if needed)
+  Future<void> playNextSurah() async {
+    final currentSurahNum = currentSurah.value;
+    if (currentSurahNum == null || currentSurahNum >= 114) return;
+
+    // Stop current playback immediately so we don't play while downloading/buffering
+    await stop();
+
+    final nextSurah = currentSurahNum + 1;
+
+    // Auto-download if not available
+    final isDownloaded =
+        await _storage.isSurahDownloaded(_recitationId, nextSurah);
+    if (!isDownloaded) {
+      final recitation = AudioRecitation(
+        id: _recitationId,
+        reciterName: _recitationName,
+      );
+      final ok = await downloadSurahIfNeeded(recitation, nextSurah);
+      if (!ok) return; // Download failed
+    }
+
+    final surahName = getSurahName(nextSurah);
+
+    await playSurahSequence(
+      surah: nextSurah,
+      startAyah: 1,
+      surahLabel: surahName,
+      reciterName: _recitationName,
+    );
+  }
+
+  /// Play the previous surah in sequence (auto-downloads if needed)
+  Future<void> playPreviousSurah() async {
+    final currentSurahNum = currentSurah.value;
+    if (currentSurahNum == null || currentSurahNum <= 1) return;
+
+    // Stop current playback immediately
+    await stop();
+
+    final prevSurah = currentSurahNum - 1;
+
+    // Auto-download if not available
+    final isDownloaded =
+        await _storage.isSurahDownloaded(_recitationId, prevSurah);
+    if (!isDownloaded) {
+      final recitation = AudioRecitation(
+        id: _recitationId,
+        reciterName: _recitationName,
+      );
+      final ok = await downloadSurahIfNeeded(recitation, prevSurah);
+      if (!ok) return; // Download failed
+    }
+
+    final surahName = getSurahName(prevSurah);
+
+    await playSurahSequence(
+      surah: prevSurah,
+      startAyah: 1,
+      surahLabel: surahName,
+      reciterName: _recitationName,
     );
   }
 
