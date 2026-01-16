@@ -437,6 +437,7 @@ class _PageWithNumber extends StatelessWidget {
 }
 
 /// Widget that displays the page number with a themed background image
+/// and optionally the Hizb number if a Hizb starts on this page.
 class _PageNumberWithBackground extends StatelessWidget {
   final int pageNumber;
   final TextStyle textStyle;
@@ -449,26 +450,32 @@ class _PageNumberWithBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeService = ThemeService();
-    final backgroundImage = themeService.pageBackgroundImagePath;
+    // Hizb Logic
+    final hizbNumber = getHizbNumberForPage(pageNumber);
+    final hasHizb = hizbNumber != -1;
 
-    return SizedBox(
+    // Alignment Logic
+    // Even pages: Page number on Left, Hizb on Right
+    // Odd pages: Page number on Right, Hizb on Left
+    final isEven = pageNumber % 2 == 0;
+
+    // Page Number Widget
+    final backgroundImage = themeService.pageBackgroundImagePath;
+    final pageNumberWidget = SizedBox(
       width: 60,
       height: 60,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Background decorative image
           Image.asset(
             backgroundImage,
             width: 60,
             height: 60,
             fit: BoxFit.contain,
             errorBuilder: (context, error, stackTrace) {
-              // Fallback to plain text if image not found
               return const SizedBox.shrink();
             },
           ),
-          // Page number text overlay
           Text(
             pageNumber.toString(),
             style: textStyle.copyWith(
@@ -476,6 +483,72 @@ class _PageNumberWithBackground extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+
+    // Hizb Widget
+    Widget? hizbWidget;
+    if (hasHizb) {
+      final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+      hizbWidget = Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isDarkMode
+              ? const Color(0xFFFACC15)
+                  .withOpacity(0.2) // Yellowish for dark mode
+              : const Color(0xFFB45309)
+                  .withOpacity(0.1), // Brownish for light mode
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDarkMode
+                ? const Color(0xFFFACC15).withOpacity(0.5)
+                : const Color(0xFFB45309).withOpacity(0.3),
+          ),
+        ),
+        child: Text(
+          "Hizb $hizbNumber",
+          style: textStyle.copyWith(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+    }
+
+    // Determine layout children based on Left (Even) / Right (Odd) logic
+    // We are in a Render object that might be RTL or LTR.
+    // To ensure "Bottom Left" and "Bottom Right" regardless of Directionality,
+    // we can use standard Row with MainAxisAlignment.spaceBetween and
+    // explicit children order, forcing LTR for the Row if needed, OR handling RTL correctly.
+
+    // Let's force TextDirection.ltr for the Row to have predictable Left/Right behavior
+    // ignoring the app's RTL nature for this specific positioning component.
+
+    List<Widget> children = [];
+    if (isEven) {
+      // Even Page -> Page Number Bottom Left.
+      // Left: Page Number. Right: Hizb (if any).
+      children = [
+        pageNumberWidget,
+        if (hasHizb) hizbWidget! else const SizedBox(width: 60),
+      ];
+    } else {
+      // Odd Page -> Page Number Bottom Right.
+      // Left: Hizb (if any). Right: Page Number.
+      children = [
+        if (hasHizb) hizbWidget! else const SizedBox(width: 60),
+        pageNumberWidget,
+      ];
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: children,
+        ),
       ),
     );
   }

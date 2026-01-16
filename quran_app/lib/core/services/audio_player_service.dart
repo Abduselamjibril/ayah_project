@@ -470,4 +470,131 @@ class AudioPlayerService {
       await AudioNotificationService.instance.cancel();
     }
   }
+
+  /// Plays a custom range of verses from [startSurah]:[startAyah] to [endSurah]:[endAyah].
+  /// This supports both single-surah and cross-surah playback.
+  Future<void> playRangeSequence({
+    required int startSurah,
+    required int startAyah,
+    required int endSurah,
+    required int endAyah,
+    required String reciterName,
+  }) async {
+    // Invalidate any old sequence
+    final token = ++_serviceSequenceToken;
+    _inSequence = true;
+
+    await _player.stop();
+
+    // Play through all surahs in the range
+    for (var surah = startSurah; surah <= endSurah; surah++) {
+      if (token != _serviceSequenceToken) break;
+
+      final totalAyat = getVerseCount(surah);
+      final firstAyah = (surah == startSurah) ? startAyah : 1;
+      final lastAyah = (surah == endSurah) ? endAyah : totalAyat;
+
+      for (var ayah = firstAyah; ayah <= lastAyah; ayah++) {
+        if (token != _serviceSequenceToken) break;
+
+        try {
+          await playAyahPreferLocal(
+            surah: surah,
+            ayah: ayah,
+            surahName: getSurahName(surah),
+            reciterName: reciterName,
+          );
+        } catch (e) {
+          // Error playing, stop sequence
+          break;
+        }
+
+        await waitForCompleteOrStop();
+
+        if (token != _serviceSequenceToken || !_hasSource) {
+          break;
+        }
+      }
+
+      // If stopped, exit outer loop too
+      if (token != _serviceSequenceToken || !_hasSource) {
+        break;
+      }
+    }
+
+    // Clear state if finished naturally
+    _inSequence = false;
+    if (token == _serviceSequenceToken) {
+      currentSurah.value = null;
+      currentAyah.value = null;
+      _hasSource = false;
+      isPlaying.value = false;
+      await AudioNotificationService.instance.cancel();
+    }
+  }
+
+  /// Play a custom range with download support.
+  /// This validates the range, downloads all required surahs, then plays the range.
+  Future<void> playRangeSequenceWithDownload(
+    BuildContext context, {
+    required int startSurah,
+    required int startAyah,
+    required int endSurah,
+    required int endAyah,
+    bool forceReciter = false,
+  }) async {
+    // Validate range
+    final startPage = getPageNumber(startSurah, startAyah);
+    final endPage = getPageNumber(endSurah, endAyah);
+
+    if (startPage > endPage ||
+        (startSurah == endSurah && startAyah > endAyah)) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid range: end point must be after start point'),
+          ),
+        );
+      }
+      return;
+    }
+
+    final recitation =
+        await _selectOrCachedReciter(context, forceReciter: forceReciter);
+    if (recitation == null) return;
+
+    await _storage.initialize();
+
+    // Download all required surahs
+    for (var surah = startSurah; surah <= endSurah; surah++) {
+      final hasLocal = await _storage.isSurahDownloaded(recitation.id, surah);
+      if (!hasLocal) {
+        final surahName = getSurahName(surah);
+        final ok = await downloadSurahIfNeeded(
+          recitation,
+          surah,
+          notificationTitle: 'Downloading $surahName',
+        );
+        if (!ok) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Could not download audio for $surahName'),
+              ),
+            );
+          }
+          return;
+        }
+      }
+    }
+
+    // Play the range
+    await playRangeSequence(
+      startSurah: startSurah,
+      startAyah: startAyah,
+      endSurah: endSurah,
+      endAyah: endAyah,
+      reciterName: recitation.reciterName,
+    );
+  }
 }

@@ -13,6 +13,7 @@ import '../../audio_player/audio_player_screen.dart';
 import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart';
 import '../controller/mushaf_controller.dart';
 import '../screens/verse_details_screen.dart';
+import 'play_range_dialog.dart';
 
 class HorizontalMushafView extends StatefulWidget {
   final MushafController controller;
@@ -524,6 +525,14 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                   },
                 ),
                 _buildOptionTile(
+                  icon: Icons.playlist_play,
+                  title: 'Play to...',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _showPlayToDialog(rootContext, surah, verse);
+                  },
+                ),
+                _buildOptionTile(
                   icon: Icons.menu_book,
                   title: 'View Tafsir',
                   onTap: () {
@@ -811,6 +820,19 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
           surahNumber: surah,
           ayahNumber: verse,
         ),
+      ),
+    );
+  }
+
+  Future<void> _showPlayToDialog(
+      BuildContext context, int startSurah, int startVerse) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => PlayRangeDialog(
+        startSurah: startSurah,
+        startVerse: startVerse,
       ),
     );
   }
