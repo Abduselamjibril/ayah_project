@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:quran_app/data/models/audio_model.dart';
+import 'package:quran_app/data/models/audio_segment.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../data/sources/remote/audio_api.dart';
 import 'audio_service.dart';
 import 'audio_notification_service.dart';
 import 'package:quran_app/core/quran/qcf_quran.dart';
@@ -61,7 +61,6 @@ class AudioPlayerService {
   }
 
   final AudioPlayer _player = AudioPlayer();
-  final AudioApi _api = AudioApi();
   final AudioService _storage = AudioService.instance;
 
   final ValueNotifier<bool> isPlaying = ValueNotifier(false);
@@ -80,6 +79,12 @@ class AudioPlayerService {
   bool _hasSource = false;
   bool _userSelectedReciter = false;
   bool _inSequence = false; // Track if we're currently playing a sequence
+
+  // Segmented audio support
+  List<AudioSegment>? _currentSegments; // Cache segments for current Surah
+  StreamSubscription<Duration>?
+      _positionSubscription; // Listen to playback position
+  int? _currentPlayingSurah; // Track which Surah audio is loaded
 
   // Sequence control
   int _serviceSequenceToken = 0;
@@ -203,6 +208,8 @@ class AudioPlayerService {
     ]);
   }
 
+  /// Play a single ayah using segmented audio.
+  /// Note: This will play just the specific ayah by seeking to its timestamp.
   Future<void> playAyah({
     required int surah,
     required int ayah,
@@ -213,22 +220,14 @@ class AudioPlayerService {
     final rid = recitationId ?? _recitationId;
     final reciterLabel = reciterName ?? _recitationName;
     final surahLabel = surahName ?? 'Surah $surah';
-    final file = await _api.getAudioByAyah(rid, surah, ayah);
-    if (file == null || file.url.isEmpty) {
-      throw Exception('Audio not available for reciter $reciterLabel');
-    }
 
-    currentLabel.value = '$surahLabel, Ayah $ayah • $reciterLabel';
-    currentSurah.value = surah;
-    currentAyah.value = ayah;
-    _hasSource = true;
-
-    await _player.stop();
-    await _player.play(UrlSource(file.url));
-    await AudioNotificationService.instance.showNowPlaying(
-      title: currentLabel.value,
+    // Use the playAyahPreferLocal which now only uses segmented audio
+    await playAyahPreferLocal(
+      surah: surah,
+      ayah: ayah,
+      recitationId: rid,
+      surahName: surahLabel,
       reciterName: reciterLabel,
-      isPlaying: true,
     );
   }
 
@@ -258,6 +257,9 @@ class AudioPlayerService {
     currentSurah.value = null;
     currentAyah.value = null;
     isPlaying.value = false;
+    await _stopPositionMonitoring(); // Stop monitoring
+    _currentSegments = null; // Clear segments
+    _currentPlayingSurah = null;
     await _player.stop();
     await AudioNotificationService.instance.cancel();
   }
@@ -272,8 +274,10 @@ class AudioPlayerService {
     if (recitation == null) return;
 
     await _storage.initialize();
-    final local = await _storage.getLocalAyahFile(recitation.id, surah, ayah);
-    if (local == null) {
+
+    // Check if Surah is downloaded (segmented format)
+    final isDownloaded = await _storage.isSurahDownloaded(recitation.id, surah);
+    if (!isDownloaded) {
       final ok = await downloadSurahIfNeeded(recitation, surah);
       if (!ok) {
         if (context.mounted) {
@@ -284,6 +288,7 @@ class AudioPlayerService {
         return;
       }
     }
+
     await playAyahPreferLocal(
         surah: surah,
         ayah: ayah,
@@ -377,7 +382,7 @@ class AudioPlayerService {
     }
   }
 
-  /// Play a verse, preferring a locally downloaded file if present.
+  /// Play an ayah using locally downloaded segmented audio.
   Future<void> playAyahPreferLocal({
     required int surah,
     required int ayah,
@@ -389,7 +394,14 @@ class AudioPlayerService {
     final reciterLabel = reciterName ?? _recitationName;
     final surahLabel = surahName ?? 'Surah $surah';
     await _storage.initialize();
-    final local = await _storage.getLocalAyahFile(rid, surah, ayah);
+
+    // Load segmented audio
+    final surahFile = await _storage.getLocalSurahFile(rid, surah);
+    final segments = await _storage.getLocalSegments(rid, surah);
+
+    if (surahFile == null || segments == null || segments.isEmpty) {
+      throw Exception('Surah $surah not downloaded. Please download it first.');
+    }
 
     currentSurah.value = surah;
     currentAyah.value = ayah;
@@ -397,17 +409,23 @@ class AudioPlayerService {
 
     await _player.stop();
 
-    if (local != null) {
-      await _player.play(DeviceFileSource(local.path));
-    } else {
-      // Fallback if local play requested but somehow file missing
-      final file = await _api.getAudioByAyah(rid, surah, ayah);
-      if (file != null && file.url.isNotEmpty) {
-        await _player.play(UrlSource(file.url));
-      } else {
-        return; // failed
-      }
-    }
+    // Use segmented audio format
+    _currentSegments = segments;
+    _currentPlayingSurah = surah;
+
+    await _player.setSource(DeviceFileSource(surahFile.path));
+
+    // Find the segment for this ayah and seek to it
+    final segment = segments.firstWhere(
+      (seg) => seg.ayahNumber == ayah,
+      orElse: () => segments.first,
+    );
+
+    await _player.seek(Duration(milliseconds: segment.timestampFrom));
+    await _player.resume();
+
+    // Start monitoring position for ayah tracking
+    _startPositionMonitoring();
 
     // Set _hasSource AFTER playing to prevent the stop() call above from clearing it
     _hasSource = true;
@@ -419,8 +437,7 @@ class AudioPlayerService {
     );
   }
 
-  /// Plays a sequence of verses for the given Surah, starting from [startAyah].
-  /// This manages the loop internally.
+  /// Plays a sequence of ayahs for the given Surah using seamless segmented audio.
   Future<void> playSurahSequence({
     required int surah,
     required String surahLabel,
@@ -429,44 +446,60 @@ class AudioPlayerService {
   }) async {
     // Invalidate any old sequence
     final token = ++_serviceSequenceToken;
-    _inSequence = true; // Mark that we're in a sequence
+    _inSequence = true;
 
     await _player.stop();
-    final totalAyat = getVerseCount(surah);
+    await _storage.initialize();
 
-    for (var ayah = startAyah; ayah <= totalAyat; ayah++) {
-      // Check for cancellation
-      if (token != _serviceSequenceToken) break;
+    // Load segmented audio
+    final surahFile = await _storage.getLocalSurahFile(_recitationId, surah);
+    final segments = await _storage.getLocalSegments(_recitationId, surah);
 
-      try {
-        // We assume files are already downloaded or we rely on playAyahPreferLocal fallback.
-        // For smoother experience, the caller should ensure downloadSurahIfNeeded called first.
-        await playAyahPreferLocal(
-          surah: surah,
-          ayah: ayah,
-          surahName: surahLabel,
-          reciterName: reciterName,
-        );
-      } catch (e) {
-        // Error playing this ayah, stop sequence
-        break;
-      }
-
-      await waitForCompleteOrStop();
-
-      // If stopped explicitly by user, we stop loop
-      if (token != _serviceSequenceToken || !_hasSource) {
-        break;
-      }
+    if (surahFile == null || segments == null || segments.isEmpty) {
+      throw Exception('Surah $surah not downloaded. Please download it first.');
     }
 
+    // Use segmented audio format - seamless playback!
+    _currentSegments = segments;
+    _currentPlayingSurah = surah;
+    currentSurah.value = surah;
+    currentAyah.value = startAyah;
+    currentLabel.value = '$surahLabel, Ayah $startAyah • $reciterName';
+    _hasSource = true;
+
+    await _player.setSource(DeviceFileSource(surahFile.path));
+
+    // Find the segment for startAyah and seek to it
+    final startSegment = segments.firstWhere(
+      (seg) => seg.ayahNumber == startAyah,
+      orElse: () => segments.first,
+    );
+
+    await _player.seek(Duration(milliseconds: startSegment.timestampFrom));
+    await _player.resume();
+
+    // Start monitoring position to update current ayah
+    _startPositionMonitoring();
+
+    await AudioNotificationService.instance.showNowPlaying(
+      title: currentLabel.value,
+      reciterName: reciterName,
+      isPlaying: true,
+    );
+
+    // Wait for completion or stop
+    await waitForCompleteOrStop();
+
     // Clear state if finished naturally
-    _inSequence = false; // Sequence is done
+    _inSequence = false;
     if (token == _serviceSequenceToken) {
+      await _stopPositionMonitoring();
       currentSurah.value = null;
       currentAyah.value = null;
       _hasSource = false;
       isPlaying.value = false;
+      _currentSegments = null;
+      _currentPlayingSurah = null;
       await AudioNotificationService.instance.cancel();
     }
   }
@@ -596,5 +629,44 @@ class AudioPlayerService {
       endAyah: endAyah,
       reciterName: recitation.reciterName,
     );
+  }
+
+  /// Start monitoring playback position to track current ayah
+  void _startPositionMonitoring() {
+    _stopPositionMonitoring(); // Cancel any existing subscription
+
+    _positionSubscription = _player.onPositionChanged.listen((position) {
+      if (_currentSegments != null && _currentSegments!.isNotEmpty) {
+        final positionMs = position.inMilliseconds;
+
+        // Find which ayah we're currently playing
+        for (final segment in _currentSegments!) {
+          if (segment.containsPosition(positionMs)) {
+            final newAyah = segment.ayahNumber;
+            if (newAyah != currentAyah.value) {
+              currentAyah.value = newAyah;
+              // Update notification with current ayah
+              if (_hasSource && _currentPlayingSurah != null) {
+                final surahName = getSurahName(_currentPlayingSurah!);
+                currentLabel.value =
+                    '$surahName, Ayah $newAyah • $_recitationName';
+                AudioNotificationService.instance.showNowPlaying(
+                  title: currentLabel.value,
+                  reciterName: _recitationName,
+                  isPlaying: isPlaying.value,
+                );
+              }
+            }
+            break;
+          }
+        }
+      }
+    });
+  }
+
+  /// Stop monitoring playback position
+  Future<void> _stopPositionMonitoring() async {
+    await _positionSubscription?.cancel();
+    _positionSubscription = null;
   }
 }
