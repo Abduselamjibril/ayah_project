@@ -23,12 +23,12 @@ class ShareService {
     String? appLink,
   }) async {
     final surahName = getSurahName(surahNumber);
-    final verseText =
-        getVerseQCF(surahNumber, ayahNumber, verseEndSymbol: true);
+    final verseText = getVerse(surahNumber, ayahNumber, verseEndSymbol: true);
     final link = appLink ?? defaultAppLink;
     final text = [
       '$surahName ($surahNumber:$ayahNumber)',
       verseText,
+      'Shared via Ayah App',
       link,
     ].join('\n\n');
 
