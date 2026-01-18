@@ -1,16 +1,13 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:screenshot/screenshot.dart';
 import '../../../core/quran/qcf_quran.dart';
 import '../../../core/services/audio_player_service.dart';
 import '../../audio_player/audio_player_screen.dart';
 import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart';
+import 'package:quran_app/features/share/presentation/dialogs/share_preview_dialog.dart';
 import '../controller/mushaf_controller.dart';
 import '../screens/verse_details_screen.dart';
 import 'play_range_dialog.dart';
@@ -41,7 +38,6 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   bool _overlayVisible = true;
   Timer? _autoHideTimer;
   final bool _isSequentialMode = false;
-  final ScreenshotController _screenshotController = ScreenshotController();
 
   static const List<String> _bookmarkColors = [
     '#FFB300',
@@ -787,29 +783,11 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   }
 
   Future<void> _shareVerseCard(int surah, int verse) async {
-    final surahName = getSurahName(surah);
-    final verseText = getVerseQCF(surah, verse, verseEndSymbol: true);
-    try {
-      final bytes = await _screenshotController.captureFromWidget(
-        _VerseShareCard(
-          surah: surah,
-          verse: verse,
-          surahName: surahName,
-          verseText: verseText,
-        ),
-        pixelRatio: 2.5,
-      );
-
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/ayah_${surah}_$verse.png');
-      await file.writeAsBytes(bytes);
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: 'Surah $surahName ($surah:$verse)',
-      );
-    } catch (e) {
-      _showSnack('Could not share verse: $e');
-    }
+    await showSharePreviewDialog(
+      context: context,
+      surahNumber: surah,
+      ayahNumber: verse,
+    );
   }
 
   void _viewTafsir(BuildContext context, int surah, int verse) {
@@ -841,76 +819,5 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     final text = getVerseQCF(surah, verse, verseEndSymbol: true);
     Clipboard.setData(ClipboardData(text: text));
     _showSnack('Copied Surah $surah:$verse');
-  }
-}
-
-class _VerseShareCard extends StatelessWidget {
-  final int surah;
-  final int verse;
-  final String surahName;
-  final String verseText;
-
-  const _VerseShareCard({
-    required this.surah,
-    required this.verse,
-    required this.surahName,
-    required this.verseText,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = ThemeData.dark();
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        width: 1080,
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              '$surahName — $surah:$verse',
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Directionality(
-              textDirection: TextDirection.rtl,
-              child: Text(
-                verseText,
-                textAlign: TextAlign.right,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  height: 1.8,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Row(
-              children: [
-                Icon(Icons.bedtime, color: Colors.white70, size: 18),
-                SizedBox(width: 8),
-                Text(
-                  'Ayah App • Offline bookmark',
-                  style: TextStyle(color: Colors.white70),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:quran_app/core/quran/qcf_quran.dart';
 import 'package:quran_app/core/services/audio_player_service.dart';
@@ -12,9 +10,8 @@ import 'package:quran_app/features/audio_player/audio_player_screen.dart';
 import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart';
 import 'package:quran_app/features/mushaf/controller/mushaf_controller.dart';
 import 'package:quran_app/features/mushaf/screens/verse_details_screen.dart';
-import 'package:screenshot/screenshot.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:quran_app/features/share/presentation/dialogs/share_preview_dialog.dart';
 import 'play_range_dialog.dart';
 
 class VerticalMushafView extends StatefulWidget {
@@ -59,8 +56,6 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   bool _isAutoScrolling = false;
   double _autoScrollSpeed = 30.0; // pixels per second (conceptually)
   int _scrollGeneration = 0;
-
-  final ScreenshotController _screenshotController = ScreenshotController();
 
   static const List<String> _bookmarkColors = [
     '#FFB300',
@@ -1046,54 +1041,11 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   }
 
   Future<void> _shareVerseCard(int surah, int verse) async {
-    try {
-      final name = getSurahName(surah);
-      final text = getVerseQCF(surah, verse);
-      final widget = Container(
-        padding: const EdgeInsets.all(24),
-        color: Colors.white,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Surah $name - Verse $verse',
-              style: const TextStyle(
-                color: Colors.black,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              text,
-              textAlign: TextAlign.center,
-              textDirection: TextDirection.rtl,
-              style: const TextStyle(
-                color: Colors.black,
-                fontSize: 24,
-                fontFamily: 'QCF_BSML', // Simplified shared font
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Shared via Ayah App',
-              style: TextStyle(color: Colors.grey, fontSize: 12),
-            ),
-          ],
-        ),
-      );
-
-      final image = await _screenshotController.captureFromWidget(widget);
-      final temp = await getTemporaryDirectory();
-      final path = '${temp.path}/ayah_share.png';
-      final file = File(path);
-      await file.writeAsBytes(image);
-
-      final xFile = XFile(path);
-      await Share.shareXFiles([xFile], text: 'Surah $name:$verse');
-    } catch (e) {
-      _showSnack('Failed to share: $e');
-    }
+    await showSharePreviewDialog(
+      context: context,
+      surahNumber: surah,
+      ayahNumber: verse,
+    );
   }
 
   void _copyVerseText(int surah, int verse) {
