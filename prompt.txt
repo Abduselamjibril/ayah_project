@@ -1,0 +1,1 @@
+when i see some pages in wide screen its normal but in some screen text over flow so decrease the page size releted to the screen look in quran_pageview.dart fix this 
