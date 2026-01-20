@@ -471,7 +471,6 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     }
 
     final sortedLanguages = groupedByLanguage.keys.toList()..sort();
-    print('Loaded translation languages: $sortedLanguages'); // Debug log
 
     return ListView.builder(
       itemCount: sortedLanguages.length,
@@ -582,7 +581,6 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     }
 
     final sortedLanguages = groupedByLanguage.keys.toList()..sort();
-    print('Loaded tafsir languages: $sortedLanguages'); // Debug log
 
     return ListView.builder(
       itemCount: sortedLanguages.length,
