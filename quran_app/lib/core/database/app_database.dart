@@ -22,7 +22,7 @@ class AppDatabase {
 
     return await openDatabase(
       path,
-      version: 5, // Incremented version for FTS normalization
+      version: 6, // Bump for translator/scholar columns
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -134,6 +134,29 @@ class AppDatabase {
       await _rebuildFtsWithNormalization(db);
       debugPrint('Database upgraded to version 5 (Normalized FTS)');
     }
+
+    if (oldVersion < 6) {
+      // Align schema with translator/scholar metadata used by services
+      await _addColumnIfNotExists(db, 'translations', 'translator', 'TEXT');
+      await _addColumnIfNotExists(db, 'tafsir', 'language', 'TEXT');
+      await _addColumnIfNotExists(db, 'tafsir', 'scholar', 'TEXT');
+
+      // Backfill nulls to keep NOT NULL semantics on fresh installs
+      await db.execute(
+          "UPDATE translations SET translator = '' WHERE translator IS NULL");
+      await db
+          .execute("UPDATE tafsir SET language = '' WHERE language IS NULL");
+      await db.execute("UPDATE tafsir SET scholar = '' WHERE scholar IS NULL");
+
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_translations_translator ON translations (translator)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_tafsir_language ON tafsir (language)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_tafsir_scholar ON tafsir (scholar)');
+
+      debugPrint('Database upgraded to version 6 (translator/scholar columns)');
+    }
   }
 
   Future<void> _rebuildFtsWithNormalization(Database db) async {
@@ -214,6 +237,7 @@ class AppDatabase {
         ayah_number INTEGER NOT NULL,
         text TEXT NOT NULL,
         language TEXT NOT NULL,
+        translator TEXT,
         edition_identifier TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
       )
@@ -223,6 +247,8 @@ class AppDatabase {
         'CREATE INDEX IF NOT EXISTS idx_translations_surah_ayah ON translations (surah_number, ayah_number)');
     await db.execute(
         'CREATE INDEX IF NOT EXISTS idx_translations_language ON translations (language)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_translations_translator ON translations (translator)');
   }
 
   Future<void> _createTafsirTable(Database db) async {
@@ -232,6 +258,8 @@ class AppDatabase {
         surah_number INTEGER NOT NULL,
         ayah_number INTEGER NOT NULL,
         text TEXT NOT NULL,
+        language TEXT NOT NULL,
+        scholar TEXT,
         author TEXT,
         edition_identifier TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -240,6 +268,10 @@ class AppDatabase {
 
     await db.execute(
         'CREATE INDEX IF NOT EXISTS idx_tafsir_surah_ayah ON tafsir (surah_number, ayah_number)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_tafsir_language ON tafsir (language)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_tafsir_scholar ON tafsir (scholar)');
   }
 
   /// Helper method to add a column only if it doesn't already exist
