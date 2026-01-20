@@ -11,6 +11,7 @@ class ShareCardDesign extends StatelessWidget {
   final ShareCardBackground background;
   final String appName;
   final String appIconAsset;
+  final String? frameAsset;
   final String? translationText;
   final String? referenceText;
   final bool showReference;
@@ -28,15 +29,17 @@ class ShareCardDesign extends StatelessWidget {
     required this.referenceText,
     required this.showReference,
     required this.size,
+    this.frameAsset,
   });
 
   @override
   Widget build(BuildContext context) {
     final textColor = isDark ? Colors.white : Colors.black;
-    final frameAsset = isDark
-        ? 'assets/images/mainframe_dark.png'
-        : 'assets/images/mainframe.png';
-    final safePadding = size * 0.06;
+    final effectiveFrameAsset = frameAsset ??
+        (isDark
+            ? 'assets/images/mainframe_dark.png'
+            : 'assets/images/mainframe.png');
+    final safePadding = size * 0.025;
 
     return SizedBox(
       width: size,
@@ -57,7 +60,8 @@ class ShareCardDesign extends StatelessWidget {
             if (background.overlayOpacity > 0)
               Positioned.fill(
                 child: Container(
-                  color: Colors.black.withOpacity(background.overlayOpacity),
+                  color:
+                      Colors.black.withValues(alpha: background.overlayOpacity),
                 ),
               ),
             Padding(
@@ -67,12 +71,12 @@ class ShareCardDesign extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _SurahHeader(
-                    frameAsset: frameAsset,
+                    frameAsset: effectiveFrameAsset,
                     surahNumber: surahNumber,
                     size: size,
                     textColor: textColor,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 0),
                   _AyahBody(
                     surahNumber: surahNumber,
                     ayahNumber: ayahNumber,
@@ -179,7 +183,7 @@ class _AyahBody extends StatelessWidget {
           surahNumber: surahNumber,
           verseNumber: ayahNumber,
           textColor: textColor,
-          fontSize: 18,
+          fontSize: 23,
         ),
         if (translationText != null) ...[
           const SizedBox(height: 8),
@@ -189,7 +193,7 @@ class _AyahBody extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               height: 1.4,
-              color: textColor.withOpacity(0.7),
+              color: textColor.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -201,7 +205,7 @@ class _AyahBody extends StatelessWidget {
             style: TextStyle(
               fontSize: 20,
               letterSpacing: 0.4,
-              color: textColor.withOpacity(0.75),
+              color: textColor.withValues(alpha: 0.75),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -242,7 +246,7 @@ class _ShareFooter extends StatelessWidget {
           style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.bold,
-            color: textColor.withOpacity(0.3),
+            color: textColor.withValues(alpha: 0.3),
             letterSpacing: 0.8,
           ),
         ),

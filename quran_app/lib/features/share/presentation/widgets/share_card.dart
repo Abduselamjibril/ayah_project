@@ -41,6 +41,7 @@ class ShareCard extends StatelessWidget {
   final String? referenceText;
   final bool showReference;
   final double size;
+  final String? frameAsset;
 
   const ShareCard({
     super.key,
@@ -54,6 +55,7 @@ class ShareCard extends StatelessWidget {
     this.referenceText,
     this.showReference = true,
     this.size = 1080,
+    this.frameAsset,
   });
 
   @override
@@ -69,6 +71,7 @@ class ShareCard extends StatelessWidget {
       referenceText: referenceText,
       showReference: showReference,
       size: size,
+      frameAsset: frameAsset,
     );
   }
 }

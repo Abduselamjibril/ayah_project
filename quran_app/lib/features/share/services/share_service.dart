@@ -43,6 +43,7 @@ class ShareService {
     bool isDark = true,
     String? appName,
     String? appIconAsset,
+    String? frameAsset,
     double pixelRatio = 2.0,
   }) async {
     final controller = ScreenshotController();
@@ -55,6 +56,7 @@ class ShareService {
         appName: appName ?? defaultAppName,
         appIconAsset: appIconAsset ?? defaultAppIconAsset,
         size: size,
+        frameAsset: frameAsset,
       ),
       pixelRatio: pixelRatio,
     );

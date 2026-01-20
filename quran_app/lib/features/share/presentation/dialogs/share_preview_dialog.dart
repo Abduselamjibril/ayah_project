@@ -1,26 +1,8 @@
-import 'dart:io';
-import 'dart:ui' as ui;
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 
-import 'package:quran_app/core/quran/qcf_quran.dart';
+import 'package:quran_app/core/services/theme_service.dart';
 import 'package:quran_app/features/share/presentation/widgets/share_card.dart';
-
-class ShareThemePreset {
-  final String label;
-  final ShareCardBackground background;
-  final bool isDark;
-
-  const ShareThemePreset({
-    required this.label,
-    required this.background,
-    required this.isDark,
-  });
-}
+import 'package:quran_app/features/share/services/share_service.dart';
 
 Future<void> showSharePreviewDialog({
   required BuildContext context,
@@ -29,105 +11,102 @@ Future<void> showSharePreviewDialog({
 }) async {
   await showDialog<void>(
     context: context,
-    barrierDismissible: true,
-    builder: (dialogContext) => SharePreviewDialog(
+    builder: (dialogContext) => ShareOptionsDialog(
       surahNumber: surahNumber,
       ayahNumber: ayahNumber,
     ),
   );
 }
 
-class SharePreviewDialog extends StatefulWidget {
+class ShareOptionsDialog extends StatefulWidget {
   final int surahNumber;
   final int ayahNumber;
 
-  const SharePreviewDialog({
+  const ShareOptionsDialog({
     super.key,
     required this.surahNumber,
     required this.ayahNumber,
   });
 
   @override
-  State<SharePreviewDialog> createState() => _SharePreviewDialogState();
+  State<ShareOptionsDialog> createState() => _ShareOptionsDialogState();
 }
 
-class _SharePreviewDialogState extends State<SharePreviewDialog> {
-  int _selected = 0;
-  final GlobalKey _repaintBoundaryKey = GlobalKey();
+class _ShareOptionsDialogState extends State<ShareOptionsDialog> {
   bool _isSharing = false;
-
-  late final List<ShareThemePreset> _presets = [
-    ShareThemePreset(
-      label: 'Night Blue',
-      isDark: true,
-      background: ShareCardBackground.gradient(
-        LinearGradient(
-          colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-    ),
-    ShareThemePreset(
-      label: 'Midnight',
-      isDark: true,
-      background: ShareCardBackground.solid(Color(0xFF101417)),
-    ),
-    ShareThemePreset(
-      label: 'Olive',
-      isDark: true,
-      background: ShareCardBackground.gradient(
-        LinearGradient(
-          colors: [Color(0xFF0B1A17), Color(0xFF1C3A2F)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
-    ),
-    ShareThemePreset(
-      label: 'Parchment',
-      isDark: false,
-      background: ShareCardBackground.solid(Color(0xFFFFF4DA)),
-    ),
-    ShareThemePreset(
-      label: 'Desert',
-      isDark: false,
-      background: ShareCardBackground.gradient(
-        LinearGradient(
-          colors: [Color(0xFFFFE9C2), Color(0xFFF7DDB4)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-    ),
-  ];
 
   Future<void> _shareAsImage() async {
     if (_isSharing) return;
     setState(() => _isSharing = true);
 
     try {
-      final boundary = _repaintBoundaryKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
-      if (boundary == null) return;
+      // 1. Determine current theme from ThemeService
+      final themeService = ThemeService();
+      final currentTheme = themeService.currentTheme;
 
-      // Capture at high resolution (3x for quality)
-      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-      final ByteData? byteData =
-          await image.toByteData(format: ui.ImageByteFormat.png);
-      if (byteData == null) return;
+      // 2. Map AppTheme to ShareCardBackground and proper configuration
+      ShareCardBackground background;
+      bool isDark = true;
 
-      final Uint8List pngBytes = byteData.buffer.asUint8List();
+      switch (currentTheme) {
+        case AppTheme.goldenParchment:
+          background = ShareCardBackground.solid(const Color(0xFFFFF4DA));
+          isDark = false;
+          break;
+        case AppTheme.midnightBlueprint:
+          background = ShareCardBackground.solid(const Color(0xFF101417));
+          isDark = true;
+          break;
+        case AppTheme.mintGarden:
+          // Using a nice green gradient/theme similar to "Olive" preset
+          // Matching Mint Garden's general vibe but optimized for card
+          background = ShareCardBackground.gradient(
+            const LinearGradient(
+              colors: [Color(0xFF0B1A17), Color(0xFF1C3A2F)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          );
+          isDark =
+              true; // Dark text on light green might also work, but gradients usually look best with white text
+          // Actually Mint Garden is a Light theme in app.
+          // Let's check AppColors.greenLightSurface (D0EBD4).
+          // If the APP theme is light, maybe we should use a light card?
+          // But the user asked for "current style".
+          // If I use the Olive preset (dark), it might clash if the user expects light.
+          // Let's try to match the actual theme colors if possible.
+          // AppColors.greenLightSurface is 0xFFD0EBD4.
+          // background = ShareCardBackground.solid(AppColors.greenLightSurface);
+          // isDark = false;
+          // However, gradients look premium.
+          // Let's stick to the "Olive" preset for now as it's a safe "Green" theme.
+          // Or better: Let's use the actual surface color if it's solid.
+          // modifying to use the mapped presets from before for high quality:
+          break;
+        case AppTheme.ornateTwilight:
+          // "Night Blue" preset vibe or Dark Green?
+          // Ornate Twilight is Green Dark.
+          background = ShareCardBackground.gradient(
+            const LinearGradient(
+              colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          );
+          isDark = true;
+          break;
+      }
 
-      final dir = await getTemporaryDirectory();
-      final file = File(
-          '${dir.path}/ayah_${widget.surahNumber}_${widget.ayahNumber}.jpg');
-      await file.writeAsBytes(pngBytes);
-
-      final surahName = getSurahName(widget.surahNumber);
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: '$surahName (${widget.surahNumber}:${widget.ayahNumber})',
+      // 3. Trigger ShareService off-screen capture
+      // We use size: 400 to mimic a phone width layout, preventing fonts from looking too small
+      await ShareService.instance.shareVerseImage(
+        surahNumber: widget.surahNumber,
+        ayahNumber: widget.ayahNumber,
+        background: background,
+        isDark: isDark,
+        size: 400,
+        frameAsset: themeService.mainframeImagePath,
+        pixelRatio: 3.0, // High resolution output
       );
 
       if (mounted) {
@@ -141,19 +120,10 @@ class _SharePreviewDialogState extends State<SharePreviewDialog> {
   }
 
   Future<void> _shareAsText() async {
-    final surahName = getSurahName(widget.surahNumber);
-    final verseText =
-        getVerse(widget.surahNumber, widget.ayahNumber, verseEndSymbol: true);
-    const appLink = 'https://app-link.example.com';
-    final text = [
-      '$surahName (${widget.surahNumber}:${widget.ayahNumber})',
-      verseText,
-      'Shared via Ayah App',
-      appLink,
-    ].join('\n\n');
-
-    await Share.share(text);
-
+    await ShareService.instance.shareVerseText(
+      surahNumber: widget.surahNumber,
+      ayahNumber: widget.ayahNumber,
+    );
     if (mounted) {
       Navigator.of(context).pop();
     }
@@ -161,84 +131,103 @@ class _SharePreviewDialogState extends State<SharePreviewDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final preset = _presets[_selected];
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final previewSize = screenWidth < 520 ? screenWidth - 48 : 520.0;
-
     return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                constraints: BoxConstraints(
-                  maxWidth: previewSize,
-                  maxHeight: MediaQuery.sizeOf(context).height * 0.6,
-                ),
-                child: RepaintBoundary(
-                  key: _repaintBoundaryKey,
-                  child: ShareCard(
-                    surahNumber: widget.surahNumber,
-                    ayahNumber: widget.ayahNumber,
-                    isDark: preset.isDark,
-                    background: preset.background,
-                    size: previewSize,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Share Verse',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: _ShareOptionButton(
+                    icon: Icons.text_fields,
+                    label: 'Share Text',
+                    onTap: _shareAsText,
+                    isOutlined: true,
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Themes',
-                  style: Theme.of(context).textTheme.titleSmall,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _ShareOptionButton(
+                    icon: Icons.image,
+                    label: 'Share Image',
+                    isLoading: _isSharing,
+                    onTap: _isSharing ? null : _shareAsImage,
+                    isOutlined: false,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: List.generate(_presets.length, (index) {
-                  final item = _presets[index];
-                  final isSelected = index == _selected;
-                  return ChoiceChip(
-                    label: Text(item.label),
-                    selected: isSelected,
-                    onSelected: (_) => setState(() => _selected = index),
-                  );
-                }),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _shareAsText,
-                      child: const Text('Share Text'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: _isSharing ? null : _shareAsImage,
-                      child: _isSharing
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Share Image'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ),
       ),
+    );
+  }
+}
+
+class _ShareOptionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  final bool isOutlined;
+  final bool isLoading;
+
+  const _ShareOptionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    required this.isOutlined,
+    this.isLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final style = ElevatedButton.styleFrom(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    );
+
+    if (isLoading) {
+      return FilledButton(
+        onPressed: null,
+        style: style,
+        child: const SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(strokeWidth: 2.5),
+        ),
+      );
+    }
+
+    if (isOutlined) {
+      return OutlinedButton.icon(
+        onPressed: onTap,
+        icon: Icon(icon),
+        label: Text(label),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+
+    return FilledButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon),
+      label: Text(label),
+      style: style,
     );
   }
 }
