@@ -1,7 +1,14 @@
-import 'package:flutter/material.dart';
+import 'dart:io';
+import 'dart:ui' as ui;
+import 'dart:typed_data';
 
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+
+import 'package:quran_app/core/quran/qcf_quran.dart';
 import 'package:quran_app/features/share/presentation/widgets/share_card.dart';
-import 'package:quran_app/features/share/services/share_service.dart';
 
 class ShareThemePreset {
   final String label;
@@ -46,6 +53,8 @@ class SharePreviewDialog extends StatefulWidget {
 
 class _SharePreviewDialogState extends State<SharePreviewDialog> {
   int _selected = 0;
+  final GlobalKey _repaintBoundaryKey = GlobalKey();
+  bool _isSharing = false;
 
   late final List<ShareThemePreset> _presets = [
     ShareThemePreset(
@@ -93,6 +102,63 @@ class _SharePreviewDialogState extends State<SharePreviewDialog> {
     ),
   ];
 
+  Future<void> _shareAsImage() async {
+    if (_isSharing) return;
+    setState(() => _isSharing = true);
+
+    try {
+      final boundary = _repaintBoundaryKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
+      if (boundary == null) return;
+
+      // Capture at high resolution (3x for quality)
+      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      final ByteData? byteData =
+          await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return;
+
+      final Uint8List pngBytes = byteData.buffer.asUint8List();
+
+      final dir = await getTemporaryDirectory();
+      final file = File(
+          '${dir.path}/ayah_${widget.surahNumber}_${widget.ayahNumber}.jpg');
+      await file.writeAsBytes(pngBytes);
+
+      final surahName = getSurahName(widget.surahNumber);
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: '$surahName (${widget.surahNumber}:${widget.ayahNumber})',
+      );
+
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSharing = false);
+      }
+    }
+  }
+
+  Future<void> _shareAsText() async {
+    final surahName = getSurahName(widget.surahNumber);
+    final verseText =
+        getVerse(widget.surahNumber, widget.ayahNumber, verseEndSymbol: true);
+    const appLink = 'https://app-link.example.com';
+    final text = [
+      '$surahName (${widget.surahNumber}:${widget.ayahNumber})',
+      verseText,
+      'Shared via Ayah App',
+      appLink,
+    ].join('\n\n');
+
+    await Share.share(text);
+
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final preset = _presets[_selected];
@@ -112,14 +178,14 @@ class _SharePreviewDialogState extends State<SharePreviewDialog> {
                   maxWidth: previewSize,
                   maxHeight: MediaQuery.sizeOf(context).height * 0.6,
                 ),
-                child: FittedBox(
-                  fit: BoxFit.contain,
+                child: RepaintBoundary(
+                  key: _repaintBoundaryKey,
                   child: ShareCard(
                     surahNumber: widget.surahNumber,
                     ayahNumber: widget.ayahNumber,
                     isDark: preset.isDark,
                     background: preset.background,
-                    size: 1400,
+                    size: previewSize,
                   ),
                 ),
               ),
@@ -150,35 +216,21 @@ class _SharePreviewDialogState extends State<SharePreviewDialog> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () async {
-                        final navigator = Navigator.of(context);
-                        await ShareService.instance.shareVerseText(
-                          surahNumber: widget.surahNumber,
-                          ayahNumber: widget.ayahNumber,
-                        );
-                        if (navigator.mounted) {
-                          navigator.pop();
-                        }
-                      },
+                      onPressed: _shareAsText,
                       child: const Text('Share Text'),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: FilledButton(
-                      onPressed: () async {
-                        final navigator = Navigator.of(context);
-                        await ShareService.instance.shareVerseImage(
-                          surahNumber: widget.surahNumber,
-                          ayahNumber: widget.ayahNumber,
-                          background: preset.background,
-                          isDark: preset.isDark,
-                        );
-                        if (navigator.mounted) {
-                          navigator.pop();
-                        }
-                      },
-                      child: const Text('Share Image'),
+                      onPressed: _isSharing ? null : _shareAsImage,
+                      child: _isSharing
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Share Image'),
                     ),
                   ),
                 ],

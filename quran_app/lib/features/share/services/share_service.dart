@@ -39,6 +39,7 @@ class ShareService {
     required int surahNumber,
     required int ayahNumber,
     required ShareCardBackground background,
+    required double size,
     bool isDark = true,
     String? appName,
     String? appIconAsset,
@@ -53,13 +54,13 @@ class ShareService {
         background: background,
         appName: appName ?? defaultAppName,
         appIconAsset: appIconAsset ?? defaultAppIconAsset,
-        size: 2000,
+        size: size,
       ),
       pixelRatio: pixelRatio,
     );
 
     final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/ayah_${surahNumber}_$ayahNumber.png');
+    final file = File('${dir.path}/ayah_${surahNumber}_$ayahNumber.jpg');
     await file.writeAsBytes(bytes);
 
     await Share.shareXFiles(

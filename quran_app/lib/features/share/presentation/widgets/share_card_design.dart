@@ -116,7 +116,7 @@ class _SurahHeader extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final imageWidth = constraints.maxWidth;
-        final fontSize = 35 * (imageWidth / 430);
+        final fontSize = 37 * (imageWidth / 430);
 
         return SizedBox(
           height: imageWidth * 0.22,
@@ -129,7 +129,7 @@ class _SurahHeader extends StatelessWidget {
                 fit: BoxFit.contain,
               ),
               Padding(
-                padding: const EdgeInsets.only(top: 10),
+                padding: const EdgeInsets.only(top: 0),
                 child: RichText(
                   textAlign: TextAlign.center,
                   text: TextSpan(
@@ -179,28 +179,28 @@ class _AyahBody extends StatelessWidget {
           surahNumber: surahNumber,
           verseNumber: ayahNumber,
           textColor: textColor,
-          fontSize: 76.5,
+          fontSize: 18,
         ),
         if (translationText != null) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
             translationText!,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 32,
-              height: 1.5,
+              fontSize: 14,
+              height: 1.4,
               color: textColor.withOpacity(0.7),
             ),
           ),
         ],
         if (showReference) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
             referenceText,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 50,
-              letterSpacing: 0.6,
+              fontSize: 20,
+              letterSpacing: 0.4,
               color: textColor.withOpacity(0.75),
               fontWeight: FontWeight.w500,
             ),
@@ -228,22 +228,22 @@ class _ShareFooter extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         ClipRRect(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(10),
           child: Image.asset(
             appIconAsset,
-            width: 95,
-            height: 95,
+            width: 30,
+            height: 30,
             fit: BoxFit.cover,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         Text(
           appName,
           style: TextStyle(
-            fontSize: 50,
+            fontSize: 10,
             fontWeight: FontWeight.bold,
             color: textColor.withOpacity(0.3),
-            letterSpacing: 1.2,
+            letterSpacing: 0.8,
           ),
         ),
       ],
