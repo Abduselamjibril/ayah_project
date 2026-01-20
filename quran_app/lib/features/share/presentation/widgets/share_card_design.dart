@@ -77,14 +77,17 @@ class ShareCardDesign extends StatelessWidget {
                     textColor: textColor,
                   ),
                   const SizedBox(height: 0),
-                  _AyahBody(
-                    surahNumber: surahNumber,
-                    ayahNumber: ayahNumber,
-                    translationText: translationText,
-                    textColor: textColor,
-                    isDark: isDark,
-                    showReference: false,
-                    referenceText: '',
+                  Transform.translate(
+                    offset: Offset(0, -size * 0.03),
+                    child: _AyahBody(
+                      surahNumber: surahNumber,
+                      ayahNumber: ayahNumber,
+                      translationText: translationText,
+                      textColor: textColor,
+                      isDark: isDark,
+                      showReference: false,
+                      referenceText: '',
+                    ),
                   ),
                   const SizedBox(height: 18),
                   _ShareFooter(

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:share_plus/share_plus.dart';
+
 import 'package:quran_app/core/i18n/app_localizations.dart';
 import '../../core/quran/qcf_quran.dart';
+import '../../features/share/presentation/dialogs/share_preview_dialog.dart';
 
 import '../../core/services/verse_of_the_day_service.dart';
 import '../../data/models/hijri_date_model.dart';
@@ -339,9 +340,11 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             IconButton(
-                              onPressed: () {
-                                Share.share(
-                                  '$verseText\n\n$surahName ($surah:$verse)\n${AppLocalizations.of(context)?.translate('shared_via') ?? 'Shared via Quran App'}',
+                              onPressed: () async {
+                                await showSharePreviewDialog(
+                                  context: context,
+                                  surahNumber: surah,
+                                  ayahNumber: verse,
                                 );
                               },
                               icon: const Icon(Icons.share_rounded),

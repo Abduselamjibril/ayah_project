@@ -4,6 +4,7 @@ import 'package:quran_app/core/services/tafsir_service.dart';
 import 'package:quran_app/core/quran/data/suwar.dart';
 import 'package:quran_app/core/quran/data/quran_text.dart';
 import 'package:quran_app/features/downloads/downloads_screen.dart';
+import 'package:quran_app/features/share/presentation/dialogs/share_preview_dialog.dart';
 
 class VerseDetailsScreen extends StatefulWidget {
   final int surahNumber;
@@ -245,7 +246,11 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
                         ),
                         IconButton(
                           onPressed: () {
-                            // Share functionality
+                            showSharePreviewDialog(
+                              context: context,
+                              surahNumber: widget.surahNumber,
+                              ayahNumber: widget.ayahNumber,
+                            );
                           },
                           icon: Icon(
                             Icons.share,

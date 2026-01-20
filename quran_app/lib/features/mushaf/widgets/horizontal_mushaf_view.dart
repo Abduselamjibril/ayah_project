@@ -538,7 +538,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                 ),
                 _buildOptionTile(
                   icon: Icons.share,
-                  title: 'Share Verse Image',
+                  title: 'Share',
                   onTap: () {
                     Navigator.pop(context);
                     _shareVerseCard(surah, verse);
