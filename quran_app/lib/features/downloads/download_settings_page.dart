@@ -75,6 +75,7 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+
     final theme = Theme.of(context);
     final accent = BrandColors.accent;
     final titleText = AppLocalizations.of(context)
@@ -101,12 +102,14 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
             titleText,
             style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
+
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
+
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -126,6 +129,7 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
           titleText,
           style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
         ),
+
       ),
       body: ListView(
         children: [
@@ -187,7 +191,9 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
                 Text(
                   AppLocalizations.of(context)?.translate('about_downloads') ??
                       'About Downloads',
+
                   style: TextStyle(
+
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: Colors.grey,

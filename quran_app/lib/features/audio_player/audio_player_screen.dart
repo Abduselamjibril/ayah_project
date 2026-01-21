@@ -8,7 +8,6 @@ import 'package:quran_app/core/services/audio_player_service.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
 import 'package:quran_app/core/utils/localization_helper.dart';
 import 'package:quran_app/features/mushaf/widgets/mushaf_audio_navigation.dart';
-
 import '../../core/quran/qcf_quran.dart';
 import '../mushaf/controller/mushaf_controller.dart';
 import 'package:quran_app/app/app.dart';
@@ -157,7 +156,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                   shape: BoxShape.circle,
                   color: Theme.of(context)
                       .colorScheme
-                      .surfaceVariant
+                      .surfaceContainerHighest // Using the blended UI fix
                       .withOpacity(0.5),
                 ),
                 child: IconButton(
@@ -216,59 +215,73 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
       if (recitation == null) return; // User cancelled
     }
 
-    // Step 2: Determine which surah to play
+    // Step 2: Determine playback range from current page
     // Highlighted verse has priority
     final hs = widget.controller.highlightedSurah;
     final hv = widget.controller.highlightedVerse;
-    int surah;
-    int startAyah = 1;
 
-    if (hs != null && hv != null) {
-      surah = hs;
-      startAyah = hv;
+    int startSurah;
+    int startAyah;
+    int endSurah;
+    int endAyah;
+
+    // Use current page data helper
+    await AudioService.instance.initialize();
+    final currentPage = widget.controller.currentPage;
+    final pd = getPageData(currentPage);
+
+    // If page is empty (shouldn't happen for valid pages), default to Surah 1
+    if (pd.isEmpty) {
+      startSurah = 1;
+      startAyah = 1;
+      endSurah = 1;
+      endAyah = 7;
     } else {
-      // Use current page
-      await AudioService.instance.initialize();
-      final currentPage = widget.controller.currentPage;
-      final pd = getPageData(currentPage);
-      surah = 1;
-      if (pd.isNotEmpty) {
-        surah = int.tryParse(pd.first['surah'].toString()) ?? 1;
+      // Determine range from page content
+      final firstVerse = pd.first;
+      final lastVerse = pd.last;
+
+      final pageStartSurah = int.tryParse(firstVerse['surah'].toString()) ?? 1;
+      final pageStartAyah = int.tryParse(firstVerse['start'].toString()) ?? 1;
+      final pageEndSurah = int.tryParse(lastVerse['surah'].toString()) ?? 1;
+      final pageEndAyah = int.tryParse(lastVerse['end'].toString()) ?? 1;
+
+      // Check if highlighted verse belongs to current page
+      bool isHighlightOnCurrentPage = false;
+      if (hs != null && hv != null) {
+        try {
+          final p = getPageNumber(hs, hv);
+          if (p == currentPage) {
+            isHighlightOnCurrentPage = true;
+          }
+        } catch (_) {}
+      }
+
+      // If playing from specific highlighted verse ON THIS PAGE
+      if (isHighlightOnCurrentPage && hs != null && hv != null) {
+        startSurah = hs;
+        startAyah = hv;
+        // End at the end of the page
+        endSurah = pageEndSurah;
+        endAyah = pageEndAyah;
+      } else {
+        // Play whole page from start
+        startSurah = pageStartSurah;
+        startAyah = pageStartAyah;
+        endSurah = pageEndSurah;
+        endAyah = pageEndAyah;
       }
     }
 
-    final recitationId = recitation.id;
-    final surahLabel = getLocalizedSurahName(context, surah);
-
-    // Step 3: Check if audio is downloaded, if not download it
-    final hasLocal =
-        await AudioService.instance.isSurahDownloaded(recitationId, surah);
-    if (!hasLocal) {
-      final downloadTitle =
-          (AppLocalizations.of(context)?.translate('downloading_surah') ??
-                  'Downloading Surah {number} ({reciter})')
-              .replaceAll('{number}', '$surah')
-              .replaceAll('{reciter}', recitation.reciterName);
-
-      final ok = await _audioPlayer.downloadSurahIfNeeded(recitation, surah,
-          notificationTitle: downloadTitle);
-      if (!ok) {
-        _showSnack(
-            (AppLocalizations.of(context)?.translate('download_surah_error') ??
-                    'Could not download audio for Surah {surah}')
-                .replaceAll('{surah}', '$surah'));
-
-        return;
-      }
-    }
-
-    // Step 4: Play the audio
+    // Step 3: Play Range Sequence (handling downloads automatically)
     try {
-      await _audioPlayer.playSurahSequence(
-        surah: surah,
+      await _audioPlayer.playRangeSequenceWithDownload(
+        context,
+        startSurah: startSurah,
         startAyah: startAyah,
-        surahLabel: surahLabel,
-        reciterName: recitation.reciterName,
+        endSurah: endSurah,
+        endAyah: endAyah,
+        forceReciter: false,
       );
     } catch (e) {
       _showSnack(

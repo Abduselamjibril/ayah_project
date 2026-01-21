@@ -223,7 +223,7 @@ Future<AudioRecitation?> showReciterPickerSheet(
                                       border:
                                           Border.all(color: BrandColors.accent),
                                     ),
-                                    child: Icon(
+                                    child: const Icon(
                                       Icons.info_outline,
                                       size: 18,
                                       color: BrandColors.accent,

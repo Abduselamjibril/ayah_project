@@ -115,8 +115,6 @@ class _PageviewQuranState extends State<PageviewQuran> {
   bool get _ownsVerticalController => widget.itemScrollController == null;
   bool get _isVertical => widget.scrollMode == ScrollMode.vertical;
 
-  // ... (existing methods)
-
   @override
   void initState() {
     super.initState();
@@ -159,7 +157,9 @@ class _PageviewQuranState extends State<PageviewQuran> {
     final newPage = firstVisible.index + 1;
 
     if (newPage >= 1 && newPage <= totalPagesCount && newPage != _currentPage) {
-      _currentPage = newPage;
+      setState(() {
+        _currentPage = newPage;
+      });
       widget.onPageChanged?.call(_currentPage);
     }
   }
@@ -215,7 +215,9 @@ class _PageviewQuranState extends State<PageviewQuran> {
           controller: _controller,
           itemCount: totalPagesCount,
           onPageChanged: (index) {
-            _currentPage = index + 1;
+            setState(() {
+              _currentPage = index + 1;
+            });
             widget.onPageChanged?.call(_currentPage);
           },
           physics: const BouncingScrollPhysics(),
@@ -263,7 +265,6 @@ class _PageviewQuranState extends State<PageviewQuran> {
           physics: const BouncingScrollPhysics(),
           itemCount: totalPagesCount,
           initialScrollIndex: widget.initialPageNumber - 1,
-          // Removed cacheExtent etc as they differ in this package
           itemBuilder: (context, index) {
             final pageNumber = index + 1;
             final header = _headerForPage(pageNumber);
@@ -336,7 +337,7 @@ class _PageWithNumber extends StatelessWidget {
   Widget build(BuildContext context) {
     final style = pageNumberTextStyle ??
         TextStyle(
-          color: textColorFallback.withValues(alpha: 0.6),
+          color: textColorFallback.withOpacity(0.6),
           fontSize: 15.0,
           fontWeight: FontWeight.w500,
         );
@@ -436,7 +437,6 @@ class _PageWithNumber extends StatelessWidget {
   }
 }
 
-/// Widget that displays the page number with a themed background image
 class _PageNumberWithBackground extends StatelessWidget {
   final int pageNumber;
   final TextStyle textStyle;
@@ -451,24 +451,27 @@ class _PageNumberWithBackground extends StatelessWidget {
     final themeService = ThemeService();
     final backgroundImage = themeService.pageBackgroundImagePath;
 
-    return SizedBox(
+    // Hizb Logic
+    final hizbNumber = getHizbNumberForPage(pageNumber);
+    final hasHizb = hizbNumber != -1;
+    final isEven = pageNumber % 2 == 0;
+
+    // Page Number Widget
+    final pageNumberWidget = SizedBox(
       width: 60,
       height: 60,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Background decorative image
           Image.asset(
             backgroundImage,
             width: 60,
             height: 60,
             fit: BoxFit.contain,
             errorBuilder: (context, error, stackTrace) {
-              // Fallback to plain text if image not found
               return const SizedBox.shrink();
             },
           ),
-          // Page number text overlay
           Text(
             pageNumber.toString(),
             style: textStyle.copyWith(
@@ -476,6 +479,59 @@ class _PageNumberWithBackground extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+
+    // Hizb Widget
+    Widget hizbWidget;
+    if (hasHizb) {
+      final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+      hizbWidget = Container(
+        width: 60,
+        height: 32,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isDarkMode
+              ? const Color(0xFFFACC15).withOpacity(0.18)
+              : const Color(0xFFB45309).withOpacity(0.09),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isDarkMode
+                ? const Color(0xFFFACC15).withOpacity(0.4)
+                : const Color(0xFFB45309).withOpacity(0.18),
+          ),
+        ),
+        child: Text(
+          "Hizb $hizbNumber",
+          style: textStyle.copyWith(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: isDarkMode
+                ? const Color(0xFFFACC15)
+                : const Color(0xFFB45309),
+          ),
+        ),
+      );
+    } else {
+      hizbWidget = const SizedBox(width: 60, height: 32);
+    }
+
+    // Layout: Even = Page Left, Hizb Right; Odd = Hizb Left, Page Right
+    List<Widget> children;
+    if (isEven) {
+      children = [pageNumberWidget, hizbWidget];
+    } else {
+      children = [hizbWidget, pageNumberWidget];
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: children,
+        ),
       ),
     );
   }
@@ -561,6 +617,9 @@ class _QuranPageContentState extends State<QuranPageContent>
       for (int v = start; v <= end; v++) {
         if (v == start && v == 1) {
           verseSpans.add(WidgetSpan(child: HeaderWidget(suraNumber: surah)));
+
+          verseSpans.add(const TextSpan(text: "\n"));
+
           if (widget.pageNumber != 1 && widget.pageNumber != 187) {
             if (surah != 97) {
               verseSpans.add(

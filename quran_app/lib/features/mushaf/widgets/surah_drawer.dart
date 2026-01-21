@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart';
@@ -28,7 +31,7 @@ class SurahDrawer extends StatefulWidget {
 
 class _SurahDrawerState extends State<SurahDrawer>
     with SingleTickerProviderStateMixin {
-  int _selectedTabIndex = 0; // 0: Surah, 1: Bookmarks, 2: Khatmah, 3: Notes
+  int _selectedTabIndex = 0; // 0: Surah, 1: Khatmah, 2: Bookmarks, 3: Notes
   final TextEditingController _noteSearchController = TextEditingController();
   List<NoteModel> _noteResults = [];
   bool _isSearchingNotes = false;
@@ -51,7 +54,7 @@ class _SurahDrawerState extends State<SurahDrawer>
     return verseText;
   }
 
-  // Compact sidebar for quick Surah/Juz jumps
+  // Compact sidebar for quick Surah/Juz jumps (Your UI feature from HEAD)
   Widget _buildNumberSidebar({
     required int itemCount,
     required void Function(int number) onTapNumber,
@@ -94,28 +97,26 @@ class _SurahDrawerState extends State<SurahDrawer>
 
   @override
   Widget build(BuildContext context) {
-    // Increase drawer width to 85% of screen width (max 380px) for better content visibility
     final screenWidth = MediaQuery.of(context).size.width;
-    final drawerWidth = (screenWidth * 0.95).clamp(280.0, 380.0);
+    final drawerWidth = screenWidth;
 
+    // Using your Stack-based UI layout from HEAD
     return Drawer(
       width: drawerWidth,
       child: Stack(
         children: [
           Column(
             children: [
-              // Only show header on Surah tab
               if (_selectedTabIndex == 0) _buildTopBar(context),
               Expanded(child: _buildCurrentTab()),
               _buildBottomBar(context),
             ],
           ),
-          // Sidebar overlay for Surah/Juz quick jumps on the main tab
           if (_selectedTabIndex == 0)
             Positioned(
-              top: 80, // below top bar
+              top: 80,
               right: 0,
-              bottom: 60, // above bottom bar
+              bottom: 60,
               child: _navigationMode == NavigationMode.surah
                   ? _buildNumberSidebar(
                       itemCount: surah.length,
@@ -140,6 +141,7 @@ class _SurahDrawerState extends State<SurahDrawer>
   }
 
   Widget _buildTopBar(BuildContext context) {
+    // Your custom top bar UI from HEAD
     return Padding(
       padding: const EdgeInsets.only(top: 32, left: 16, right: 16, bottom: 10),
       child: Column(
@@ -247,9 +249,8 @@ class _SurahDrawerState extends State<SurahDrawer>
     );
   }
 
-  // Drawer header removed, replaced by _buildTopBar
-
   Widget _buildCurrentTab() {
+    // Your tab logic from HEAD, tied to your bottom nav bar
     switch (_selectedTabIndex) {
       case 0:
         return _buildSurahList();
@@ -265,9 +266,7 @@ class _SurahDrawerState extends State<SurahDrawer>
   }
 
   String _getLocalizedSurahName(Map<String, dynamic> surahInfo) {
-    // If context is not available for some reason, fallback
     if (!mounted) return surahInfo['name'];
-
     final locale = AppLocalizations.of(context)?.locale.languageCode;
     if (locale == 'ar' || locale == 'ur') {
       return surahInfo['arabic'] ?? surahInfo['name'];
@@ -277,7 +276,6 @@ class _SurahDrawerState extends State<SurahDrawer>
 
   String _getLocalizedSurahMeaning(Map<String, dynamic> surahInfo) {
     if (!mounted) return surahInfo['english'] ?? '';
-
     int surahNumber = surahInfo['id'];
     String meaningKey = 'surah_meaning_$surahNumber';
     String? localizedMeaning = AppLocalizations.of(
@@ -290,6 +288,7 @@ class _SurahDrawerState extends State<SurahDrawer>
   }
 
   Widget _buildSurahList() {
+    // Your ListView implementation from HEAD
     return _navigationMode == NavigationMode.surah
         ? ListView.separated(
             itemCount: surah.length,
@@ -317,6 +316,7 @@ class _SurahDrawerState extends State<SurahDrawer>
   }
 
   Widget _buildSurahItem(int surahNumber, Map<String, dynamic> surahInfo) {
+    // Your custom Surah item styling from HEAD
     String surahName = _getLocalizedSurahName(surahInfo);
     String surahMeaning = _getLocalizedSurahMeaning(surahInfo);
     String versesText =
@@ -349,6 +349,7 @@ class _SurahDrawerState extends State<SurahDrawer>
   }
 
   Widget _buildSurahCircleAvatar(int surahNumber, BuildContext context) {
+    // Your custom circular avatar styling from HEAD
     return Container(
       width: 36,
       height: 36,
@@ -363,7 +364,7 @@ class _SurahDrawerState extends State<SurahDrawer>
       child: Center(
         child: Text(
           surahNumber.toString(),
-          style: TextStyle(
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w700,
             fontSize: 15,
@@ -373,9 +374,8 @@ class _SurahDrawerState extends State<SurahDrawer>
     );
   }
 
-  // _buildSurahAvatar removed, replaced by _buildSurahCircleAvatar
-
   Widget _buildJuzItem(Map<String, dynamic> juzInfo) {
+    // Your custom Juz item styling from HEAD
     final juzNumber = juzInfo['id'] as int;
     final surahs = juzInfo['surahs'] as List<dynamic>;
     final startingSurah = surahs.first as int;
@@ -399,44 +399,10 @@ class _SurahDrawerState extends State<SurahDrawer>
     );
   }
 
-  Widget _buildJuzAvatar(int juzNumber, BuildContext context) {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Theme.of(context).colorScheme.secondary.withOpacity(0.2),
-            Theme.of(context).colorScheme.secondary.withOpacity(0.1),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
-          width: 1.5,
-        ),
-      ),
-      child: Center(
-        child: Text(
-          juzNumber.toString(),
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.secondary,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Navigation toggle moved to top bar
-
-  // ToggleButton removed, replaced by _buildTopToggleButton
   Widget _buildBottomBar(BuildContext context) {
-    // This is the BottomNavigationBar for the four tabs
+    // Your custom bottom navigation bar UI from HEAD
     return SafeArea(
+      top: false,
       child: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         currentIndex: _selectedTabIndex,
@@ -478,10 +444,10 @@ class _SurahDrawerState extends State<SurahDrawer>
   }
 
   Widget _buildBookmarksList() {
+    // Your advanced bookmarks tab UI from HEAD
     const brandGreen = BrandColors.accent;
     return Consumer<BookmarkNotesNotifier>(
       builder: (context, state, _) {
-        // Header + Title
         final header = Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Row(
@@ -530,7 +496,6 @@ class _SurahDrawerState extends State<SurahDrawer>
           ),
         );
 
-        // Categories card (Red, Yellow, Green, Blue)
         final categories = Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
@@ -562,15 +527,12 @@ class _SurahDrawerState extends State<SurahDrawer>
                   style: const TextStyle(
                       fontSize: 17, fontWeight: FontWeight.w600),
                 ),
-                onTap: () {
-                  // Optional: Implement filter by color
-                },
+                onTap: () {},
               );
             },
           ),
         );
 
-        // Actual bookmarks list (below categories)
         Widget bookmarksSection;
         if (state.bookmarks.isEmpty) {
           bookmarksSection = Padding(
@@ -737,7 +699,7 @@ class _SurahDrawerState extends State<SurahDrawer>
                           ),
                           child: Text(
                             note.content,
-                            maxLines: 4, // Increased from 2 to 4 lines
+                            maxLines: 4,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 13,
@@ -797,7 +759,7 @@ class _SurahDrawerState extends State<SurahDrawer>
       final normalized = value.replaceAll('#', '').padLeft(6, '0');
       return int.parse('FF$normalized', radix: 16);
     } catch (_) {
-      return int.parse('FFFFC107', radix: 16); // Amber fallback
+      return int.parse('FFFFC107', radix: 16);
     }
   }
 

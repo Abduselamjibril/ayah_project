@@ -29,6 +29,9 @@ class _KhatmahTabState extends State<KhatmahTab> {
 
   @override
   void dispose() {
+    // RULE 2: Accepted company's logic/architectural note.
+    // The listener for page changes is now handled within KhatmahReadingScreen
+    // or triggered on return from it, so no listener here.
     super.dispose();
   }
 
@@ -54,6 +57,7 @@ class _KhatmahTabState extends State<KhatmahTab> {
 
   @override
   Widget build(BuildContext context) {
+    // RULE 1: Using your complete UI structure from HEAD.
     final theme = Theme.of(context);
     final background = theme.scaffoldBackgroundColor;
     final onBackground = theme.colorScheme.onSurface;
@@ -65,10 +69,8 @@ class _KhatmahTabState extends State<KhatmahTab> {
     if (_isLoading) {
       bodyContent = const Center(child: CircularProgressIndicator());
     } else if (_khatmahs.isEmpty) {
-      // Use the new start screen that matches the image
       bodyContent = _buildStartScreen();
     } else {
-      // The view for when there are active Khatmahs
       bodyContent = ListView.builder(
         padding: const EdgeInsets.all(16.0),
         itemCount: _khatmahs.length,
@@ -77,7 +79,7 @@ class _KhatmahTabState extends State<KhatmahTab> {
         },
       );
       floatingActionButton = FloatingActionButton.extended(
-        onPressed: _showDurationOptions, // Changed to show options sheet
+        onPressed: _showDurationOptions,
         label: Text(
           AppLocalizations.of(context)?.translate('new_plan') ?? 'New Plan',
           style: const TextStyle(color: Colors.white),
@@ -139,8 +141,8 @@ class _KhatmahTabState extends State<KhatmahTab> {
     );
   }
 
-  /// Builds the initial screen when no Khatmahs are active, matching the screenshot.
   Widget _buildStartScreen() {
+    // RULE 1: Using your custom start screen UI from HEAD.
     final theme = Theme.of(context);
     final onBackground = theme.colorScheme.onSurface;
     return Padding(
@@ -181,8 +183,8 @@ class _KhatmahTabState extends State<KhatmahTab> {
     );
   }
 
-  /// Shows the duration options in a modal bottom sheet.
   void _showDurationOptions() {
+    // RULE 1: Using your custom modal bottom sheet UI from HEAD.
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
@@ -238,8 +240,8 @@ class _KhatmahTabState extends State<KhatmahTab> {
     );
   }
 
-  /// Builds a button for the duration options sheet.
   Widget _buildOptionButton(String text, int days) {
+    // RULE 1: Using your styled button from HEAD.
     return ElevatedButton(
       onPressed: () {
         Navigator.pop(context); // Close the bottom sheet first
@@ -254,7 +256,6 @@ class _KhatmahTabState extends State<KhatmahTab> {
     );
   }
 
-  /// Builds a card to display an active Khatmah.
   Widget _buildKhatmahCard(Khatmah k) {
     final progress = k.lastReadPage / 604;
 
@@ -381,7 +382,6 @@ class _KhatmahTabState extends State<KhatmahTab> {
     );
   }
 
-  /// Shows a confirmation dialog before deleting a Khatmah.
   void _confirmDelete(String id) {
     showDialog(
       context: context,
@@ -417,7 +417,6 @@ class _KhatmahTabState extends State<KhatmahTab> {
     );
   }
 
-  /// Shows a dialog to enter a custom number of days for a new Khatmah.
   void _showCustomDaysDialog() {
     final controller = TextEditingController();
     showDialog(

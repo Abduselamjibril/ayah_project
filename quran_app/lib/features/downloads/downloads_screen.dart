@@ -410,13 +410,15 @@ class _DownloadsScreenState extends State<DownloadsScreen>
           icon: Icon(Icons.arrow_back_ios_new_rounded, color: accent, size: 18),
           label: Text(
             'Settings',
-            style: TextStyle(color: accent, fontSize: 16, fontWeight: FontWeight.w600),
+            style: TextStyle(
+                color: accent, fontSize: 16, fontWeight: FontWeight.w600),
           ),
           style: TextButton.styleFrom(padding: const EdgeInsets.only(left: 8)),
         ),
         title: Text(
           'Downloads',
-          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          style: theme.textTheme.titleMedium
+              ?.copyWith(fontWeight: FontWeight.w700),
         ),
         actions: [
           IconButton(
@@ -491,6 +493,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     }
 
     final sortedLanguages = groupedByLanguage.keys.toList()..sort();
+
     print('Loaded translation languages: $sortedLanguages'); // Debug log
 
     return ListView.builder(
@@ -602,6 +605,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     }
 
     final sortedLanguages = groupedByLanguage.keys.toList()..sort();
+
     print('Loaded tafsir languages: $sortedLanguages'); // Debug log
 
     return ListView.builder(

@@ -1,10 +1,10 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:io'; // Added for file handling in sharing
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:path_provider/path_provider.dart'; // Added for sharing
 import 'package:provider/provider.dart';
 import 'package:quran_app/core/quran/qcf_quran.dart';
 import 'package:quran_app/core/services/audio_player_service.dart';
@@ -14,16 +14,17 @@ import 'package:quran_app/features/mushaf/controller/mushaf_controller.dart';
 import 'package:quran_app/features/mushaf/screens/verse_details_screen.dart';
 import 'package:quran_app/core/services/mushaf_settings_service.dart';
 import 'package:quran_app/core/services/theme_service.dart';
-import 'package:screenshot/screenshot.dart';
 import 'package:quran_app/core/services/language_service.dart';
+import 'package:screenshot/screenshot.dart'; // Added for image sharing
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:share_plus/share_plus.dart'; // Added for sharing
 import 'package:quran_app/app/app.dart';
+import 'package:quran_app/features/share/presentation/dialogs/share_preview_dialog.dart';
+import 'play_range_dialog.dart';
 
 class VerticalMushafView extends StatefulWidget {
   final MushafController controller;
-  // Previously scrollController was passed, but now we use ItemScrollController internally
   final ValueChanged<bool>? onOverlayVisibilityChanged;
 
   const VerticalMushafView({
@@ -37,7 +38,6 @@ class VerticalMushafView extends StatefulWidget {
 }
 
 class _VerticalMushafViewState extends State<VerticalMushafView> {
-  // Use ItemScrollController for index-based jumping
   final ItemScrollController _itemScrollController = ItemScrollController();
   final ItemPositionsListener _itemPositionsListener =
       ItemPositionsListener.create();
@@ -51,19 +51,11 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   bool _overlayVisible = true;
   Timer? _autoHideTimer;
 
-  // Auto-scroll implementation now relies on programmed scrolling via index jumps or simplified standard scrolling if using a different approach?
-  // ScrollablePositionedList doesn't support smooth continuous pixel-scrolling easily for "auto scroll" (teleprompter style)
-  // WITHOUT jumpTo/animateTo usage.
-  // However, we can simulate it or just disable it for this refactor to ensure stability first.
-  // The user requirement was to fix vertical navigation accuracy.
-  // Let's implement a simple version of auto-scroll if possible, or leave it for later.
-  // For now, I will comment out auto-scroll logic that relied on scrollController.offset to avoid compilation errors,
-  // focusing on the primary goal: index-based navigation.
-
   bool _isAutoScrolling = false;
-  double _autoScrollSpeed = 30.0; // pixels per second (conceptually)
+  double _autoScrollSpeed = 30.0;
   int _scrollGeneration = 0;
 
+  // Added ScreenshotController as required by the Git function version
   final ScreenshotController _screenshotController = ScreenshotController();
 
   static const List<String> _bookmarkColors = [
@@ -86,8 +78,6 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
 
     _ayahListener = () {
       if (!mounted) return;
-      // We don't have _isSequentialMode tracked here easily without checking player service
-      // But we can check if we should auto-highlight
       final s = _audioPlayer.currentSurah.value;
       final a = _audioPlayer.currentAyah.value;
       if (s != null && a != null) {
@@ -98,18 +88,14 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     _audioPlayer.currentSurah.addListener(_ayahListener);
     _audioPlayer.currentAyah.addListener(_ayahListener);
 
-    // Listen to navigation events from the controller
     _navSubscription = widget.controller.navigationStream.listen((page) {
       if (_itemScrollController.isAttached) {
-        // Stop any manual auto-scroll
         _stopAutoScroll();
         _lastPage = page;
-        // Index is 0-based
         _itemScrollController.jumpTo(index: page - 1);
       }
     });
 
-    // Listen to scroll positions to sync back to controller
     _itemPositionsListener.itemPositions.addListener(_onVisibleItemsChanged);
 
     widget.controller.addListener(_onControllerChanged);
@@ -129,19 +115,14 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     final positions = _itemPositionsListener.itemPositions.value;
     if (positions.isEmpty) return;
 
-    // Sort to find the top-most item
     final sorted = positions.toList()
       ..sort((a, b) => a.index.compareTo(b.index));
 
-    // The top-most visible item is our current page (index + 1)
     final firstVisible = sorted.first;
-    // We can also check itemTrailingEdge to see if it's mostly scrolled off
-
     final page = firstVisible.index + 1;
 
     if (page != _lastPage) {
       _lastPage = page;
-      // We use setPage specifically to update state WITHOUT triggering a navigation event loop
       widget.controller.setPage(page);
     }
   }
@@ -159,7 +140,6 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   }
 
   void _onControllerChanged() {
-    // Only handle state syncs, not navigation (handled by stream)
     if (widget.controller.currentPage != _lastPage) {
       _lastPage = widget.controller.currentPage;
       _sliderValue = null;
@@ -169,7 +149,6 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
 
   @override
   Widget build(BuildContext context) {
-    // Using simple provider lookup or whatever was used before
     final bookmarkState = context.watch<BookmarkNotesNotifier>();
 
     return Stack(
@@ -200,7 +179,6 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                         scrollMode: ScrollMode.vertical,
                         itemScrollController: _itemScrollController,
                         itemPositionsListener: _itemPositionsListener,
-                        // We don't use onPageChanged callback here because we use the listener
                         textColor: Theme.of(context).colorScheme.onSurface,
                         pageBackgroundColor:
                             Theme.of(context).scaffoldBackgroundColor,
@@ -346,46 +324,75 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                                           fontSize: 14,
                                         ),
                                       ),
-                                      SizedBox(width: 6),
-                                      Icon(Icons.lock_outline, size: 16),
                                     ],
                                   ),
                                   const SizedBox(height: 6),
-                                  Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      borderRadius: BorderRadius.circular(22),
-                                      onTap: () {
-                                        setState(() {
-                                          _overlayVisible = true;
-                                        });
-                                        if (_isAutoScrolling) {
-                                          _stopAutoScroll();
-                                        } else {
-                                          _startAutoScroll();
-                                        }
-                                        _scheduleAutoHide();
-                                      },
-                                      onLongPress: _showAutoScrollSpeedSheet,
-                                      child: Container(
-                                        width: 92,
-                                        height: 44,
-                                        decoration: BoxDecoration(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .surfaceVariant
-                                              .withOpacity(0.35),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (_isAutoScrolling) ...[
+                                        IconButton(
+                                          icon: const Icon(
+                                              Icons.remove_circle_outline),
+                                          color: BrandColors.accent
+                                              .withOpacity(0.8),
+                                          onPressed: () =>
+                                              _changeAutoScrollSpeed(-5),
+                                        ),
+                                        const SizedBox(width: 4),
+                                      ],
+                                      Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
                                           borderRadius:
                                               BorderRadius.circular(22),
-                                        ),
-                                        alignment: Alignment.center,
-                                        child: Icon(
-                                          Icons.arrow_downward,
-                                          color: BrandColors.accent.withOpacity(
-                                              _isAutoScrolling ? 1.0 : 0.7),
+                                          onTap: () {
+                                            setState(() {
+                                              _overlayVisible = true;
+                                            });
+                                            if (_isAutoScrolling) {
+                                              _stopAutoScroll();
+                                            } else {
+                                              _startAutoScroll();
+                                            }
+                                            _scheduleAutoHide();
+                                          },
+                                          onLongPress:
+                                              _showAutoScrollSpeedSheet,
+                                          child: Container(
+                                            width: 92,
+                                            height: 44,
+                                            decoration: BoxDecoration(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .surfaceVariant
+                                                  .withOpacity(0.35),
+                                              borderRadius:
+                                                  BorderRadius.circular(22),
+                                            ),
+                                            alignment: Alignment.center,
+                                            child: Icon(
+                                              Icons.arrow_downward,
+                                              color: BrandColors.accent
+                                                  .withOpacity(_isAutoScrolling
+                                                      ? 1.0
+                                                      : 0.7),
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    ),
+                                      if (_isAutoScrolling) ...[
+                                        const SizedBox(width: 4),
+                                        IconButton(
+                                          icon: const Icon(
+                                              Icons.add_circle_outline),
+                                          color: BrandColors.accent
+                                              .withOpacity(0.8),
+                                          onPressed: () =>
+                                              _changeAutoScrollSpeed(5),
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                 ],
                               ),
@@ -415,9 +422,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   Widget _buildSideSlider() {
     if (!_overlayVisible) return const SizedBox.shrink();
     final media = MediaQuery.of(context);
-    // Leave breathing room near header/footer so the slider doesn't collide with UI chrome
     final top = media.padding.top + 64;
-    // Leave extra clearance above the bottom audio bar
     final bottom = media.padding.bottom + 170;
 
     final currentDouble = ((_isSliderActive && _sliderValue != null)
@@ -491,9 +496,13 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                       alignment: Alignment.center,
                       child: Text(
                         '$currentPage',
+                        textScaler: const TextScaler.linear(1.0),
+                        textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
+                          fontSize: 12,
+                          height: 1.05,
                         ),
                       ),
                     ),
@@ -572,14 +581,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
       ..sort((a, b) => a.index.compareTo(b.index));
     final current = sorted.first;
 
-    // Determine the target index
-    int targetIndex = current.index;
-
-    // Provide a small duration for micro-steps (e.g., 250ms)
-    // This allows frequent checks for stop/speed change without long waits
     const int stepDurationMs = 250;
-
-    // Calculate how much we move in this step in terms of viewport fraction
     final pageHeight = MediaQuery.of(context).size.height;
     if (pageHeight <= 0) return;
 
@@ -587,49 +589,19 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     final movePixels = speed * (stepDurationMs / 1000.0);
     final moveFraction = movePixels / pageHeight;
 
-    // Current alignment (leading edge)
-    // If we are scrolling down, leading edge decreases (moves up/negative)
     double targetLimit = current.itemLeadingEdge - moveFraction;
+    int targetIndex = current.index;
 
-    // Check if we need to switch to the next page reference
-    // If the current item is almost off-screen (e.g. leading edge < -0.9),
-    // calculating alignment relative to it becomes unstable or unsupported.
-    // Instead, target the NEXT item.
-    // Assuming reduced height or overlap, let's say if leading edge is < -0.5, catch the next one?
-    // ScrollablePositionedList reports visible items. If 'current' is index 5 but index 6 is also visible.
-    // We can target index 6.
-
-    // Simple logic:
-    // If targetLimit is significantly negative (e.g. < -1.0), it means this page is fully scrolled out.
-    // But we are in a loop. We just want to move *a little bit*.
-
-    // Ideally, we scroll 'current' to 'targetLimit'.
-    // If 'targetLimit' is valid.
-
-    // Let's use the 'jump' logic only if we need to change reference item?
-    // No, scrollTo uses index.
-
-    // Use the next item if the current one is mostly gone.
     if (current.itemLeadingEdge < -0.8 && sorted.length > 1) {
-      // Target the next item instead for better stability
       final next = sorted[1];
       targetIndex = next.index;
-      // We want to move 'next' upwards.
-      // Current 'next' alignment is next.itemLeadingEdge.
-      // Target = next.itemLeadingEdge - moveFraction.
       targetLimit = next.itemLeadingEdge - moveFraction;
     } else if (current.itemLeadingEdge < -1.5) {
-      // Single item visible but moved way off? Force next.
       targetIndex = current.index + 1;
-      // Estimate alignment?
-      // If we switch index, we must know its current position or 0.0?
-      // This branch shouldn't happen often if we have >1 visible items.
-      // Just stop if we hit end of book.
       if (targetIndex > 604) {
         _stopAutoScroll();
         return;
       }
-      // Blind guess: alignment 0 (start of page)
       targetLimit = 0;
     }
 
@@ -663,7 +635,6 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   }
 
   void _showAutoScrollSpeedSheet() {
-    // Speed doesn't apply if auto-scroll is disabled, but keeping the UI
     if (!mounted) return;
     showModalBottomSheet(
       context: context,
@@ -710,6 +681,19 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
         );
       },
     );
+  }
+
+  void _changeAutoScrollSpeed(double delta) {
+    final double newSpeed =
+        (_autoScrollSpeed + delta).clamp(10.0, 80.0).toDouble();
+    setState(() {
+      _autoScrollSpeed = newSpeed;
+      if (_isAutoScrolling) {
+        _scrollGeneration++;
+        _scrollLoop();
+      }
+    });
+    _scheduleAutoHide();
   }
 
   void _scheduleAutoHide() {
@@ -844,10 +828,10 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                                       icon: Icons.view_day,
                                       selected: mode == ScrollMode.horizontal,
                                       onTap: () {
-                                        mushafSettings
-                                            .setScrollMode(ScrollMode.horizontal);
-                                        setStateSheet(() => mode =
+                                        mushafSettings.setScrollMode(
                                             ScrollMode.horizontal);
+                                        setStateSheet(
+                                            () => mode = ScrollMode.horizontal);
                                       },
                                     ),
                                     const SizedBox(width: 12),
@@ -921,53 +905,6 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                                     );
                                   }).toList(),
                                 ),
-                                const SizedBox(height: 18),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Two-finger Search',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .titleSmall
-                                                ?.copyWith(
-                                                    fontWeight:
-                                                        FontWeight.w700),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            'Drag down to search',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodySmall
-                                                ?.copyWith(
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .onSurface
-                                                      .withOpacity(0.6),
-                                                ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Switch.adaptive(
-                                      value: searchGesture,
-                                      onChanged: (val) async {
-                                        setStateSheet(() =>
-                                            searchGesture = val);
-                                        await prefs.setBool(
-                                            'search_gesture_enabled', val);
-                                      },
-                                      activeColor:
-                                          Theme.of(context).colorScheme.primary,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 24),
                               ],
                             ),
                           ),
@@ -1028,6 +965,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     _showSnack('$pageLabel$name:$verse set as last read');
   }
 
+  // UPDATED showVerseOptions - Replaced with the version from Git
   void _showVerseOptions(
     BuildContext context,
     BookmarkNotesNotifier bookmarkState,
@@ -1392,11 +1330,12 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     );
   }
 
+  // ADDED _shareVerseCard - Required by the Git version of showVerseOptions
   Future<void> _shareVerseCard(int surah, int verse) async {
     try {
       final name = getSurahName(surah);
       final text = getVerseQCF(surah, verse);
-      final widget = Container(
+      final widgetToCapture = Container(
         padding: const EdgeInsets.all(24),
         color: Colors.white,
         child: Column(
@@ -1418,7 +1357,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
               style: const TextStyle(
                 color: Colors.black,
                 fontSize: 24,
-                fontFamily: 'QCF_BSML', // Simplified shared font
+                fontFamily: 'QCF_BSML',
               ),
             ),
             const SizedBox(height: 16),
@@ -1430,7 +1369,8 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
         ),
       );
 
-      final image = await _screenshotController.captureFromWidget(widget);
+      final image =
+          await _screenshotController.captureFromWidget(widgetToCapture);
       final temp = await getTemporaryDirectory();
       final path = '${temp.path}/ayah_share.png';
       final file = File(path);
@@ -1450,6 +1390,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   }
 }
 
+// Helper Widgets below (unchanged from Current version)
 class _NavPill extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -1547,7 +1488,8 @@ class _SettingOptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final border = RoundedRectangleBorder(borderRadius: BorderRadius.circular(14));
+    final border =
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(14));
     return Expanded(
       child: Material(
         color: selected

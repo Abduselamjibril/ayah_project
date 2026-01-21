@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
 import '../../core/quran/qcf_quran.dart';
 import 'package:quran_app/app/app.dart';
-
+import 'package:flutter/services.dart';
+import '../../features/share/presentation/dialogs/share_preview_dialog.dart';
 import '../../core/services/verse_of_the_day_service.dart';
 import '../../data/models/hijri_date_model.dart';
 import '../../data/repositories/hijri_date_repository.dart';
@@ -74,6 +75,7 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
     final theme = Theme.of(context);
     final surah = _service.surahNumber;
     final verse = _service.verseNumber;
+
     final screenHeight = MediaQuery.of(context).size.height;
 
     if (surah == null || verse == null) {
@@ -91,6 +93,8 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
 
     final verseText = getVerseQCF(surah, verse, verseEndSymbol: false);
     final verseNumberSymbol = getVerseNumberQCF(surah, verse);
+
+    // RULE 1: Using your complete modal bottom sheet UI from HEAD
     return Material(
       color: Colors.transparent,
       child: SafeArea(
@@ -386,28 +390,45 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                // RULE 3: Integrating the company's Share button into your UI layout.
+                Row(
+                  children: [
+                    IconButton(
+                      icon:
+                          Icon(Icons.share_rounded, color: BrandColors.accent),
+                      tooltip: 'Share',
+                      onPressed: () async {
+                        await showSharePreviewDialog(
+                          context: context,
+                          surahNumber: surah,
+                          ayahNumber: verse,
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).pop({
+                            'surah': surah,
+                            'verse': verse,
+                          });
+                        },
+                        child: Text(
+                          AppLocalizations.of(context)
+                                  ?.translate('read_in_mushaf') ??
+                              'Read in Mushaf',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
                       ),
                     ),
-                    onPressed: () {
-                      Navigator.of(context).pop({
-                        'surah': surah,
-                        'verse': verse,
-                      });
-                    },
-                    child: Text(
-                      AppLocalizations.of(context)
-                              ?.translate('read_in_mushaf') ??
-                          'Read in Mushaf',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ),
+                  ],
                 ),
               ],
             ),

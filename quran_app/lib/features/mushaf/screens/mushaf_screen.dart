@@ -180,13 +180,7 @@ class _MushafScreenState extends State<MushafScreen> {
   }
 
   Widget _buildMushafView(ScrollMode mode) {
-    // Use Stack with Offstage to keep views alive but only render the visible one
     final isHorizontal = mode == ScrollMode.horizontal;
-    // The following lines were part of the instruction but appear to be
-    // misplaced from a SearchRepository context.
-    // final res = deduped.take(limit).toList();
-    // _setSuggestCache(cacheKey, res);
-    // return res;
     return Stack(
       children: [
         Offstage(

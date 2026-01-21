@@ -1,23 +1,21 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:screenshot/screenshot.dart';
+import 'package:quran_app/core/services/language_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/quran/qcf_quran.dart';
 import '../../../core/services/audio_player_service.dart';
 import '../../audio_player/audio_player_screen.dart';
 import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart';
+import 'package:quran_app/features/share/presentation/dialogs/share_preview_dialog.dart';
 import '../controller/mushaf_controller.dart';
 import '../screens/verse_details_screen.dart';
+import 'play_range_dialog.dart';
 import 'package:quran_app/app/app.dart';
 import 'package:quran_app/core/services/mushaf_settings_service.dart';
 import 'package:quran_app/core/services/theme_service.dart';
-import 'package:quran_app/core/services/language_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class HorizontalMushafView extends StatefulWidget {
   final MushafController controller;
@@ -45,7 +43,6 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   bool _overlayVisible = true;
   Timer? _autoHideTimer;
   final bool _isSequentialMode = false;
-  final ScreenshotController _screenshotController = ScreenshotController();
 
   static const List<String> _bookmarkColors = [
     '#FFB300',
@@ -103,23 +100,16 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   }
 
   void _onControllerChanged() {
-    final targetPage = widget.controller.currentPage - 1;
-    if (!_isSliderActive && _pageController.hasClients) {
-      // Don't interrupt user scrolling with external updates
-      if (_pageController.position.isScrollingNotifier.value) return;
-
-      if ((_pageController.page?.round() ?? -1) != targetPage) {
-        _sliderValue = null;
-        _isSliderActive = false;
-        // Use jumpToPage instead of animateToPage to avoid lag with IndexedStack
-        _pageController.jumpToPage(targetPage);
-      }
-    }
+    // RULE 2: Using company's improved logic to prevent race conditions.
+    // Only repaint if necessary, but DO NOT force page jumps here.
+    // Page jumps are handled exclusively by _navSubscription to avoid
+    // race conditions where setHighlightedVerse() triggers a revert to an old page.
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final accent = BrandColors.accent;
+    final accent = BrandColors.accent; // Kept from HEAD for its UI
     final bookmarkState = context.watch<BookmarkNotesNotifier>();
     return Stack(
       children: [
@@ -188,6 +178,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     if (!_overlayVisible) {
       return const SizedBox.shrink();
     }
+    // RULE 1: Using your complete UI for the bottom overlay from HEAD
     return Positioned(
       bottom: 0,
       left: 0,
@@ -409,6 +400,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   }
 
   Widget _buildAudioPlayerCard() {
+    // RULE 1: Using your styled wrapper for the audio card from HEAD
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -452,9 +444,8 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     }
   }
 
-  // Navigation buttons and page number removed in favor of slider
-
   void _navigateToPage(int page) {
+    // Kept from HEAD for the clamp safety feature
     widget.controller.navigateToPage(page.clamp(1, 604));
   }
 
@@ -468,6 +459,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     unawaited(_openNoteSheet(context, state, surah, ayah));
   }
 
+  // BLEND: Kept this entire settings sheet logic from HEAD to support its UI
   Future<void> _openPageSettingsSheet() async {
     final mushafSettings = MushafSettingsService();
     final themeService = ThemeService();
@@ -546,10 +538,10 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                                       icon: Icons.view_day,
                                       selected: mode == ScrollMode.horizontal,
                                       onTap: () {
-                                        mushafSettings
-                                            .setScrollMode(ScrollMode.horizontal);
-                                        setStateSheet(() => mode =
+                                        mushafSettings.setScrollMode(
                                             ScrollMode.horizontal);
+                                        setStateSheet(
+                                            () => mode = ScrollMode.horizontal);
                                       },
                                     ),
                                     const SizedBox(width: 12),
@@ -659,8 +651,8 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                                     Switch.adaptive(
                                       value: searchGesture,
                                       onChanged: (val) async {
-                                        setStateSheet(() =>
-                                            searchGesture = val);
+                                        setStateSheet(
+                                            () => searchGesture = val);
                                         await prefs.setBool(
                                             'search_gesture_enabled', val);
                                       },
@@ -784,6 +776,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     int surah,
     int verse,
   ) {
+    // RULE 3: Integrating company's new features into the options menu
     final rootContext = context;
     final isBookmarked = bookmarkState.isBookmarked(surah, verse);
     final hasNote = bookmarkState.hasNote(surah, verse);
@@ -880,6 +873,15 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                     );
                   },
                 ),
+                // NEW FEATURE from company
+                _buildOptionTile(
+                  icon: Icons.playlist_play,
+                  title: 'Play to...',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _showPlayToDialog(rootContext, surah, verse);
+                  },
+                ),
                 _buildOptionTile(
                   icon: Icons.menu_book,
                   title: 'View Tafsir',
@@ -890,7 +892,8 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                 ),
                 _buildOptionTile(
                   icon: Icons.share,
-                  title: 'Share Verse Image',
+                  // Using company's title and logic for sharing
+                  title: 'Share',
                   onTap: () {
                     Navigator.pop(context);
                     _shareVerseCard(surah, verse);
@@ -1135,29 +1138,12 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   }
 
   Future<void> _shareVerseCard(int surah, int verse) async {
-    final surahName = getSurahName(surah);
-    final verseText = getVerseQCF(surah, verse, verseEndSymbol: true);
-    try {
-      final bytes = await _screenshotController.captureFromWidget(
-        _VerseShareCard(
-          surah: surah,
-          verse: verse,
-          surahName: surahName,
-          verseText: verseText,
-        ),
-        pixelRatio: 2.5,
-      );
-
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/ayah_${surah}_$verse.png');
-      await file.writeAsBytes(bytes);
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: 'Surah $surahName ($surah:$verse)',
-      );
-    } catch (e) {
-      _showSnack('Could not share verse: $e');
-    }
+    // RULE 3: Using the company's new sharing dialog functionality
+    await showSharePreviewDialog(
+      context: context,
+      surahNumber: surah,
+      ayahNumber: verse,
+    );
   }
 
   void _viewTafsir(BuildContext context, int surah, int verse) {
@@ -1172,6 +1158,20 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     );
   }
 
+  // RULE 3: Adding the new helper method from the company for "Play to..."
+  Future<void> _showPlayToDialog(
+      BuildContext context, int startSurah, int startVerse) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => PlayRangeDialog(
+        startSurah: startSurah,
+        startVerse: startVerse,
+      ),
+    );
+  }
+
   void _copyVerseText(int surah, int verse) {
     final text = getVerseQCF(surah, verse, verseEndSymbol: true);
     Clipboard.setData(ClipboardData(text: text));
@@ -1179,6 +1179,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   }
 }
 
+// All helper widgets from HEAD required for your UI are kept below
 class _NavPill extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -1276,7 +1277,8 @@ class _SettingOptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final border = RoundedRectangleBorder(borderRadius: BorderRadius.circular(14));
+    final border =
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(14));
     return Expanded(
       child: Material(
         color: selected
@@ -1389,77 +1391,6 @@ class _ThemeCardTile extends StatelessWidget {
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _VerseShareCard extends StatelessWidget {
-  final int surah;
-  final int verse;
-  final String surahName;
-  final String verseText;
-
-  const _VerseShareCard({
-    required this.surah,
-    required this.verse,
-    required this.surahName,
-    required this.verseText,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = ThemeData.dark();
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        width: 1080,
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              '$surahName — $surah:$verse',
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Directionality(
-              textDirection: TextDirection.rtl,
-              child: Text(
-                verseText,
-                textAlign: TextAlign.right,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  height: 1.8,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Row(
-              children: [
-                Icon(Icons.bedtime, color: Colors.white70, size: 18),
-                SizedBox(width: 8),
-                Text(
-                  'Ayah App • Offline bookmark',
-                  style: TextStyle(color: Colors.white70),
-                ),
-              ],
-            ),
-          ],
         ),
       ),
     );

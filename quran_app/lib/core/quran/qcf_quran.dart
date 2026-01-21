@@ -7,6 +7,8 @@ import 'data/juzs.dart';
 import 'data/suwar.dart';
 import 'data/quran_text.dart';
 
+import 'data/quarters.dart';
+
 export 'widgets/qcf_verse.dart';
 export 'widgets/quran_pageview.dart';
 export 'widgets/header_widget.dart';
@@ -68,6 +70,29 @@ int getJuzNumber(int surahNumber, int verseNumber) {
           verseNumber <= j['verses'][surahNumber][1]) {
         return int.parse(j['id'].toString());
       }
+    }
+  }
+  return -1;
+}
+
+/// Takes [pageNumber] and returns the Hizb number if a Hizb starts on this page.
+/// Returns -1 if no Hizb starts on this page.
+int getHizbNumberForPage(int pageNumber) {
+  for (int i = 0; i < quarters.length; i++) {
+    // Check if this quarter is the start of a Hizb (every 4th quarter, 0-indexed)
+    if (i % 4 == 0) {
+      final q = quarters[i];
+      final surah = int.parse(q['surah'].toString());
+      final ayah = int.parse(q['ayah'].toString());
+
+      try {
+        final p = getPageNumber(surah, ayah);
+        if (p == pageNumber) {
+          // Hizb 1 starts at index 0. Hizb 2 starts at index 4.
+          // Formula: (index / 4) + 1
+          return (i ~/ 4) + 1;
+        }
+      } catch (_) {}
     }
   }
   return -1;

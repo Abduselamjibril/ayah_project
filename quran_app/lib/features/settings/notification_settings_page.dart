@@ -51,19 +51,27 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        leadingWidth: 100,
+        leadingWidth: 120,
         leading: TextButton.icon(
           onPressed: () => Navigator.of(context).pop(),
           icon: Icon(Icons.arrow_back_ios_new_rounded, color: accent, size: 18),
           label: Text(
             'Settings',
-            style: TextStyle(color: accent, fontSize: 16, fontWeight: FontWeight.w600),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            softWrap: false,
+            style: TextStyle(
+              color: accent,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           style: TextButton.styleFrom(padding: const EdgeInsets.only(left: 8)),
         ),
         title: Text(
           'Notification Settings',
-          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          style: theme.textTheme.titleMedium
+              ?.copyWith(fontWeight: FontWeight.w700),
         ),
       ),
       body: _isLoading
