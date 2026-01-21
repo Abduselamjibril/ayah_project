@@ -36,7 +36,8 @@ class AboutScreen extends StatelessWidget {
         ),
         title: Text(
           'About',
-          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          style: theme.textTheme.titleMedium
+              ?.copyWith(fontWeight: FontWeight.w700),
         ),
       ),
       body: ListView(
@@ -130,13 +131,16 @@ class AboutScreen extends StatelessWidget {
             child: Column(
               children: [
                 ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   title: Text(
                     'Share App',
-                    style: TextStyle(color: accent, fontWeight: FontWeight.w600),
+                    style:
+                        TextStyle(color: accent, fontWeight: FontWeight.w600),
                   ),
                   onTap: () {
-                    final message = 'Check out Quran App — a beautiful Mushaf with audio, bookmarks, and daily inspiration.';
+                    final message =
+                        'Check out Quran App — a beautiful Mushaf with audio, bookmarks, and daily inspiration.';
                     Share.share(message, subject: 'Quran App');
                   },
                 ),

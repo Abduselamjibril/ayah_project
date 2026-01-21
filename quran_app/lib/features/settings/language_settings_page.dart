@@ -51,7 +51,8 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
         ),
         title: Text(
           'Language',
-          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          style: theme.textTheme.titleMedium
+              ?.copyWith(fontWeight: FontWeight.w700),
         ),
       ),
       body: ListView(
@@ -124,9 +125,8 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
           color: theme.colorScheme.onSurface,
         ),
       ),
-      trailing: isSelected
-          ? Icon(Icons.check_circle_rounded, color: accent)
-          : null,
+      trailing:
+          isSelected ? Icon(Icons.check_circle_rounded, color: accent) : null,
       onTap: () async {
         await _languageService.setLocale(Locale(code));
         setState(() {});
