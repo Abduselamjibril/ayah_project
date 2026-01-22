@@ -11,6 +11,7 @@ import '../../search/search_screen.dart';
 import 'package:quran_app/features/mushaf/widgets/surah_drawer.dart';
 import '../../daily_verse/verse_of_the_day_screen.dart';
 import 'package:quran_app/app/app.dart';
+import 'package:quran_app/core/ui/responsive.dart';
 
 class MushafScreen extends StatefulWidget {
   const MushafScreen({super.key});
@@ -52,6 +53,12 @@ class _MushafScreenState extends State<MushafScreen> {
   }
 
   Widget _buildFloatingAppBar(BuildContext context) {
+    final iconSize = ResponsiveLayout.scaled(context, 26, min: 24, max: 32);
+    final gap = ResponsiveLayout.scaled(context, 8, min: 6, max: 12);
+    final barHeight =
+        ResponsiveLayout.scaled(context, kToolbarHeight, min: 52, max: 64);
+    final verticalPad = ResponsiveLayout.scaled(context, 2, min: 1, max: 4);
+
     return Positioned(
       top: 0,
       left: 0,
@@ -93,25 +100,27 @@ class _MushafScreenState extends State<MushafScreen> {
                   child: SafeArea(
                     bottom: false,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      padding: EdgeInsets.symmetric(vertical: verticalPad),
                       child: SizedBox(
-                        height: kToolbarHeight,
+                        height: barHeight,
                         child: Row(
                           key: const ValueKey('default-mode'),
                           children: [
                             IconButton(
                               icon: const Icon(Icons.menu_rounded),
                               color: BrandColors.accent,
+                              iconSize: iconSize,
                               tooltip: AppLocalizations.of(context)
                                       ?.translate('surahs_tooltip') ??
                                   'Surahs',
                               onPressed: () =>
                                   _scaffoldKey.currentState?.openDrawer(),
                             ),
-                            const SizedBox(width: 8),
+                            SizedBox(width: gap),
                             IconButton(
                               icon: const Icon(Icons.search_rounded),
                               color: BrandColors.accent,
+                              iconSize: iconSize,
                               tooltip: AppLocalizations.of(context)
                                       ?.translate('search_tooltip') ??
                                   'Search',
@@ -121,6 +130,7 @@ class _MushafScreenState extends State<MushafScreen> {
                             IconButton(
                               icon: const Icon(Icons.calendar_month_rounded),
                               color: BrandColors.accent,
+                              iconSize: iconSize,
                               tooltip: AppLocalizations.of(context)
                                       ?.translate('verse_of_the_day_tooltip') ??
                                   'Verse of the Day',
@@ -142,6 +152,7 @@ class _MushafScreenState extends State<MushafScreen> {
                             IconButton(
                               icon: const Icon(Icons.settings_rounded),
                               color: BrandColors.accent,
+                              iconSize: iconSize,
                               tooltip: AppLocalizations.of(context)
                                       ?.translate('settings_tooltip') ??
                                   'Settings',

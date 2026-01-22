@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:quran_app/app/app.dart';
 import 'package:quran_app/core/services/language_service.dart';
+import 'package:quran_app/core/ui/responsive.dart';
 
 class LanguageSettingsPage extends StatefulWidget {
   const LanguageSettingsPage({super.key});
@@ -24,6 +25,17 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
     final accent = BrandColors.accent;
     final cardBg = theme.cardColor.withOpacity(0.5);
 
+    final leadingWidth =
+        ResponsiveLayout.scaled(context, 100, min: 88, max: 130);
+    final backIconSize = ResponsiveLayout.scaled(context, 18, min: 16, max: 22);
+    final backFontSize = ResponsiveLayout.scaled(context, 16, min: 14, max: 18);
+    final titleFontSize =
+        ResponsiveLayout.scaled(context, 18, min: 16, max: 20);
+    final hPadding = ResponsiveLayout.scaled(context, 16, min: 12, max: 20);
+    final descPadding = ResponsiveLayout.scaled(context, 18, min: 14, max: 22);
+    final tileHPad = ResponsiveLayout.scaled(context, 18, min: 14, max: 22);
+    final titleSize = ResponsiveLayout.scaled(context, 16, min: 14, max: 18);
+
     final selectedCode = _languageService.currentLocale.languageCode;
 
     return Scaffold(
@@ -32,36 +44,39 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        leadingWidth: 120,
+        leadingWidth: leadingWidth,
         leading: TextButton.icon(
           onPressed: () => Navigator.of(context).pop(),
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: accent, size: 18),
+          icon: Icon(Icons.arrow_back_ios_new_rounded,
+              color: accent, size: backIconSize),
           label: Text(
             'Settings',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            softWrap: false,
             style: TextStyle(
-              color: accent,
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-            ),
+                color: accent,
+                fontSize: backFontSize,
+                fontWeight: FontWeight.w600),
           ),
-          style: TextButton.styleFrom(padding: const EdgeInsets.only(left: 8)),
+          style: TextButton.styleFrom(
+              padding: EdgeInsets.only(
+                  left: ResponsiveLayout.scaled(context, 8, min: 6, max: 12))),
         ),
         title: Text(
           'Language',
           style: theme.textTheme.titleMedium
-              ?.copyWith(fontWeight: FontWeight.w700),
+              ?.copyWith(fontWeight: FontWeight.w700, fontSize: titleFontSize),
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: EdgeInsets.symmetric(horizontal: hPadding),
         children: [
           // Top bar (title is in AppBar like About)
           // Description
           Padding(
-            padding: const EdgeInsets.only(left: 4, right: 4, bottom: 18),
+            padding: EdgeInsets.only(
+              left: ResponsiveLayout.scaled(context, 4, min: 2, max: 6),
+              right: ResponsiveLayout.scaled(context, 4, min: 2, max: 6),
+              bottom: descPadding,
+            ),
             child: Text(
               'Quran App supports English and Arabic. Select your preferred language below.',
               textAlign: TextAlign.center,
@@ -88,8 +103,10 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
                 Divider(
                   height: 0,
                   thickness: 0.7,
-                  indent: 18,
-                  endIndent: 18,
+                  indent:
+                      ResponsiveLayout.scaled(context, 18, min: 14, max: 22),
+                  endIndent:
+                      ResponsiveLayout.scaled(context, 18, min: 14, max: 22),
                   color: theme.dividerColor.withOpacity(0.25),
                 ),
                 _languageTile(
@@ -101,7 +118,8 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(
+              height: ResponsiveLayout.scaled(context, 20, min: 14, max: 28)),
         ],
       ),
     );
@@ -116,12 +134,16 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
     final theme = Theme.of(context);
     final accent = BrandColors.accent;
     final isSelected = selectedCode == code;
+    final tileHPad = ResponsiveLayout.scaled(context, 18, min: 14, max: 22);
+    final titleSize = ResponsiveLayout.scaled(context, 16, min: 14, max: 18);
+    final hPad = ResponsiveLayout.scaled(context, tileHPad, min: 14, max: 24);
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+      contentPadding: EdgeInsets.symmetric(horizontal: hPad, vertical: 4),
       title: Text(
         title,
         style: TextStyle(
           fontWeight: FontWeight.w600,
+          fontSize: titleSize,
           color: theme.colorScheme.onSurface,
         ),
       ),

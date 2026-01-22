@@ -220,7 +220,14 @@ class _PageviewQuranState extends State<PageviewQuran> {
             });
             widget.onPageChanged?.call(_currentPage);
           },
-          physics: const BouncingScrollPhysics(),
+          dragStartBehavior: DragStartBehavior.down,
+          physics: const PageScrollPhysics(
+            parent: BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
+          ),
+          allowImplicitScrolling: true,
+          pageSnapping: true,
           itemBuilder: (context, index) {
             final pageNumber = index + 1;
             final header = _headerForPage(pageNumber);
@@ -262,7 +269,9 @@ class _PageviewQuranState extends State<PageviewQuran> {
         child: ScrollablePositionedList.builder(
           itemScrollController: _itemScrollController,
           itemPositionsListener: _itemPositionsListener,
-          physics: const BouncingScrollPhysics(),
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ),
           itemCount: totalPagesCount,
           initialScrollIndex: widget.initialPageNumber - 1,
           itemBuilder: (context, index) {
@@ -506,9 +515,8 @@ class _PageNumberWithBackground extends StatelessWidget {
           style: textStyle.copyWith(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: isDarkMode
-                ? const Color(0xFFFACC15)
-                : const Color(0xFFB45309),
+            color:
+                isDarkMode ? const Color(0xFFFACC15) : const Color(0xFFB45309),
           ),
         ),
       );

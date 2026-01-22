@@ -3,6 +3,7 @@ import 'package:quran_app/app/app.dart';
 import '../../core/quran/widgets/quran_pageview.dart';
 import '../../core/services/mushaf_settings_service.dart';
 import '../../core/services/theme_service.dart';
+import 'package:quran_app/core/ui/responsive.dart';
 
 class ThemeSettingsPage extends StatelessWidget {
   const ThemeSettingsPage({super.key});
@@ -13,6 +14,17 @@ class ThemeSettingsPage extends StatelessWidget {
     final mushafSettings = MushafSettingsService();
     final theme = Theme.of(context);
     final accent = BrandColors.accent;
+    final leadingWidth =
+        ResponsiveLayout.scaled(context, 120, min: 96, max: 140);
+    final backIconSize = ResponsiveLayout.scaled(context, 18, min: 16, max: 22);
+    final backFontSize = ResponsiveLayout.scaled(context, 15, min: 13, max: 17);
+    final titleFontSize =
+        ResponsiveLayout.scaled(context, 18, min: 16, max: 20);
+    final paddingAll = ResponsiveLayout.scaled(context, 16, min: 12, max: 20);
+    final sectionGap = ResponsiveLayout.scaled(context, 12, min: 8, max: 16);
+    final headerGap = ResponsiveLayout.scaled(context, 24, min: 18, max: 28);
+    final titleSpacing = ResponsiveLayout.scaled(context, 16, min: 12, max: 20);
+    final cardHeight = ResponsiveLayout.scaled(context, 80, min: 68, max: 96);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -20,10 +32,11 @@ class ThemeSettingsPage extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        leadingWidth: 120,
+        leadingWidth: leadingWidth,
         leading: TextButton.icon(
           onPressed: () => Navigator.of(context).pop(),
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: accent, size: 18),
+          icon: Icon(Icons.arrow_back_ios_new_rounded,
+              color: accent, size: backIconSize),
           label: Text(
             'Settings',
             maxLines: 1,
@@ -31,29 +44,34 @@ class ThemeSettingsPage extends StatelessWidget {
             softWrap: false,
             style: TextStyle(
               color: accent,
-              fontSize: 15,
+              fontSize: backFontSize,
               fontWeight: FontWeight.w600,
             ),
           ),
-          style: TextButton.styleFrom(padding: const EdgeInsets.only(left: 8)),
+          style: TextButton.styleFrom(
+              padding: EdgeInsets.only(
+                  left: ResponsiveLayout.scaled(context, 8, min: 6, max: 12))),
         ),
         title: Text(
           'App Appearance',
           style: theme.textTheme.titleMedium
-              ?.copyWith(fontWeight: FontWeight.w700),
+              ?.copyWith(fontWeight: FontWeight.w700, fontSize: titleFontSize),
         ),
       ),
       body: AnimatedBuilder(
         animation: Listenable.merge([themeService, mushafSettings]),
         builder: (context, child) {
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(paddingAll),
             children: [
-              const Padding(
-                padding: EdgeInsets.only(bottom: 16),
+              Padding(
+                padding: EdgeInsets.only(bottom: titleSpacing),
                 child: Text(
                   'Theme Selection',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: ResponsiveLayout.scaled(context, 18,
+                          min: 16, max: 20)),
                 ),
               ),
               // Theme list - vertical layout
@@ -63,32 +81,39 @@ class ThemeSettingsPage extends StatelessWidget {
                 isSelected:
                     themeService.currentTheme == AppTheme.goldenParchment,
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: sectionGap),
               _buildThemeCard(
                 context,
                 theme: AppTheme.midnightBlueprint,
                 isSelected:
                     themeService.currentTheme == AppTheme.midnightBlueprint,
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: sectionGap),
               _buildThemeCard(
                 context,
                 theme: AppTheme.mintGarden,
                 isSelected: themeService.currentTheme == AppTheme.mintGarden,
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: sectionGap),
               _buildThemeCard(
                 context,
                 theme: AppTheme.ornateTwilight,
                 isSelected:
                     themeService.currentTheme == AppTheme.ornateTwilight,
               ),
-              const SizedBox(height: 24),
-              const Padding(
-                padding: EdgeInsets.fromLTRB(0, 8, 0, 8),
+              SizedBox(height: headerGap),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                    0,
+                    ResponsiveLayout.scaled(context, 8, min: 6, max: 12),
+                    0,
+                    ResponsiveLayout.scaled(context, 8, min: 6, max: 12)),
                 child: Text(
                   'Mushaf Layout',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: ResponsiveLayout.scaled(context, 18,
+                          min: 16, max: 20)),
                 ),
               ),
               _buildMushafLayoutOption(
@@ -123,6 +148,7 @@ class ThemeSettingsPage extends StatelessWidget {
     required AppTheme theme,
     required bool isSelected,
   }) {
+    final cardHeight = ResponsiveLayout.scaled(context, 80, min: 68, max: 96);
     final imagePath = ThemeService.getMainframeImagePath(theme);
     final themeName = ThemeService.getThemeName(theme);
 
@@ -131,7 +157,7 @@ class ThemeSettingsPage extends StatelessWidget {
         ThemeService().setTheme(theme);
       },
       child: Container(
-        height: 80,
+        height: cardHeight,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
@@ -198,7 +224,9 @@ class ThemeSettingsPage extends StatelessWidget {
               // Theme name and checkmark on top
               Positioned.fill(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: ResponsiveLayout.scaled(context, 16,
+                          min: 12, max: 20)),
                   child: Row(
                     children: [
                       Expanded(
@@ -207,7 +235,8 @@ class ThemeSettingsPage extends StatelessWidget {
                           style: TextStyle(
                             fontWeight:
                                 isSelected ? FontWeight.bold : FontWeight.w600,
-                            fontSize: 16,
+                            fontSize: ResponsiveLayout.scaled(context, 16,
+                                min: 14, max: 18),
                             color: isSelected
                                 ? Theme.of(context).primaryColor
                                 : Theme.of(context).textTheme.bodyLarge?.color,
@@ -218,7 +247,8 @@ class ThemeSettingsPage extends StatelessWidget {
                         Icon(
                           Icons.check_circle,
                           color: Theme.of(context).primaryColor,
-                          size: 24,
+                          size: ResponsiveLayout.scaled(context, 24,
+                              min: 20, max: 28),
                         ),
                     ],
                   ),
@@ -240,8 +270,13 @@ class ThemeSettingsPage extends StatelessWidget {
     required IconData icon,
     required VoidCallback onSelect,
   }) {
+    final margin = ResponsiveLayout.scaled(context, 8, min: 6, max: 12);
+    final iconSize = ResponsiveLayout.scaled(context, 24, min: 20, max: 28);
+    final titleSize = ResponsiveLayout.scaled(context, 15, min: 14, max: 17);
+    final subtitleSize = ResponsiveLayout.scaled(context, 13, min: 12, max: 15);
+    final trailingSize = ResponsiveLayout.scaled(context, 24, min: 20, max: 28);
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: EdgeInsets.symmetric(vertical: margin),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: isSelected
@@ -256,6 +291,7 @@ class ThemeSettingsPage extends StatelessWidget {
           child: Icon(
             icon,
             color: isSelected ? Theme.of(context).primaryColor : Colors.grey,
+            size: iconSize,
           ),
         ),
         title: Text(
@@ -263,11 +299,13 @@ class ThemeSettingsPage extends StatelessWidget {
           style: TextStyle(
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             color: isSelected ? Theme.of(context).primaryColor : null,
+            fontSize: titleSize,
           ),
         ),
-        subtitle: Text(subtitle),
+        subtitle: Text(subtitle, style: TextStyle(fontSize: subtitleSize)),
         trailing: isSelected
-            ? Icon(Icons.check_circle, color: Theme.of(context).primaryColor)
+            ? Icon(Icons.check_circle,
+                color: Theme.of(context).primaryColor, size: trailingSize)
             : null,
         onTap: onSelect,
       ),

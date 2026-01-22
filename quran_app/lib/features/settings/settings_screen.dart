@@ -3,6 +3,7 @@ import 'package:quran_app/core/i18n/app_localizations.dart';
 import 'package:quran_app/core/services/language_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:quran_app/app/app.dart';
+import 'package:quran_app/core/ui/responsive.dart';
 
 // Assuming these pages exist in your project structure
 import 'daily_verse_settings_page.dart';
@@ -22,7 +23,16 @@ class SettingsScreen extends StatelessWidget {
     final cardColor = theme.cardColor.withOpacity(0.5);
     final iconColor = theme.colorScheme.onSurface.withOpacity(0.85);
     final borderRadius = BorderRadius.circular(16);
-    final groupSpacing = const SizedBox(height: 26);
+    final hPadding = ResponsiveLayout.scaled(context, 16, min: 12, max: 22);
+    final vSectionSpacing =
+        ResponsiveLayout.scaled(context, 26, min: 18, max: 32);
+    final toolbarHeight =
+        ResponsiveLayout.scaled(context, 80, min: 64, max: 96);
+    final titleSize = ResponsiveLayout.scaled(context, 32, min: 26, max: 36);
+    final backIconSize = ResponsiveLayout.scaled(context, 22, min: 18, max: 26);
+    final circleRadius = ResponsiveLayout.scaled(context, 20, min: 16, max: 24);
+    final cardHPad = ResponsiveLayout.scaled(context, 18, min: 14, max: 22);
+    final gestureVPad = ResponsiveLayout.scaled(context, 8, min: 6, max: 12);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -33,7 +43,8 @@ class SettingsScreen extends StatelessWidget {
         automaticallyImplyLeading: false,
         centerTitle: false,
         title: Padding(
-          padding: const EdgeInsets.only(left: 12.0),
+          padding: EdgeInsets.only(
+              left: ResponsiveLayout.scaled(context, 12, min: 8, max: 16)),
           // MODIFICATION: The leading widget is now part of the title's Row for better alignment.
           child: GestureDetector(
             onTap: () {
@@ -41,27 +52,32 @@ class SettingsScreen extends StatelessWidget {
             },
             child: CircleAvatar(
               backgroundColor: cardColor,
+              radius: circleRadius,
               child: Icon(
                 Icons.arrow_back_ios_new_rounded,
                 color: BrandColors.accent,
-                size: 22,
+                size: backIconSize,
               ),
             ),
           ),
         ),
-        toolbarHeight: 80,
+        toolbarHeight: toolbarHeight,
       ),
       body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: EdgeInsets.symmetric(horizontal: hPadding),
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 0, bottom: 24, left: 4),
+            padding: EdgeInsets.only(
+              top: 0,
+              bottom: ResponsiveLayout.scaled(context, 24, min: 18, max: 30),
+              left: ResponsiveLayout.scaled(context, 4, min: 2, max: 8),
+            ),
             child: Text(
               AppLocalizations.of(context)?.translate('settings_title') ??
                   'Settings',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 32,
+                fontSize: titleSize,
                 color: theme.colorScheme.onSurface,
               ),
             ),
@@ -106,8 +122,9 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           // Gesture Toggle
-          _buildGestureToggleContainer(context, iconColor),
-          groupSpacing,
+          _buildGestureToggleContainer(
+              context, iconColor, cardHPad, gestureVPad),
+          SizedBox(height: vSectionSpacing),
           // "Content" section
           Container(
             decoration: BoxDecoration(
@@ -132,7 +149,7 @@ class SettingsScreen extends StatelessWidget {
               ],
             ),
           ),
-          groupSpacing,
+          SizedBox(height: vSectionSpacing),
           // "Notifications" section
           Container(
             decoration: BoxDecoration(
@@ -171,7 +188,7 @@ class SettingsScreen extends StatelessWidget {
               ],
             ),
           ),
-          groupSpacing,
+          SizedBox(height: vSectionSpacing),
           // "About" section
           Container(
             decoration: BoxDecoration(
@@ -196,7 +213,8 @@ class SettingsScreen extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 32),
+          SizedBox(
+              height: ResponsiveLayout.scaled(context, 32, min: 22, max: 42)),
         ],
       ),
     );
@@ -212,23 +230,27 @@ class SettingsScreen extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     final theme = Theme.of(context);
+    final iconSize = ResponsiveLayout.scaled(context, 26, min: 22, max: 30);
+    final textSize = ResponsiveLayout.scaled(context, 16.5, min: 15, max: 18);
+    final trailingSize = ResponsiveLayout.scaled(context, 18, min: 16, max: 22);
+    final hPad = ResponsiveLayout.scaled(context, 18, min: 14, max: 22);
     return ListTile(
-      leading: Icon(icon, color: iconColor, size: 26),
+      leading: Icon(icon, color: iconColor, size: iconSize),
       title: Text(
         label,
         style: TextStyle(
           fontWeight: FontWeight.w500,
-          fontSize: 16.5,
+          fontSize: textSize,
           color: theme.colorScheme.onSurface,
         ),
       ),
       trailing: Icon(
         Icons.arrow_forward_ios_rounded,
         color: theme.colorScheme.onSurface.withOpacity(0.4),
-        size: 18,
+        size: trailingSize,
       ),
       onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 0),
+      contentPadding: EdgeInsets.symmetric(horizontal: hPad, vertical: 0),
       minLeadingWidth: 0,
       dense: true,
     );
@@ -242,22 +264,25 @@ class SettingsScreen extends StatelessWidget {
         color: Theme.of(context).dividerColor.withOpacity(0.3),
       );
 
-  Widget _buildGestureToggleContainer(BuildContext context, Color iconColor) {
+  Widget _buildGestureToggleContainer(
+      BuildContext context, Color iconColor, double hPad, double vPad) {
     final theme = Theme.of(context);
     bool enabled = false; // Mock; would read from SharedPreferences
 
     return StatefulBuilder(
       builder: (context, setState) {
         return Container(
-          margin: const EdgeInsets.only(top: 26),
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+          margin: EdgeInsets.only(top: hPad + 2),
+          padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
           decoration: BoxDecoration(
             color: theme.cardColor.withOpacity(0.5),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Row(
             children: [
-              Icon(Icons.gesture_rounded, color: iconColor, size: 26),
+              Icon(Icons.gesture_rounded,
+                  color: iconColor,
+                  size: ResponsiveLayout.scaled(context, 26, min: 22, max: 30)),
               const SizedBox(width: 18),
               Expanded(
                 child: Column(

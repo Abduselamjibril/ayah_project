@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:quran_app/app/app.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:quran_app/core/ui/responsive.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -10,6 +11,21 @@ class AboutScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final accent = BrandColors.accent;
     final cardBg = theme.colorScheme.onSurface.withOpacity(0.12);
+    final leadingWidth =
+        ResponsiveLayout.scaled(context, 120, min: 96, max: 140);
+    final backIconSize = ResponsiveLayout.scaled(context, 18, min: 16, max: 22);
+    final backFontSize = ResponsiveLayout.scaled(context, 15, min: 13, max: 17);
+    final titleFontSize =
+        ResponsiveLayout.scaled(context, 18, min: 16, max: 20);
+    final listHPad = ResponsiveLayout.scaled(context, 20, min: 14, max: 26);
+    final logoSize = ResponsiveLayout.scaled(context, 108, min: 90, max: 132);
+    final logoRadius = ResponsiveLayout.scaled(context, 24, min: 18, max: 30);
+    final logoPadding = ResponsiveLayout.scaled(context, 20, min: 14, max: 24);
+    final appNameSize = ResponsiveLayout.scaled(context, 32, min: 26, max: 36);
+    final versionSize = ResponsiveLayout.scaled(context, 14, min: 12, max: 16);
+    final sectionGap = ResponsiveLayout.scaled(context, 18, min: 14, max: 24);
+    final titleGap = ResponsiveLayout.scaled(context, 6, min: 4, max: 10);
+    final headerGap = ResponsiveLayout.scaled(context, 16, min: 12, max: 22);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -17,10 +33,11 @@ class AboutScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        leadingWidth: 120,
+        leadingWidth: leadingWidth,
         leading: TextButton.icon(
           onPressed: () => Navigator.of(context).pop(),
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: accent, size: 18),
+          icon: Icon(Icons.arrow_back_ios_new_rounded,
+              color: accent, size: backIconSize),
           label: Text(
             'Settings',
             maxLines: 1,
@@ -28,34 +45,37 @@ class AboutScreen extends StatelessWidget {
             softWrap: false,
             style: TextStyle(
               color: accent,
-              fontSize: 15,
+              fontSize: backFontSize,
               fontWeight: FontWeight.w600,
             ),
           ),
-          style: TextButton.styleFrom(padding: const EdgeInsets.only(left: 8)),
+          style: TextButton.styleFrom(
+              padding: EdgeInsets.only(
+                  left: ResponsiveLayout.scaled(context, 8, min: 6, max: 12))),
         ),
         title: Text(
           'About',
           style: theme.textTheme.titleMedium
-              ?.copyWith(fontWeight: FontWeight.w700),
+              ?.copyWith(fontWeight: FontWeight.w700, fontSize: titleFontSize),
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: EdgeInsets.symmetric(horizontal: listHPad),
         children: [
-          const SizedBox(height: 10),
+          SizedBox(
+              height: ResponsiveLayout.scaled(context, 10, min: 8, max: 14)),
           // App Logo
           Align(
             alignment: Alignment.center,
             child: Container(
-              width: 108,
-              height: 108,
+              width: logoSize,
+              height: logoSize,
               decoration: BoxDecoration(
                 color: accent,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(logoRadius),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(20.0),
+                padding: EdgeInsets.all(logoPadding),
                 child: Image.asset(
                   'assets/images/ayah.png',
                   fit: BoxFit.contain,
@@ -63,31 +83,31 @@ class AboutScreen extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: headerGap),
           // App Name
           Align(
             alignment: Alignment.center,
             child: Text(
               'Quran App',
               style: TextStyle(
-                fontSize: 32,
+                fontSize: appNameSize,
                 fontWeight: FontWeight.w800,
                 color: theme.colorScheme.onSurface,
               ),
             ),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: titleGap),
           Align(
             alignment: Alignment.center,
             child: Text(
               'Version 1.0.0',
               style: TextStyle(
-                fontSize: 14,
+                fontSize: versionSize,
                 color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
           ),
-          const SizedBox(height: 18),
+          SizedBox(height: sectionGap),
           // Policy links
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -97,7 +117,8 @@ class AboutScreen extends StatelessWidget {
                 child: const Text('Privacy Policy'),
                 style: TextButton.styleFrom(foregroundColor: accent),
               ),
-              const SizedBox(width: 12),
+              SizedBox(
+                  width: ResponsiveLayout.scaled(context, 12, min: 8, max: 16)),
               TextButton(
                 onPressed: () {},
                 child: const Text('Terms of Use'),
@@ -105,14 +126,15 @@ class AboutScreen extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          SizedBox(height: sectionGap),
           // Description card
           Container(
             decoration: BoxDecoration(
               color: cardBg,
               borderRadius: BorderRadius.circular(16),
             ),
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(
+                ResponsiveLayout.scaled(context, 16, min: 12, max: 20)),
             child: Text(
               "The app's name is derived from the saying: \u00ABConvey from me even an Ayah\u00BB.",
               style: theme.textTheme.bodyMedium?.copyWith(
@@ -121,7 +143,7 @@ class AboutScreen extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 18),
+          SizedBox(height: sectionGap),
           // Share/Review card
           Container(
             decoration: BoxDecoration(
@@ -131,8 +153,11 @@ class AboutScreen extends StatelessWidget {
             child: Column(
               children: [
                 ListTile(
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  contentPadding: EdgeInsets.symmetric(
+                      horizontal: ResponsiveLayout.scaled(context, 16,
+                          min: 12, max: 20),
+                      vertical: ResponsiveLayout.scaled(context, 10,
+                          min: 8, max: 14)),
                   title: Text(
                     'Share App',
                     style:
@@ -147,7 +172,8 @@ class AboutScreen extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 32),
+          SizedBox(
+              height: ResponsiveLayout.scaled(context, 32, min: 22, max: 42)),
         ],
       ),
     );
