@@ -21,6 +21,10 @@ class ShareService {
     required int surahNumber,
     required int ayahNumber,
     int? endAyahNumber,
+    bool includeSurahName = true,
+    bool includeReference = false,
+    bool includeBadge = true,
+    bool stripDiacritics = false,
     String? appLink,
   }) async {
     final surahName = getSurahName(surahNumber);
@@ -29,20 +33,27 @@ class ShareService {
     final lastAyah = endAyahNumber ?? ayahNumber;
     final buffer = StringBuffer();
 
-    for (int i = ayahNumber; i <= lastAyah; i++) {
-      buffer.writeln(getVerse(surahNumber, i, verseEndSymbol: true));
+    final reference =
+        '$surahName ($surahNumber:$ayahNumber${lastAyah != ayahNumber ? '-$lastAyah' : ''})';
+    if (includeSurahName || includeReference) {
+      buffer.writeln(reference);
+      buffer.writeln();
     }
-    final verseText = buffer.toString().trim();
 
-    final link = appLink ?? defaultAppLink;
-    final text = [
-      '$surahName ($surahNumber:$ayahNumber${endAyahNumber != null ? '-$endAyahNumber' : ''})',
-      verseText,
-      'Shared via Ayah App',
-      link,
-    ].join('\n\n');
+    for (int i = ayahNumber; i <= lastAyah; i++) {
+      var text = getVerse(surahNumber, i, verseEndSymbol: true);
+      if (stripDiacritics) {
+        text = removeDiacritics(text);
+      }
+      buffer.writeln(text);
+    }
 
-    await Share.share(text);
+    if (includeBadge) {
+      buffer.writeln('\nShared via Ayah App');
+      buffer.writeln(appLink ?? defaultAppLink);
+    }
+
+    await Share.share(buffer.toString().trim());
   }
 
   Future<void> shareVerseImage({
@@ -57,6 +68,7 @@ class ShareService {
     String? frameAsset,
     bool showSurahName = true,
     bool showPageNumber = false,
+    bool showBadge = true,
     double pixelRatio = 2.0,
   }) async {
     final controller = ScreenshotController();
@@ -73,6 +85,7 @@ class ShareService {
         frameAsset: frameAsset,
         showSurahName: showSurahName,
         showPageNumber: showPageNumber,
+        showFooter: showBadge,
       ),
       pixelRatio: pixelRatio,
     );

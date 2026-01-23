@@ -45,6 +45,7 @@ class ShareCard extends StatelessWidget {
   final bool showPageNumber;
   final double size;
   final String? frameAsset;
+  final bool showFooter;
 
   const ShareCard({
     super.key,
@@ -62,6 +63,7 @@ class ShareCard extends StatelessWidget {
     this.showPageNumber = false,
     this.size = 1080,
     this.frameAsset,
+    this.showFooter = true,
   });
 
   @override
@@ -81,6 +83,7 @@ class ShareCard extends StatelessWidget {
       showPageNumber: showPageNumber,
       size: size,
       frameAsset: frameAsset,
+      showFooter: showFooter,
     );
   }
 }

@@ -18,6 +18,7 @@ class ShareCardDesign extends StatelessWidget {
   final bool showSurahName;
   final bool showPageNumber;
   final double size;
+  final bool showFooter;
 
   const ShareCardDesign({
     super.key,
@@ -34,6 +35,7 @@ class ShareCardDesign extends StatelessWidget {
     required this.showSurahName,
     required this.showPageNumber,
     required this.size,
+    required this.showFooter,
     this.frameAsset,
   });
 
@@ -97,14 +99,15 @@ class ShareCardDesign extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  _ShareFooter(
-                    appName: appName,
-                    appIconAsset: appIconAsset,
-                    textColor: textColor,
-                    showPageNumber: showPageNumber,
-                    surahNumber: surahNumber,
-                    ayahNumber: ayahNumber,
-                  ),
+                  if (showFooter)
+                    _ShareFooter(
+                      appName: appName,
+                      appIconAsset: appIconAsset,
+                      textColor: textColor,
+                      showPageNumber: showPageNumber,
+                      surahNumber: surahNumber,
+                      ayahNumber: ayahNumber,
+                    ),
                 ],
               ),
             ),

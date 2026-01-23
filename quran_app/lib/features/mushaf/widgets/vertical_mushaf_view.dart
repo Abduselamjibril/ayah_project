@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:io';
-import 'dart:math';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:quran_app/core/quran/qcf_quran.dart';
 import 'package:quran_app/core/services/audio_player_service.dart';
@@ -17,13 +15,13 @@ import 'package:quran_app/features/mushaf/screens/verse_details_screen.dart';
 import 'package:quran_app/core/services/mushaf_settings_service.dart';
 import 'package:quran_app/core/services/theme_service.dart';
 import 'package:quran_app/core/ui/responsive.dart';
-import 'package:screenshot/screenshot.dart';
 import 'package:quran_app/core/services/language_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:quran_app/app/app.dart';
 import 'package:quran_app/features/share/presentation/dialogs/share_preview_dialog.dart';
+import 'package:quran_app/features/share/presentation/widgets/share_card.dart';
+import 'package:quran_app/features/share/services/share_service.dart';
 import 'play_range_dialog.dart';
 
 // Result type for the verse menu editor dialog
@@ -74,8 +72,6 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   bool _autoScrollControlsVisible = false;
   double _autoScrollSpeed = 30.0;
   int _scrollGeneration = 0;
-
-  final ScreenshotController _screenshotController = ScreenshotController();
 
   static const List<String> _bookmarkColors = [
     '#FFB300',
@@ -219,15 +215,15 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                 final sidePadding =
                     ResponsiveLayout.scaled(context, 6, min: 4, max: 12);
                 final availableWidth =
-                    max(0.0, constraints.maxWidth - (sidePadding * 2));
-                final maxWidth = min(
+                    math.max(0.0, constraints.maxWidth - (sidePadding * 2));
+                final maxWidth = math.min(
                   availableWidth,
                   ResponsiveLayout.scaled(context, 900, min: 740, max: 1080),
                 );
                 final topMargin = MediaQuery.paddingOf(context).top +
                     ResponsiveLayout.scaled(context, 12, min: 8, max: 16);
                 final contentHeight =
-                    max(0.0, constraints.maxHeight - topMargin);
+                    math.max(0.0, constraints.maxHeight - topMargin);
 
                 return Center(
                   child: Padding(
@@ -832,6 +828,52 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     } else {
       _showOverlay();
     }
+  }
+
+  ({ShareCardBackground background, bool isDark, String frameAsset})
+      _resolveShareCardTheme() {
+    final themeService = ThemeService();
+    final appTheme = themeService.currentTheme;
+
+    ShareCardBackground background;
+    bool isDark;
+
+    switch (appTheme) {
+      case AppTheme.goldenParchment:
+        background = ShareCardBackground.solid(const Color(0xFFFFF4DA));
+        isDark = false;
+        break;
+      case AppTheme.midnightBlueprint:
+        background = ShareCardBackground.solid(const Color(0xFF101417));
+        isDark = true;
+        break;
+      case AppTheme.mintGarden:
+        background = ShareCardBackground.gradient(
+          const LinearGradient(
+            colors: [Color(0xFF0B1A17), Color(0xFF1C3A2F)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        );
+        isDark = true;
+        break;
+      case AppTheme.ornateTwilight:
+        background = ShareCardBackground.gradient(
+          const LinearGradient(
+            colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        );
+        isDark = true;
+        break;
+    }
+
+    return (
+      background: background,
+      isDark: isDark,
+      frameAsset: themeService.mainframeImagePath,
+    );
   }
 
   Future<void> _navigateWithFade(int page) async {
@@ -1835,24 +1877,31 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
               setSheetState(() => isSharing = true);
               try {
                 if (format == _ShareFormat.image) {
-                  await _shareVersesAsImage(
-                      surah: surah,
-                      surahName: surahName,
-                      verses: List.generate(
-                          toVerse - fromVerse + 1, (i) => fromVerse + i),
-                      includeSurahName: includeSurahName,
-                      includeReference: includeVerseReference,
-                      includeBadge: includeBadge);
+                  final shareTheme = _resolveShareCardTheme();
+                  await ShareService.instance.shareVerseImage(
+                    surahNumber: surah,
+                    ayahNumber: fromVerse,
+                    endAyahNumber: toVerse,
+                    background: shareTheme.background,
+                    isDark: shareTheme.isDark,
+                    frameAsset: shareTheme.frameAsset,
+                    showSurahName: includeSurahName,
+                    showPageNumber: includeVerseReference,
+                    showBadge: includeBadge,
+                    size: 1080,
+                    pixelRatio: 2.5,
+                  );
                 } else {
-                  await _shareVersesAsText(
-                      surah: surah,
-                      startVerse: fromVerse,
-                      endVerse: toVerse,
-                      stripDiacritics:
-                          format == _ShareFormat.textWithoutDiacritics,
-                      includeSurahName: includeSurahName,
-                      includeReference: includeVerseReference,
-                      includeBadge: includeBadge);
+                  await ShareService.instance.shareVerseText(
+                    surahNumber: surah,
+                    ayahNumber: fromVerse,
+                    endAyahNumber: toVerse,
+                    stripDiacritics:
+                        format == _ShareFormat.textWithoutDiacritics,
+                    includeSurahName: includeSurahName,
+                    includeReference: includeVerseReference,
+                    includeBadge: includeBadge,
+                  );
                 }
                 if (mounted) Navigator.pop(context);
               } catch (e) {
@@ -1992,51 +2041,6 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     ]);
   }
 
-  Future<void> _shareVersesAsText(
-      {required int surah,
-      required int startVerse,
-      required int endVerse,
-      required bool stripDiacritics,
-      required bool includeSurahName,
-      required bool includeReference,
-      required bool includeBadge}) async {
-    final buffer = StringBuffer();
-    if (includeSurahName) buffer.writeln('Surah ${getSurahName(surah)}');
-    for (var v = startVerse; v <= endVerse; v++) {
-      var text = getVerseQCF(surah, v, verseEndSymbol: true);
-      if (stripDiacritics) text = removeDiacritics(text);
-      buffer.writeln(text);
-    }
-    if (includeBadge) buffer.writeln('\nShared via Ayah App');
-    await Share.share(buffer.toString().trim());
-  }
-
-  Future<void> _shareVersesAsImage(
-      {required int surah,
-      required String surahName,
-      required List<int> verses,
-      required bool includeSurahName,
-      required bool includeReference,
-      required bool includeBadge}) async {
-    final bytes = await _screenshotController.captureFromWidget(
-      _VerseShareCard(
-          surah: surah,
-          startVerse: verses.first,
-          endVerse: verses.last,
-          surahName: surahName,
-          verses: verses
-              .map((v) => getVerseQCF(surah, v, verseEndSymbol: true))
-              .toList(),
-          includeBadge: includeBadge,
-          includeReference: includeReference,
-          includeSurahName: includeSurahName),
-      pixelRatio: 2.5,
-    );
-    final dir = await getTemporaryDirectory();
-    final file = await File('${dir.path}/ayah_share.png').writeAsBytes(bytes);
-    await Share.shareXFiles([XFile(file.path)], text: 'Surah $surahName');
-  }
-
   Future<void> _shareVerseCardPreview(int surah, int verse) async {
     await showSharePreviewDialog(
         context: context, surahNumber: surah, ayahNumber: verse);
@@ -2164,54 +2168,6 @@ class _ThemeCardTile extends StatelessWidget {
             child: Text(ThemeService.getThemeName(theme),
                 style: const TextStyle(fontWeight: FontWeight.bold))),
       ),
-    );
-  }
-}
-
-class _VerseShareCard extends StatelessWidget {
-  final int surah;
-  final int startVerse;
-  final int endVerse;
-  final String surahName;
-  final List<String> verses;
-  final bool includeBadge;
-  final bool includeReference;
-  final bool includeSurahName;
-  const _VerseShareCard(
-      {required this.surah,
-      required this.startVerse,
-      required this.endVerse,
-      required this.surahName,
-      required this.verses,
-      required this.includeBadge,
-      required this.includeReference,
-      required this.includeSurahName});
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 1080,
-      padding: const EdgeInsets.all(24),
-      decoration: const BoxDecoration(
-          gradient:
-              LinearGradient(colors: [Color(0xFF0F2027), Color(0xFF2C5364)])),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        if (includeSurahName)
-          Text(surahName,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold)),
-        const SizedBox(height: 12),
-        ...verses.map((v) => Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Text(v,
-                  style: const TextStyle(color: Colors.white, fontSize: 28),
-                  textAlign: TextAlign.right),
-            )),
-        if (includeBadge)
-          const Text('Shared via Ayah App',
-              style: TextStyle(color: Colors.white70)),
-      ]),
     );
   }
 }
