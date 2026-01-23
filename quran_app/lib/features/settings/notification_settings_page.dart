@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:quran_app/app/app.dart';
 import '../khatmah/services/khatmah_service.dart';
 import 'package:quran_app/core/ui/responsive.dart';
+import '../../core/services/verse_of_the_day_service.dart';
 
 class NotificationSettingsPage extends StatefulWidget {
   const NotificationSettingsPage({super.key});
@@ -12,9 +13,17 @@ class NotificationSettingsPage extends StatefulWidget {
 }
 
 class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
-  final KhatmahService _service = KhatmahService();
-  bool _enabled = false;
-  TimeOfDay _time = const TimeOfDay(hour: 20, minute: 0);
+  final KhatmahService _khatmahService = KhatmahService();
+  final VerseOfTheDayService _votdService = VerseOfTheDayService.instance;
+
+  // Khatmah Settings
+  bool _khatmahEnabled = false;
+  TimeOfDay _khatmahTime = const TimeOfDay(hour: 20, minute: 0);
+
+  // Verse of the Day Settings
+  bool _votdEnabled = true;
+  TimeOfDay _votdTime = const TimeOfDay(hour: 8, minute: 0);
+
   bool _isLoading = true;
 
   @override
@@ -24,22 +33,37 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   }
 
   Future<void> _loadSettings() async {
-    final settings = await _service.getNotificationSettings();
+    final khatmahSettings = await _khatmahService.getNotificationSettings();
+
     if (mounted) {
       setState(() {
-        _enabled = settings['enabled'];
-        _time = TimeOfDay(hour: settings['hour'], minute: settings['minute']);
+        _khatmahEnabled = khatmahSettings['enabled'];
+        _khatmahTime = TimeOfDay(
+            hour: khatmahSettings['hour'], minute: khatmahSettings['minute']);
+
+        _votdEnabled = _votdService.enabled;
+        _votdTime = _votdService.notificationTime;
+
         _isLoading = false;
       });
     }
   }
 
-  Future<void> _updateSettings(bool enabled, TimeOfDay time) async {
+  Future<void> _updateKhatmahSettings(bool enabled, TimeOfDay time) async {
     setState(() {
-      _enabled = enabled;
-      _time = time;
+      _khatmahEnabled = enabled;
+      _khatmahTime = time;
     });
-    await _service.setNotificationSettings(enabled, time);
+    await _khatmahService.setNotificationSettings(enabled, time);
+  }
+
+  Future<void> _updateVotdSettings(bool enabled, TimeOfDay time) async {
+    setState(() {
+      _votdEnabled = enabled;
+      _votdTime = time;
+    });
+    await _votdService.setEnabled(enabled);
+    await _votdService.setNotificationTime(time);
   }
 
   @override
@@ -90,30 +114,70 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
           : ListView(
               padding: EdgeInsets.all(listPadding),
               children: [
+                _buildSectionHeader(theme, 'Khatmah Reminder'),
                 SwitchListTile(
                   title: const Text('Daily Khatmah Reminder'),
                   subtitle: const Text(
                       'Receive a daily notification to read your Khatmah'),
-                  value: _enabled,
-                  onChanged: (value) => _updateSettings(value, _time),
+                  value: _khatmahEnabled,
+                  onChanged: (value) =>
+                      _updateKhatmahSettings(value, _khatmahTime),
+                  activeColor: theme.primaryColor,
                 ),
                 ListTile(
                   title: const Text('Reminder Time'),
-                  subtitle: Text(_time.format(context)),
-                  enabled: _enabled,
+                  subtitle: Text(_khatmahTime.format(context)),
+                  enabled: _khatmahEnabled,
                   trailing: const Icon(Icons.access_time),
                   onTap: () async {
                     final TimeOfDay? picked = await showTimePicker(
                       context: context,
-                      initialTime: _time,
+                      initialTime: _khatmahTime,
                     );
-                    if (picked != null && picked != _time) {
-                      _updateSettings(_enabled, picked);
+                    if (picked != null && picked != _khatmahTime) {
+                      _updateKhatmahSettings(_khatmahEnabled, picked);
+                    }
+                  },
+                ),
+                const Divider(),
+                _buildSectionHeader(theme, 'Verse of the Day'),
+                SwitchListTile(
+                  title: const Text('Daily Verse Notification'),
+                  subtitle: const Text('Receive a random verse every day'),
+                  value: _votdEnabled,
+                  onChanged: (value) => _updateVotdSettings(value, _votdTime),
+                  activeColor: theme.primaryColor,
+                ),
+                ListTile(
+                  title: const Text('Notification Time'),
+                  subtitle: Text(_votdTime.format(context)),
+                  enabled: _votdEnabled,
+                  trailing: const Icon(Icons.access_time),
+                  onTap: () async {
+                    final TimeOfDay? picked = await showTimePicker(
+                      context: context,
+                      initialTime: _votdTime,
+                    );
+                    if (picked != null && picked != _votdTime) {
+                      _updateVotdSettings(_votdEnabled, picked);
                     }
                   },
                 ),
               ],
             ),
+    );
+  }
+
+  Widget _buildSectionHeader(ThemeData theme, String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Text(
+        title,
+        style: theme.textTheme.titleMedium?.copyWith(
+          color: theme.primaryColor,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 }

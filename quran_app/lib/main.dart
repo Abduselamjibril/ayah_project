@@ -11,6 +11,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:quran_app/core/services/language_service.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
+import 'package:quran_app/core/services/notification_service.dart';
 import 'core/services/verse_of_the_day_service.dart';
 
 Future<void> main() async {
@@ -31,6 +32,12 @@ Future<void> main() async {
 
   // Initialize Verse of the Day service
   await VerseOfTheDayService.instance.initialize();
+
+  // Initialize Notification Service (important for timezones)
+  await AppNotificationService.instance.initialize();
+
+  // Request notification permissions immediately
+  await AppNotificationService.instance.requestPermissionsIfNeeded();
 
   // Keep home widget in sync with local database
   await HomeWidgetService.instance.initializeBackgroundSync();
