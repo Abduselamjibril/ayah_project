@@ -46,6 +46,10 @@ class VerseOfTheDayService {
     if (_surahNumber == null || _verseNumber == null) {
       await _generateNewVerse(prefs);
     }
+
+    if (_enabled) {
+      await scheduleNotification();
+    }
   }
 
   Future<void> _generateNewVerse(SharedPreferences prefs) async {
@@ -96,6 +100,10 @@ class VerseOfTheDayService {
 
   Future<void> scheduleNotification() async {
     if (!_enabled) return;
+    await AppNotificationService.instance.initialize();
+    final granted =
+        await AppNotificationService.instance.requestPermissionsIfNeeded();
+    if (!granted) return;
     await AppNotificationService.instance
         .scheduleDailyNotification(_notificationTime);
   }

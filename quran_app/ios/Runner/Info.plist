@@ -7,17 +7,14 @@
 		<array>
 			<string>background-fetch</string>
 			<string>processing</string>
-<<<<<<< HEAD
-=======
 			<string>audio</string>
->>>>>>> company/main
 		</array>
 
 		<!-- Local notifications permission description -->
 		<key>NSUserNotificationAlertStyle</key>
 		<string>alert</string>
 		<key>NSUserNotificationUsageDescription</key>
-		<string>This app uses notifications to show download progress and completion.</string>
+		<string>This app uses notifications for daily inspiration, Khatmah reminders, and download updates.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

@@ -17,8 +17,18 @@ class KhatmahService {
 
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
+  bool _initialized = false;
+
+  static const AndroidNotificationChannel _khatmahChannel =
+      AndroidNotificationChannel(
+    'khatmah_channel',
+    'Khatmah Reminders',
+    description: 'Daily reminders for Quran Khatmah',
+    importance: Importance.max,
+  );
 
   Future<void> init() async {
+    if (_initialized) return;
     // Android init
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -40,11 +50,27 @@ class KhatmahService {
     await _notificationsPlugin.initialize(initializationSettings);
     tz.initializeTimeZones();
 
+    if (Platform.isAndroid) {
+      final android =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      await android?.createNotificationChannel(_khatmahChannel);
+    }
+
     // Migrate legacy single khatmah to list
     await _migrateLegacyData();
+
+    _initialized = true;
+  }
+
+  Future<void> _ensureInitialized() async {
+    if (!_initialized) {
+      await init();
+    }
   }
 
   Future<void> requestPermissions() async {
+    await _ensureInitialized();
     if (Platform.isIOS) {
       await _notificationsPlugin
           .resolvePlatformSpecificImplementation<
@@ -154,6 +180,7 @@ class KhatmahService {
   }
 
   Future<void> setNotificationSettings(bool enabled, TimeOfDay time) async {
+    await _ensureInitialized();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_notifEnabledKey, enabled);
     await prefs.setInt(_notifHourKey, time.hour);
@@ -168,6 +195,7 @@ class KhatmahService {
   }
 
   Future<void> _scheduleDailyNotification(TimeOfDay time) async {
+    await _ensureInitialized();
     await _notificationsPlugin
         .cancelAll(); // Cancel existing before scheduling new
 

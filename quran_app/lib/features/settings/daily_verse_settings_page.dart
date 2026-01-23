@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:quran_app/app/app.dart';
 import '../../core/services/verse_of_the_day_service.dart';
+import 'package:quran_app/core/services/notification_service.dart';
 import 'package:quran_app/core/ui/responsive.dart';
 
 class DailyVerseSettingsPage extends StatefulWidget {
@@ -22,7 +23,29 @@ class _DailyVerseSettingsPageState extends State<DailyVerseSettingsPage> {
     _time = _service.notificationTime;
   }
 
+  Future<bool> _ensureExactAlarms() async {
+    final canExact =
+        await AppNotificationService.instance.canScheduleExactAlarms();
+    if (canExact) return true;
+
+    await AppNotificationService.instance.openExactAlarmSettings();
+    final after =
+        await AppNotificationService.instance.canScheduleExactAlarms();
+    return after;
+  }
+
   Future<void> _toggleEnabled(bool value) async {
+    if (value) {
+      final ok = await _ensureExactAlarms();
+      if (!ok) {
+        if (mounted) {
+          setState(() {
+            _enabled = false;
+          });
+        }
+        return;
+      }
+    }
     await _service.setEnabled(value);
     setState(() {
       _enabled = value;

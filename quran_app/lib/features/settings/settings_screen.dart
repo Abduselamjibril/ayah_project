@@ -266,59 +266,10 @@ class SettingsScreen extends StatelessWidget {
 
   Widget _buildGestureToggleContainer(
       BuildContext context, Color iconColor, double hPad, double vPad) {
-    final theme = Theme.of(context);
-    bool enabled = false; // Mock; would read from SharedPreferences
-
-    return StatefulBuilder(
-      builder: (context, setState) {
-        return Container(
-          margin: EdgeInsets.only(top: hPad + 2),
-          padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
-          decoration: BoxDecoration(
-            color: theme.cardColor.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.gesture_rounded,
-                  color: iconColor,
-                  size: ResponsiveLayout.scaled(context, 26, min: 22, max: 30)),
-              const SizedBox(width: 18),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Two-finger Search',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16.5,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Drag down to search',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Switch.adaptive(
-                value: enabled,
-                onChanged: (val) {
-                  setState(() => enabled = val);
-                  SharedPreferences.getInstance().then((prefs) {
-                    prefs.setBool('search_gesture_enabled', val);
-                  });
-                },
-                activeColor: theme.colorScheme.primary,
-              ),
-            ],
-          ),
-        );
-      },
+    return _GestureSettingsTile(
+      iconColor: iconColor,
+      hPad: hPad,
+      vPad: vPad,
     );
   }
 
@@ -408,6 +359,91 @@ class SettingsScreen extends StatelessWidget {
             child: Text(
               AppLocalizations.of(context)?.translate('close') ?? 'Close',
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GestureSettingsTile extends StatefulWidget {
+  final Color iconColor;
+  final double hPad;
+  final double vPad;
+
+  const _GestureSettingsTile({
+    required this.iconColor,
+    required this.hPad,
+    required this.vPad,
+  });
+
+  @override
+  State<_GestureSettingsTile> createState() => _GestureSettingsTileState();
+}
+
+class _GestureSettingsTileState extends State<_GestureSettingsTile> {
+  bool _enabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadState();
+  }
+
+  Future<void> _loadState() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _enabled = prefs.getBool('search_gesture_enabled') ?? true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      margin: EdgeInsets.only(top: widget.hPad + 2),
+      padding: EdgeInsets.symmetric(horizontal: widget.hPad, vertical: widget.vPad),
+      decoration: BoxDecoration(
+        color: theme.cardColor.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.gesture_rounded,
+              color: widget.iconColor,
+              size: ResponsiveLayout.scaled(context, 26, min: 22, max: 30)),
+          const SizedBox(width: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Two-finger Search',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Drag down to search',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch.adaptive(
+            value: _enabled,
+            onChanged: (val) async {
+              setState(() => _enabled = val);
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('search_gesture_enabled', val);
+            },
+            activeColor: theme.colorScheme.primary,
           ),
         ],
       ),

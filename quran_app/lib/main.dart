@@ -30,14 +30,14 @@ Future<void> main() async {
   // Initialize mushaf settings (scroll mode, etc.)
   await MushafSettingsService().initialize();
 
-  // Initialize Verse of the Day service
-  await VerseOfTheDayService.instance.initialize();
-
   // Initialize Notification Service (important for timezones)
   await AppNotificationService.instance.initialize();
 
   // Request notification permissions immediately
   await AppNotificationService.instance.requestPermissionsIfNeeded();
+
+  // Initialize Verse of the Day service
+  await VerseOfTheDayService.instance.initialize();
 
   // Keep home widget in sync with local database
   await HomeWidgetService.instance.initializeBackgroundSync();
