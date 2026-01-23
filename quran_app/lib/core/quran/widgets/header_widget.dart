@@ -18,16 +18,12 @@ class HeaderWidget extends StatelessWidget {
 
     final referenceWidth = isWideMode ? 600.0 : 430.0;
 
-    final imageWidth = referenceWidth * 0.90;
-
+    final imageWidth = referenceWidth * 0.85;
 
     return InkWell(
       borderRadius: BorderRadius.circular(8),
       child: Container(
         decoration: const BoxDecoration(),
-
-        width: double.infinity,
-
         child: Stack(
           alignment: Alignment.center,
           children: [
