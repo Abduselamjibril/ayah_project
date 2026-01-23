@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:quran_app/app/app.dart';
 import '../khatmah/services/khatmah_service.dart';
 import 'package:quran_app/core/ui/responsive.dart';
+import 'package:quran_app/core/services/notification_service.dart';
 import '../../core/services/verse_of_the_day_service.dart';
 
 class NotificationSettingsPage extends StatefulWidget {
@@ -49,7 +50,29 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     }
   }
 
+  Future<bool> _ensureExactAlarms() async {
+    final canExact =
+        await AppNotificationService.instance.canScheduleExactAlarms();
+    if (canExact) return true;
+
+    await AppNotificationService.instance.openExactAlarmSettings();
+    final after =
+        await AppNotificationService.instance.canScheduleExactAlarms();
+    return after;
+  }
+
   Future<void> _updateKhatmahSettings(bool enabled, TimeOfDay time) async {
+    if (enabled) {
+      final ok = await _ensureExactAlarms();
+      if (!ok) {
+        if (mounted) {
+          setState(() {
+            _khatmahEnabled = false;
+          });
+        }
+        return;
+      }
+    }
     setState(() {
       _khatmahEnabled = enabled;
       _khatmahTime = time;
@@ -58,6 +81,17 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   }
 
   Future<void> _updateVotdSettings(bool enabled, TimeOfDay time) async {
+    if (enabled) {
+      final ok = await _ensureExactAlarms();
+      if (!ok) {
+        if (mounted) {
+          setState(() {
+            _votdEnabled = false;
+          });
+        }
+        return;
+      }
+    }
     setState(() {
       _votdEnabled = enabled;
       _votdTime = time;

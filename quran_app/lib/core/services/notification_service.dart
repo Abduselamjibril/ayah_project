@@ -2,7 +2,9 @@
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -28,6 +30,7 @@ class AppNotificationService {
     if (_initialized) return;
 
     tz.initializeTimeZones();
+    await _configureLocalTimeZone();
 
     const AndroidInitializationSettings androidInit =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -50,6 +53,16 @@ class AppNotificationService {
     _initialized = true;
   }
 
+  Future<void> _configureLocalTimeZone() async {
+    if (kIsWeb) return;
+    try {
+      final timeZoneName = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timeZoneName));
+    } catch (_) {
+      tz.setLocalLocation(tz.getLocation('UTC'));
+    }
+  }
+
   static const AndroidNotificationChannel _dailyChannel =
       AndroidNotificationChannel(
     'daily_verse_channel',
@@ -69,7 +82,11 @@ class AppNotificationService {
       importance: Importance.defaultImportance,
       priority: Priority.defaultPriority,
     );
-    const iosDetails = DarwinNotificationDetails();
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
     const details =
         NotificationDetails(android: androidDetails, iOS: iosDetails);
 
@@ -87,19 +104,45 @@ class AppNotificationService {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
 
+    AndroidScheduleMode scheduleMode = AndroidScheduleMode.exactAllowWhileIdle;
+    if (!kIsWeb && Platform.isAndroid) {
+      final android = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      final canExact = await android?.canScheduleExactNotifications() ?? false;
+      if (!canExact) {
+        scheduleMode = AndroidScheduleMode.inexactAllowWhileIdle;
+      }
+    }
+
     await _plugin.zonedSchedule(
       888, // ID for daily notification
       'Verse of the Day',
       'Tap to read today\'s verse',
       scheduledDate,
       details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: scheduleMode,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
 
   Future<void> cancelDailyNotification() async {
     await _plugin.cancel(888);
+  }
+
+  Future<bool> canScheduleExactAlarms() async {
+    if (kIsWeb) return false;
+    if (!Platform.isAndroid) return true;
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    return await android?.canScheduleExactNotifications() ?? true;
+  }
+
+  Future<void> openExactAlarmSettings() async {
+    if (!Platform.isAndroid) return;
+    const intent = AndroidIntent(
+      action: 'android.settings.REQUEST_SCHEDULE_EXACT_ALARM',
+    );
+    await intent.launch();
   }
 
   Future<bool> requestPermissionsIfNeeded() async {
