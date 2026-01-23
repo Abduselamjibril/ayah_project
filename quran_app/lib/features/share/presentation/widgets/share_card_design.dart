@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:quran_app/core/quran/qcf_quran.dart';
-import 'package:quran_app/core/quran/widgets/qcf_verse.dart';
 
 import 'share_card.dart';
 
 class ShareCardDesign extends StatelessWidget {
   final int surahNumber;
   final int ayahNumber;
+  final int? endAyahNumber;
   final bool isDark;
   final ShareCardBackground background;
   final String appName;
@@ -15,12 +15,15 @@ class ShareCardDesign extends StatelessWidget {
   final String? translationText;
   final String? referenceText;
   final bool showReference;
+  final bool showSurahName;
+  final bool showPageNumber;
   final double size;
 
   const ShareCardDesign({
     super.key,
     required this.surahNumber,
     required this.ayahNumber,
+    this.endAyahNumber,
     required this.isDark,
     required this.background,
     required this.appName,
@@ -28,6 +31,8 @@ class ShareCardDesign extends StatelessWidget {
     required this.translationText,
     required this.referenceText,
     required this.showReference,
+    required this.showSurahName,
+    required this.showPageNumber,
     required this.size,
     this.frameAsset,
   });
@@ -70,18 +75,20 @@ class ShareCardDesign extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _SurahHeader(
-                    frameAsset: effectiveFrameAsset,
-                    surahNumber: surahNumber,
-                    size: size,
-                    textColor: textColor,
-                  ),
+                  if (showSurahName)
+                    _SurahHeader(
+                      frameAsset: effectiveFrameAsset,
+                      surahNumber: surahNumber,
+                      size: size,
+                      textColor: textColor,
+                    ),
                   const SizedBox(height: 0),
                   Transform.translate(
                     offset: Offset(0, -size * 0.03),
                     child: _AyahBody(
                       surahNumber: surahNumber,
                       ayahNumber: ayahNumber,
+                      endAyahNumber: endAyahNumber,
                       translationText: translationText,
                       textColor: textColor,
                       isDark: isDark,
@@ -94,6 +101,9 @@ class ShareCardDesign extends StatelessWidget {
                     appName: appName,
                     appIconAsset: appIconAsset,
                     textColor: textColor,
+                    showPageNumber: showPageNumber,
+                    surahNumber: surahNumber,
+                    ayahNumber: ayahNumber,
                   ),
                 ],
               ),
@@ -160,6 +170,7 @@ class _SurahHeader extends StatelessWidget {
 class _AyahBody extends StatelessWidget {
   final int surahNumber;
   final int ayahNumber;
+  final int? endAyahNumber;
   final String? translationText;
   final Color textColor;
   final bool isDark;
@@ -169,6 +180,7 @@ class _AyahBody extends StatelessWidget {
   const _AyahBody({
     required this.surahNumber,
     required this.ayahNumber,
+    this.endAyahNumber,
     required this.translationText,
     required this.textColor,
     required this.isDark,
@@ -178,15 +190,49 @@ class _AyahBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final spans = <InlineSpan>[];
+    final lastAyah = endAyahNumber ?? ayahNumber;
+
+    for (int i = ayahNumber; i <= lastAyah; i++) {
+      final pageNumber = getPageNumber(surahNumber, i);
+      final fontFamily = "QCF_P${pageNumber.toString().padLeft(3, '0')}";
+
+      spans.add(
+        TextSpan(
+          text: getVerseQCF(
+            surahNumber,
+            i,
+            verseEndSymbol: false,
+          ),
+          style: TextStyle(
+            fontFamily: fontFamily,
+            fontSize: 23,
+            color: textColor,
+          ),
+        ),
+      );
+
+      // Add verse number symbol
+      spans.add(
+        TextSpan(
+          text: ' ${getVerseNumberQCF(surahNumber, i)} ',
+          style: TextStyle(
+            fontFamily: fontFamily,
+            fontSize: 23,
+            color: textColor, // Use accent color if desired, currently plain
+          ),
+        ),
+      );
+    }
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: [
-        QcfVerse(
-          surahNumber: surahNumber,
-          verseNumber: ayahNumber,
-          textColor: textColor,
-          fontSize: 23,
+        RichText(
+          text: TextSpan(children: spans),
+          textAlign: TextAlign.center,
+          textDirection: TextDirection.rtl,
         ),
         if (translationText != null) ...[
           const SizedBox(height: 8),
@@ -222,11 +268,17 @@ class _ShareFooter extends StatelessWidget {
   final String appName;
   final String appIconAsset;
   final Color textColor;
+  final bool showPageNumber;
+  final int surahNumber;
+  final int ayahNumber;
 
   const _ShareFooter({
     required this.appName,
     required this.appIconAsset,
     required this.textColor,
+    this.showPageNumber = false,
+    required this.surahNumber,
+    required this.ayahNumber,
   });
 
   @override
@@ -253,6 +305,16 @@ class _ShareFooter extends StatelessWidget {
             letterSpacing: 0.8,
           ),
         ),
+        if (showPageNumber) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Page ${getPageNumber(surahNumber, ayahNumber)}',
+            style: TextStyle(
+              fontSize: 10,
+              color: textColor.withValues(alpha: 0.4),
+            ),
+          ),
+        ],
       ],
     );
   }

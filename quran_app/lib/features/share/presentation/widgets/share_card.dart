@@ -33,6 +33,7 @@ class ShareCardBackground {
 class ShareCard extends StatelessWidget {
   final int surahNumber;
   final int ayahNumber;
+  final int? endAyahNumber;
   final bool isDark;
   final ShareCardBackground background;
   final String appName;
@@ -40,6 +41,8 @@ class ShareCard extends StatelessWidget {
   final String? translationText;
   final String? referenceText;
   final bool showReference;
+  final bool showSurahName;
+  final bool showPageNumber;
   final double size;
   final String? frameAsset;
 
@@ -49,11 +52,14 @@ class ShareCard extends StatelessWidget {
     required this.ayahNumber,
     required this.isDark,
     required this.background,
+    this.endAyahNumber,
     this.appName = 'Ayah App',
     this.appIconAsset = 'assets/images/Icon.jpg',
     this.translationText,
     this.referenceText,
     this.showReference = true,
+    this.showSurahName = true,
+    this.showPageNumber = false,
     this.size = 1080,
     this.frameAsset,
   });
@@ -63,6 +69,7 @@ class ShareCard extends StatelessWidget {
     return ShareCardDesign(
       surahNumber: surahNumber,
       ayahNumber: ayahNumber,
+      endAyahNumber: endAyahNumber,
       isDark: isDark,
       background: background,
       appName: appName,
@@ -70,6 +77,8 @@ class ShareCard extends StatelessWidget {
       translationText: translationText,
       referenceText: referenceText,
       showReference: showReference,
+      showSurahName: showSurahName,
+      showPageNumber: showPageNumber,
       size: size,
       frameAsset: frameAsset,
     );
