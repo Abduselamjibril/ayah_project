@@ -20,13 +20,23 @@ class ShareService {
   Future<void> shareVerseText({
     required int surahNumber,
     required int ayahNumber,
+    int? endAyahNumber,
     String? appLink,
   }) async {
     final surahName = getSurahName(surahNumber);
-    final verseText = getVerse(surahNumber, ayahNumber, verseEndSymbol: true);
+
+    // Resolve multiple verses if needed
+    final lastAyah = endAyahNumber ?? ayahNumber;
+    final buffer = StringBuffer();
+
+    for (int i = ayahNumber; i <= lastAyah; i++) {
+      buffer.writeln(getVerse(surahNumber, i, verseEndSymbol: true));
+    }
+    final verseText = buffer.toString().trim();
+
     final link = appLink ?? defaultAppLink;
     final text = [
-      '$surahName ($surahNumber:$ayahNumber)',
+      '$surahName ($surahNumber:$ayahNumber${endAyahNumber != null ? '-$endAyahNumber' : ''})',
       verseText,
       'Shared via Ayah App',
       link,
@@ -38,12 +48,15 @@ class ShareService {
   Future<void> shareVerseImage({
     required int surahNumber,
     required int ayahNumber,
+    int? endAyahNumber,
     required ShareCardBackground background,
     required double size,
     bool isDark = true,
     String? appName,
     String? appIconAsset,
     String? frameAsset,
+    bool showSurahName = true,
+    bool showPageNumber = false,
     double pixelRatio = 2.0,
   }) async {
     final controller = ScreenshotController();
@@ -51,12 +64,15 @@ class ShareService {
       ShareCard(
         surahNumber: surahNumber,
         ayahNumber: ayahNumber,
+        endAyahNumber: endAyahNumber,
         isDark: isDark,
         background: background,
         appName: appName ?? defaultAppName,
         appIconAsset: appIconAsset ?? defaultAppIconAsset,
         size: size,
         frameAsset: frameAsset,
+        showSurahName: showSurahName,
+        showPageNumber: showPageNumber,
       ),
       pixelRatio: pixelRatio,
     );
@@ -67,7 +83,8 @@ class ShareService {
 
     await Share.shareXFiles(
       [XFile(file.path)],
-      text: '${getSurahName(surahNumber)} ($surahNumber:$ayahNumber)',
+      text:
+          '${getSurahName(surahNumber)} ($surahNumber:$ayahNumber${endAyahNumber != null ? '-$endAyahNumber' : ''})',
     );
   }
 }

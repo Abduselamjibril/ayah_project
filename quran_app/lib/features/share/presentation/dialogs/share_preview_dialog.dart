@@ -35,6 +35,13 @@ class ShareOptionsDialog extends StatefulWidget {
 class _ShareOptionsDialogState extends State<ShareOptionsDialog> {
   bool _isSharing = false;
 
+  // Toggles
+  bool _showSurahName = true;
+  bool _showPageNumber = false;
+
+  // Range (future proofing, currently defaults to single)
+  int? _endAyahNumber;
+
   Future<void> _shareAsImage() async {
     if (_isSharing) return;
     setState(() => _isSharing = true);
@@ -106,6 +113,9 @@ class _ShareOptionsDialogState extends State<ShareOptionsDialog> {
         isDark: isDark,
         size: 400,
         frameAsset: themeService.mainframeImagePath,
+        showSurahName: _showSurahName,
+        showPageNumber: _showPageNumber,
+        endAyahNumber: _endAyahNumber,
         pixelRatio: 3.0, // High resolution output
       );
 
@@ -146,7 +156,23 @@ class _ShareOptionsDialogState extends State<ShareOptionsDialog> {
                   ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+
+            // Options
+            SwitchListTile(
+              title: const Text('Show Surah Name'),
+              value: _showSurahName,
+              onChanged: (val) => setState(() => _showSurahName = val),
+              dense: true,
+            ),
+            SwitchListTile(
+              title: const Text('Show Page Number'),
+              value: _showPageNumber,
+              onChanged: (val) => setState(() => _showPageNumber = val),
+              dense: true,
+            ),
+
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
