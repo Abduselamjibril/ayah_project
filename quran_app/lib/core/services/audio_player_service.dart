@@ -50,9 +50,14 @@ class AudioPlayerService {
       // Sync state from handler
       _handler.playbackState.listen((state) {
         isPlaying.value = state.playing;
+        _playbackSpeedNotifier.value = state.speed;
         if (state.processingState == AudioProcessingState.completed) {
           stop();
         }
+      });
+
+      _handler.loopModeStream.listen((mode) {
+        loopMode.value = mode;
       });
 
       _handler.mediaItem.listen((item) {
@@ -123,6 +128,9 @@ class AudioPlayerService {
   final ValueNotifier<int?> downloadingSurah = ValueNotifier<int?>(null);
   final ValueNotifier<String> reciterNameNotifier =
       ValueNotifier('Mishary Alafasy');
+  final ValueNotifier<double> _playbackSpeedNotifier = ValueNotifier(1.0);
+  ValueNotifier<double> get playbackSpeed => _playbackSpeedNotifier;
+  final ValueNotifier<LoopMode> loopMode = ValueNotifier(LoopMode.off);
 
   final ValueNotifier<int?> currentSurah = ValueNotifier(null);
   final ValueNotifier<int?> currentAyah = ValueNotifier(null);
@@ -145,6 +153,7 @@ class AudioPlayerService {
     _recitationName = name;
     _userSelectedReciter = true;
     reciterNameNotifier.value = _recitationName;
+
     _saveReciterToCache();
   }
 
@@ -189,6 +198,16 @@ class AudioPlayerService {
 
   Future<void> seek(Duration position) async {
     await _handler.seek(position);
+  }
+
+  Future<void> setSpeed(double speed) async {
+    _playbackSpeedNotifier.value = speed;
+    await _handler.setSpeed(speed);
+  }
+
+  Future<void> setLoopMode(LoopMode mode) async {
+    loopMode.value = mode;
+    await _handler.setLoopMode(mode);
   }
 
   // --- Playback Logic ---
@@ -268,7 +287,6 @@ class AudioPlayerService {
     }
 
     if (sources.isEmpty) return;
-
     _currentPlaylistMetadata = metadata;
     hasSourceNotifier.value = true;
 

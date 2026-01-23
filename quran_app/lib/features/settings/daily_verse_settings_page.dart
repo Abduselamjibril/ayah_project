@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:quran_app/app/app.dart';
 import '../../core/services/verse_of_the_day_service.dart';
+import 'package:quran_app/core/ui/responsive.dart';
 
 class DailyVerseSettingsPage extends StatefulWidget {
   const DailyVerseSettingsPage({super.key});
@@ -43,11 +45,49 @@ class _DailyVerseSettingsPageState extends State<DailyVerseSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent = BrandColors.accent;
+    final leadingWidth =
+        ResponsiveLayout.scaled(context, 120, min: 96, max: 140);
+    final backIconSize = ResponsiveLayout.scaled(context, 18, min: 16, max: 22);
+    final backFontSize = ResponsiveLayout.scaled(context, 15, min: 13, max: 17);
+    final titleFontSize =
+        ResponsiveLayout.scaled(context, 18, min: 16, max: 20);
+    final listPadding = ResponsiveLayout.scaled(context, 16, min: 12, max: 20);
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Daily Inspiration'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        leadingWidth: leadingWidth,
+        leading: TextButton.icon(
+          onPressed: () => Navigator.of(context).pop(),
+          icon: Icon(Icons.arrow_back_ios_new_rounded,
+              color: accent, size: backIconSize),
+          label: Text(
+            'Settings',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            softWrap: false,
+            style: TextStyle(
+              color: accent,
+              fontSize: backFontSize,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          style: TextButton.styleFrom(
+              padding: EdgeInsets.only(
+                  left: ResponsiveLayout.scaled(context, 8, min: 6, max: 12))),
+        ),
+        title: Text(
+          'Daily Inspiration',
+          style: theme.textTheme.titleMedium
+              ?.copyWith(fontWeight: FontWeight.w700, fontSize: titleFontSize),
+        ),
       ),
       body: ListView(
+        padding: EdgeInsets.all(listPadding),
         children: [
           SwitchListTile(
             title: const Text('Enable Daily Verse'),

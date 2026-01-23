@@ -81,6 +81,15 @@ class QuranAudioHandler extends BaseAudioHandler
   bool get hasNext => _player.hasNext;
   bool get hasPrevious => _player.hasPrevious;
 
+  // Expose speed and loop controls for UI
+  double get speed => _player.speed;
+  Stream<double> get speedStream => _player.speedStream;
+  Future<void> setSpeed(double value) => _player.setSpeed(value);
+
+  LoopMode get loopMode => _player.loopMode;
+  Stream<LoopMode> get loopModeStream => _player.loopModeStream;
+  Future<void> setLoopMode(LoopMode mode) => _player.setLoopMode(mode);
+
   /// Helper to play a specific media item by URL (file path or remote)
   Future<void> playMediaItem(MediaItem item) async {
     // Update the current media item for lock screen metadata

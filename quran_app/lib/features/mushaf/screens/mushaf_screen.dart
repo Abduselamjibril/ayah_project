@@ -10,6 +10,8 @@ import '../widgets/vertical_mushaf_view.dart';
 import '../../search/search_screen.dart';
 import 'package:quran_app/features/mushaf/widgets/surah_drawer.dart';
 import '../../daily_verse/verse_of_the_day_screen.dart';
+import 'package:quran_app/app/app.dart';
+import 'package:quran_app/core/ui/responsive.dart';
 
 class MushafScreen extends StatefulWidget {
   const MushafScreen({super.key});
@@ -51,6 +53,12 @@ class _MushafScreenState extends State<MushafScreen> {
   }
 
   Widget _buildFloatingAppBar(BuildContext context) {
+    final iconSize = ResponsiveLayout.scaled(context, 26, min: 24, max: 32);
+    final gap = ResponsiveLayout.scaled(context, 8, min: 6, max: 12);
+    final barHeight =
+        ResponsiveLayout.scaled(context, kToolbarHeight, min: 52, max: 64);
+    final verticalPad = ResponsiveLayout.scaled(context, 2, min: 1, max: 4);
+
     return Positioned(
       top: 0,
       left: 0,
@@ -92,51 +100,46 @@ class _MushafScreenState extends State<MushafScreen> {
                   child: SafeArea(
                     bottom: false,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      padding: EdgeInsets.symmetric(vertical: verticalPad),
                       child: SizedBox(
-                        height: kToolbarHeight,
+                        height: barHeight,
                         child: Row(
                           key: const ValueKey('default-mode'),
                           children: [
                             IconButton(
                               icon: const Icon(Icons.menu_rounded),
+                              color: BrandColors.accent,
+                              iconSize: iconSize,
                               tooltip: AppLocalizations.of(context)
                                       ?.translate('surahs_tooltip') ??
                                   'Surahs',
                               onPressed: () =>
                                   _scaffoldKey.currentState?.openDrawer(),
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              AppLocalizations.of(context)
-                                      ?.translate('app_title') ??
-                                  'Al-Quran',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                            ),
-                            const Spacer(),
+                            SizedBox(width: gap),
                             IconButton(
                               icon: const Icon(Icons.search_rounded),
+                              color: BrandColors.accent,
+                              iconSize: iconSize,
                               tooltip: AppLocalizations.of(context)
                                       ?.translate('search_tooltip') ??
                                   'Search',
                               onPressed: () => _openSearch(context),
                             ),
+                            const Spacer(),
                             IconButton(
                               icon: const Icon(Icons.calendar_month_rounded),
+                              color: BrandColors.accent,
+                              iconSize: iconSize,
                               tooltip: AppLocalizations.of(context)
                                       ?.translate('verse_of_the_day_tooltip') ??
                                   'Verse of the Day',
                               onPressed: () async {
-                                final result = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) =>
-                                          const VerseOfTheDayScreen()),
+                                final result = await showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (ctx) => const VerseOfTheDayScreen(),
                                 );
                                 if (result != null &&
                                     result is Map<String, int> &&
@@ -148,6 +151,8 @@ class _MushafScreenState extends State<MushafScreen> {
                             ),
                             IconButton(
                               icon: const Icon(Icons.settings_rounded),
+                              color: BrandColors.accent,
+                              iconSize: iconSize,
                               tooltip: AppLocalizations.of(context)
                                       ?.translate('settings_tooltip') ??
                                   'Settings',
@@ -186,13 +191,7 @@ class _MushafScreenState extends State<MushafScreen> {
   }
 
   Widget _buildMushafView(ScrollMode mode) {
-    // Use Stack with Offstage to keep views alive but only render the visible one
     final isHorizontal = mode == ScrollMode.horizontal;
-    // The following lines were part of the instruction but appear to be
-    // misplaced from a SearchRepository context.
-    // final res = deduped.take(limit).toList();
-    // _setSuggestCache(cacheKey, res);
-    // return res;
     return Stack(
       children: [
         Offstage(
