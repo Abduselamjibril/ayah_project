@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:quran_app/core/quran/widgets/quran_pageview.dart';
 import '../../../../core/i18n/app_localizations.dart';
 import '../services/khatmah_service.dart';
+import 'package:quran_app/features/mushaf/controller/mushaf_controller.dart';
+import 'package:quran_app/features/mushaf/widgets/horizontal_mushaf_view.dart';
 
 class KhatmahReadingScreen extends StatefulWidget {
   final String khatmahId;
@@ -22,76 +23,70 @@ class KhatmahReadingScreen extends StatefulWidget {
 }
 
 class _KhatmahReadingScreenState extends State<KhatmahReadingScreen> {
-  late PageController _pageController;
-  late int _currentPage;
+  late final MushafController _mushafController;
   final KhatmahService _khatmahService = KhatmahService();
+  bool _overlayVisible = true;
 
   @override
   void initState() {
     super.initState();
-    final initialIndex = widget.initialPage - widget.startPage;
-    _pageController = PageController(initialPage: initialIndex);
-    _currentPage = widget.initialPage;
+    _mushafController = MushafController();
+    // Initialize controller to the correct page
+    // We delay the jump slightly to ensure the view is ready or just rely on the initialPage of the view if we could pass it.
+    // However, MushafController doesn't accept initialPage in constructor, but HorizontalMushafView reads currentPage from it.
+    // So we assume we can set it immediately.
+    _mushafController.setPage(widget.initialPage);
+
+    _mushafController.addListener(_onPageChanged);
   }
 
   @override
   void dispose() {
-    _pageController.dispose();
+    _mushafController.removeListener(_onPageChanged);
+    _mushafController.dispose();
     super.dispose();
   }
 
-  void _onPageChanged(int index) {
-    final newPage = widget.startPage + index;
-    setState(() => _currentPage = newPage);
+  void _onPageChanged() {
+    final newPage = _mushafController.currentPage;
+    // Only update progress if within range (though technically they can read outside)
+    // For Khatmah, we track where they are.
     _khatmahService.updateKhatmahProgress(widget.khatmahId, newPage);
+    setState(() {});
+  }
+
+  void _onOverlayVisibilityChanged(bool visible) {
+    if (_overlayVisible == visible) return;
+    setState(() {
+      _overlayVisible = visible;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final totalPages = widget.endPage - widget.startPage + 1;
-    final progress = _currentPage - widget.startPage + 1;
+    final progress = _mushafController.currentPage - widget.startPage + 1;
+
+    // Sanity check for progress display
+    final displayProgress = progress.clamp(0, totalPages);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: _buildReadingView(totalPages, progress, context),
-    );
-  }
-
-  Widget _buildReadingView(int totalPages, int progress, BuildContext context) {
-    return SafeArea(
-      child: Stack(
+      body: Stack(
         children: [
-          _buildQuranPageView(totalPages, context),
-          _buildTopAppBar(context, progress, totalPages),
-          _buildProgressIndicator(progress, totalPages, context),
-        ],
-      ),
-    );
-  }
+          // We use the HorizontalMushafView directly.
+          // Note: Vertical mode support could be added if requested, but for now we follow the "same thing" instruction which usually implies the main reading view.
+          HorizontalMushafView(
+            controller: _mushafController,
+            onOverlayVisibilityChanged: _onOverlayVisibilityChanged,
+          ),
 
-  Widget _buildQuranPageView(int totalPages, BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: PageView.builder(
-        controller: _pageController,
-        reverse: false,
-        itemCount: totalPages,
-        onPageChanged: _onPageChanged,
-        itemBuilder: (context, index) {
-          final pageNumber = widget.startPage + index;
-          return QuranPageContent(
-            key: ValueKey('khatmah_page_$pageNumber'),
-            pageNumber: pageNumber,
-            fontSize: null,
-            textColor: Theme.of(context).colorScheme.onSurface,
-            sp: 1.0,
-            h: 1.0,
-            onLongPress: null,
-            onLongPressUp: null,
-            onLongPressCancel: null,
-            onLongPressStart: null,
-          );
-        },
+          // Custom Top Bar for Khatmah tracking
+          _buildTopAppBar(context, displayProgress, totalPages),
+
+          // Custom Bottom Progress for Khatmah
+          _buildProgressIndicator(displayProgress, totalPages, context),
+        ],
       ),
     );
   }
@@ -101,25 +96,35 @@ class _KhatmahReadingScreenState extends State<KhatmahReadingScreen> {
       top: 0,
       left: 0,
       right: 0,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+      child: IgnorePointer(
+        ignoring: !_overlayVisible,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: _overlayVisible ? 1.0 : 0.0,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildCloseButton(context),
-            _buildProgressInfo(progress, totalPages, context),
-            const SizedBox(width: 48), // Balance layout
-          ],
+            child: SafeArea(
+              bottom: false,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildCloseButton(context),
+                  _buildProgressInfo(progress, totalPages, context),
+                  const SizedBox(width: 48), // Balance layout
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -169,18 +174,25 @@ class _KhatmahReadingScreenState extends State<KhatmahReadingScreen> {
       bottom: 0,
       left: 0,
       right: 0,
-      child: Container(
-        height: 4,
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(2),
-          child: LinearProgressIndicator(
-            value: progress / totalPages,
-            backgroundColor: Theme.of(context).dividerColor,
-            valueColor: AlwaysStoppedAnimation<Color>(
-              Theme.of(context).primaryColor,
+      child: IgnorePointer(
+        ignoring: !_overlayVisible,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: _overlayVisible ? 1.0 : 0.0,
+          child: Container(
+            height: 4,
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 0), // At the very bottom
+            child: LinearProgressIndicator(
+              value: (totalPages > 0)
+                  ? (progress / totalPages).clamp(0.0, 1.0)
+                  : 0,
+              backgroundColor: Theme.of(context).dividerColor,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Theme.of(context).primaryColor,
+              ),
+              minHeight: 4,
             ),
-            minHeight: 4,
           ),
         ),
       ),
