@@ -1,14 +1,17 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:quran_app/app/app.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
+import 'package:quran_app/core/quran/qcf_quran.dart';
+import 'package:quran_app/core/services/audio_player_service.dart';
 import 'package:quran_app/core/services/audio_service.dart';
+import 'package:quran_app/core/utils/localization_helper.dart';
 import 'package:quran_app/data/models/audio_model.dart';
 import 'package:quran_app/features/downloads/audio_surah_list_page.dart';
-import 'package:quran_app/core/services/audio_player_service.dart';
-import 'package:quran_app/core/i18n/app_localizations.dart';
-import 'package:quran_app/core/utils/localization_helper.dart';
-
-import '../../core/quran/qcf_quran.dart';
-import '../mushaf/controller/mushaf_controller.dart';
+import 'package:quran_app/features/mushaf/controller/mushaf_controller.dart';
+import 'package:quran_app/features/mushaf/widgets/mushaf_audio_navigation.dart';
 
 /// Reusable audio player card used by mushaf views.
 class AudioPlayerCard extends StatefulWidget {
@@ -28,6 +31,8 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   late final VoidCallback _reciterListener;
   late final VoidCallback _verseListener;
   late final VoidCallback _hasSourceListener;
+  late final VoidCallback _speedListener;
+  late final VoidCallback _loopListener;
 
   bool _isPlaying = false;
   String _audioName = '';
@@ -36,6 +41,25 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   bool _isDownloading = false;
   double _downloadProgress = 0.0;
   String _reciterName = '';
+  bool _hasSource = false;
+  double _playbackSpeed = 1.0;
+  LoopMode _loopMode = LoopMode.off;
+  bool _showExpanded = false;
+
+  String get _labelText => _audioName.isEmpty
+      ? (AppLocalizations.of(context)?.translate('select_recitation') ??
+          'Select Recitation')
+      : _audioName;
+
+  String get _statusText {
+    if (_isDownloading) {
+      final pct = (_downloadProgress * 100).clamp(0, 100).toInt();
+      return 'Downloading${_downloadProgress > 0 ? ' $pct%' : '...'}';
+    }
+    if (_reciterName.isNotEmpty) return _reciterName;
+    return AppLocalizations.of(context)?.translate('select_recitation') ??
+        'Select Recitation';
+  }
 
   @override
   void initState() {
@@ -43,12 +67,25 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     _audioPlayer = AudioPlayerService.instance;
     _isPlaying = _audioPlayer.isPlaying.value;
     _audioName = _audioPlayer.currentLabel.value;
+    _hasSource = _audioPlayer.hasSourceNotifier.value;
+    _playbackSpeed = _audioPlayer.playbackSpeed.value;
+    _loopMode = _audioPlayer.loopMode.value;
 
     _reciterName = _audioPlayer.recitationName;
+    _showExpanded =
+        _audioPlayer.isPlaying.value || _audioPlayer.isDownloading.value;
 
     _playerStateListener = () {
       if (!mounted) return;
-      setState(() => _isPlaying = _audioPlayer.isPlaying.value);
+      final playing = _audioPlayer.isPlaying.value;
+      setState(() {
+        _isPlaying = playing;
+        if (!playing && !_isDownloading) {
+          _showExpanded = false;
+        } else if (playing) {
+          _showExpanded = true;
+        }
+      });
     };
     _labelListener = () {
       if (!mounted) return;
@@ -56,7 +93,15 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     };
     _downloadingListener = () {
       if (!mounted) return;
-      setState(() => _isDownloading = _audioPlayer.isDownloading.value);
+      final downloading = _audioPlayer.isDownloading.value;
+      setState(() {
+        _isDownloading = downloading;
+        if (downloading) {
+          _showExpanded = true;
+        } else if (!_isPlaying) {
+          _showExpanded = false;
+        }
+      });
     };
     _downloadProgressListener = () {
       if (!mounted) return;
@@ -65,6 +110,18 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     _reciterListener = () {
       if (!mounted) return;
       setState(() => _reciterName = _audioPlayer.recitationName);
+    };
+    _hasSourceListener = () {
+      if (!mounted) return;
+      setState(() => _hasSource = _audioPlayer.hasSourceNotifier.value);
+    };
+    _speedListener = () {
+      if (!mounted) return;
+      setState(() => _playbackSpeed = _audioPlayer.playbackSpeed.value);
+    };
+    _loopListener = () {
+      if (!mounted) return;
+      setState(() => _loopMode = _audioPlayer.loopMode.value);
     };
     _verseListener = () {
       if (!mounted) return;
@@ -79,10 +136,6 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         }
       }
     };
-    _hasSourceListener = () {
-      if (!mounted) return;
-      setState(() {});
-    };
 
     _audioPlayer.isPlaying.addListener(_playerStateListener);
     _audioPlayer.currentLabel.addListener(_labelListener);
@@ -92,6 +145,8 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     _audioPlayer.currentSurah.addListener(_verseListener);
     _audioPlayer.currentAyah.addListener(_verseListener);
     _audioPlayer.hasSourceNotifier.addListener(_hasSourceListener);
+    _audioPlayer.playbackSpeed.addListener(_speedListener);
+    _audioPlayer.loopMode.addListener(_loopListener);
   }
 
   @override
@@ -104,277 +159,424 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     _audioPlayer.currentSurah.removeListener(_verseListener);
     _audioPlayer.currentAyah.removeListener(_verseListener);
     _audioPlayer.hasSourceNotifier.removeListener(_hasSourceListener);
+    _audioPlayer.playbackSpeed.removeListener(_speedListener);
+    _audioPlayer.loopMode.removeListener(_loopListener);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      margin: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
-          colors: [
-            Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
-            Theme.of(context).colorScheme.surface.withOpacity(0.95),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-            blurRadius: 15,
-            offset: const Offset(0, 4),
+    final colorScheme = Theme.of(context).colorScheme;
+    final accent = BrandColors.accent;
+
+    final showExpanded = _showExpanded || _isDownloading || _isPlaying;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: colorScheme.surface.withOpacity(0.92),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: accent.withOpacity(0.08)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.12),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Card(
-        elevation: 0,
-        color: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        margin: EdgeInsets.zero,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: _audioPlayer.hasSource
-              ? _buildExpandedPlayer(context)
-              : _buildCompactPlayer(context),
+          child: showExpanded
+              ? _buildExpandedPlayer(colorScheme, accent)
+              : _buildCompactSelector(colorScheme, accent),
         ),
       ),
     );
   }
 
-  /// Compact player (shown when not playing)
-  Widget _buildCompactPlayer(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Row(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-            ),
-            child: IconButton(
-              iconSize: 30,
-              icon: _isDownloading
-                  ? SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        value: _downloadProgress > 0 ? _downloadProgress : null,
-                        strokeWidth: 3,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    )
-                  : Icon(
-                      Icons.play_arrow_rounded,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-              onPressed: _togglePlayPause,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
+  Widget _buildCompactSelector(ColorScheme colorScheme, Color accent) {
+    return Row(
+      children: [
+        Expanded(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: _openAudioPicker,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _reciterName.isNotEmpty
-                      ? _reciterName
-                      : (AppLocalizations.of(context)
-                              ?.translate('select_reciter_tooltip') ??
-                          'Select Reciter'),
+                  _labelText,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                  style: TextStyle(
+                    color: accent,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _statusText,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: colorScheme.onSurface.withOpacity(0.75),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: Icon(
-              Icons.queue_music_rounded,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-            ),
-            onPressed: _openAudioPicker,
-            tooltip: AppLocalizations.of(context)
-                    ?.translate('select_reciter_tooltip') ??
-                'Select reciter',
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Expanded player (shown when playing)
-  Widget _buildExpandedPlayer(BuildContext context) {
-    final currentSurah = _audioPlayer.currentSurah.value;
-    final canGoPrevious = currentSurah != null && currentSurah > 1;
-    final canGoNext = currentSurah != null && currentSurah < 114;
-
-    return Stack(
-      children: [
-        // Close button (Top Right)
-        Positioned(
-          top: 0,
-          right: 0,
-          child: IconButton(
-            icon: Icon(
-              Icons.close_rounded,
-              size: 24,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-            ),
-            onPressed: _onStop,
-            tooltip: 'Close player',
-          ),
         ),
-
-        // Main Content (Padded to avoid close button overlap)
-        Padding(
-          padding: const EdgeInsets.only(top: 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Info section
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 40, vertical: 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      _audioName.isEmpty
-                          ? (AppLocalizations.of(context)
-                                  ?.translate('select_audio') ??
-                              'Select audio')
-                          : _audioName,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+        const SizedBox(width: 12),
+        Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+          ),
+          child: IconButton(
+            iconSize: 26,
+            padding: const EdgeInsets.all(10),
+            icon: _isDownloading
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      value: _downloadProgress > 0 ? _downloadProgress : null,
+                      strokeWidth: 3,
+                      color: accent,
                     ),
-                    if (_reciterName.isNotEmpty)
-                      Text(
-                        _reciterName,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withOpacity(0.7),
-                            ),
-                      ),
-                  ],
-                ),
-              ),
-              // Controls section
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // Previous button
-                  IconButton(
-                    icon: Icon(
-                      Icons.skip_previous_rounded,
-                      size: 32,
-                      color: canGoPrevious
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withOpacity(0.3),
-                    ),
-                    onPressed: canGoPrevious ? _onPrevious : null,
-                    tooltip: 'Previous Surah',
+                  )
+                : Icon(
+                    _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    color: accent,
                   ),
-                  // Play/Pause button
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .primary
-                          .withOpacity(0.1),
-                    ),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        if (_isDownloading)
-                          SizedBox(
-                            width: 48,
-                            height: 48,
-                            child: CircularProgressIndicator(
-                              value: _downloadProgress > 0
-                                  ? _downloadProgress
-                                  : null,
-                              strokeWidth: 4,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withOpacity(0.5),
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                  Theme.of(context).colorScheme.primary),
-                            ),
-                          ),
-                        IconButton(
-                          iconSize: 36,
-                          icon: Icon(
-                            _isPlaying
-                                ? Icons.pause_rounded
-                                : (_isDownloading
-                                    ? Icons.hourglass_bottom_rounded
-                                    : Icons.play_arrow_rounded),
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                          onPressed: _togglePlayPause,
-                          tooltip: _isPlaying ? 'Pause' : 'Play',
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Next button
-                  IconButton(
-                    icon: Icon(
-                      Icons.skip_next_rounded,
-                      size: 32,
-                      color: canGoNext
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withOpacity(0.3),
-                    ),
-                    onPressed: canGoNext ? _onNext : null,
-                    tooltip: 'Next Surah',
-                  ),
-                ],
-              ),
-            ],
+            onPressed: _isDownloading
+                ? null
+                : () async {
+                    // pressing play from compact expands and starts/resumes
+                    await _togglePlayPause();
+                    setState(
+                        () => _showExpanded = _isPlaying || _isDownloading);
+                  },
           ),
         ),
       ],
     );
   }
 
-  // Button handlers
-  Future<void> _onPrevious() async {
-    await _audioPlayer.playPreviousSurah(context);
+  Widget _buildExpandedPlayer(ColorScheme colorScheme, Color accent) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: _openAudioPicker,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _labelText,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: accent,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  child: _isDownloading
+                      ? Row(
+                          key: const ValueKey('downloading'),
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                value: _downloadProgress > 0
+                                    ? _downloadProgress
+                                    : null,
+                                strokeWidth: 2.5,
+                                color: accent,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                _statusText,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color:
+                                      colorScheme.onSurface.withOpacity(0.75),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : Text(
+                          _statusText,
+                          key: const ValueKey('reciter'),
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: colorScheme.onSurface.withOpacity(0.75),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_isDownloading)
+          Padding(
+            padding: const EdgeInsets.only(top: 10, bottom: 6),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: LinearProgressIndicator(
+                value: _downloadProgress > 0 ? _downloadProgress : null,
+                minHeight: 6,
+                color: accent,
+                backgroundColor: colorScheme.onSurface.withOpacity(0.08),
+              ),
+            ),
+          )
+        else
+          const SizedBox(height: 6),
+        Row(
+          children: [
+            _buildSpeedBadge(accent),
+            const Spacer(),
+            _roundControlButton(
+              icon: Icons.skip_previous_rounded,
+              onPressed: _hasSource
+                  ? () => _audioPlayer.playPreviousSurah(context)
+                  : null,
+              colorScheme: colorScheme,
+            ),
+            const SizedBox(width: 10),
+            _roundControlButton(
+              icon: _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+              onPressed: _isDownloading ? null : _togglePlayPause,
+              colorScheme: colorScheme,
+              filled: true,
+              showProgress: _isDownloading,
+            ),
+            const SizedBox(width: 10),
+            _roundControlButton(
+              icon: Icons.skip_next_rounded,
+              onPressed:
+                  _hasSource ? () => _audioPlayer.playNextSurah(context) : null,
+              colorScheme: colorScheme,
+            ),
+            const SizedBox(width: 10),
+            _roundControlButton(
+              icon: Icons.repeat_rounded,
+              onPressed: _toggleLoop,
+              colorScheme: colorScheme,
+              active: _loopMode != LoopMode.off,
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
-  Future<void> _onNext() async {
-    await _audioPlayer.playNextSurah(context);
+  Widget _buildSpeedBadge(Color accent) {
+    final speedLabel =
+        _playbackSpeed.toStringAsFixed(_playbackSpeed % 1 == 0 ? 0 : 2);
+    return InkWell(
+      onTap: _showSpeedPicker,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: accent.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          '${speedLabel}x',
+          style: TextStyle(
+            color: accent,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
   }
 
-  Future<void> _onStop() async {
-    await _audioPlayer.stop();
+  Widget _roundControlButton({
+    required IconData icon,
+    required ColorScheme colorScheme,
+    VoidCallback? onPressed,
+    bool filled = false,
+    bool showProgress = false,
+    bool active = false,
+  }) {
+    final isDisabled = onPressed == null;
+    final bgColor = filled
+        ? BrandColors.accent.withOpacity(0.95)
+        : active
+            ? BrandColors.accent.withOpacity(0.18)
+            : colorScheme.surfaceContainerHighest.withOpacity(0.55);
+    final iconColor = filled
+        ? colorScheme.onPrimary
+        : active
+            ? BrandColors.accent
+            : colorScheme.onSurface.withOpacity(isDisabled ? 0.35 : 0.85);
+
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: bgColor,
+        border: active
+            ? Border.all(color: BrandColors.accent.withOpacity(0.6))
+            : null,
+      ),
+      child: IconButton(
+        iconSize: filled ? 28 : 24,
+        padding: const EdgeInsets.all(10),
+        onPressed: isDisabled || showProgress ? null : onPressed,
+        icon: showProgress
+            ? SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  value: _downloadProgress > 0 ? _downloadProgress : null,
+                  strokeWidth: 3,
+                  color: BrandColors.accent,
+                ),
+              )
+            : Icon(icon, color: iconColor),
+      ),
+    );
+  }
+
+  Future<void> _showSpeedPicker() async {
+    final speeds = <double>[0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+    final selected = await showModalBottomSheet<double>(
+      context: context,
+      builder: (ctx) {
+        final scheme = Theme.of(ctx).colorScheme;
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: speeds
+                .map(
+                  (s) => ListTile(
+                    title: Text('${s.toStringAsFixed(s % 1 == 0 ? 0 : 2)}x'),
+                    trailing: s == _playbackSpeed
+                        ? Icon(Icons.check, color: scheme.primary)
+                        : null,
+                    onTap: () => Navigator.of(ctx).pop(s),
+                  ),
+                )
+                .toList(),
+          ),
+        );
+      },
+    );
+
+    if (selected != null) {
+      await _audioPlayer.setSpeed(selected);
+    }
+  }
+
+  Future<void> _toggleLoop() async {
+    final next = _loopMode == LoopMode.off ? LoopMode.all : LoopMode.off;
+    await _audioPlayer.setLoopMode(next);
+  }
+
+  Future<void> _openDownloads() async {
+    await _navigateToDownloadSurah(_audioPlayer.recitationId);
+  }
+
+  Future<void> _startPlaybackFromCurrentPage() async {
+    // Ensure reciter selection
+    AudioRecitation? recitation = _selectedRecitation;
+    if (recitation == null && _audioPlayer.userSelectedReciter) {
+      recitation = _audioPlayer.getSelectedRecitation();
+    }
+    if (recitation == null) {
+      recitation = await _ensureReciterSelected();
+      if (recitation == null) return;
+    }
+
+    // Determine playback range from current page
+    final hs = widget.controller.highlightedSurah;
+    final hv = widget.controller.highlightedVerse;
+
+    int startSurah;
+    int startAyah;
+    int endSurah;
+    int endAyah;
+
+    await AudioService.instance.initialize();
+    final currentPage = widget.controller.currentPage;
+    final pd = getPageData(currentPage);
+
+    if (pd.isEmpty) {
+      startSurah = 1;
+      startAyah = 1;
+      endSurah = 1;
+      endAyah = 7;
+    } else {
+      final firstVerse = pd.first;
+      final lastVerse = pd.last;
+
+      final pageStartSurah = int.tryParse(firstVerse['surah'].toString()) ?? 1;
+      final pageStartAyah = int.tryParse(firstVerse['start'].toString()) ?? 1;
+      final pageEndSurah = int.tryParse(lastVerse['surah'].toString()) ?? 1;
+      final pageEndAyah = int.tryParse(lastVerse['end'].toString()) ?? 1;
+
+      bool isHighlightOnCurrentPage = false;
+      if (hs != null && hv != null) {
+        try {
+          final p = getPageNumber(hs, hv);
+          if (p == currentPage) {
+            isHighlightOnCurrentPage = true;
+          }
+        } catch (_) {}
+      }
+
+      if (isHighlightOnCurrentPage && hs != null && hv != null) {
+        startSurah = hs;
+        startAyah = hv;
+        endSurah = pageEndSurah;
+        endAyah = pageEndAyah;
+      } else {
+        startSurah = pageStartSurah;
+        startAyah = pageStartAyah;
+        endSurah = pageEndSurah;
+        endAyah = pageEndAyah;
+      }
+    }
+
+    try {
+      await _audioPlayer.playRangeSequenceWithDownload(
+        context,
+        startSurah: startSurah,
+        startAyah: startAyah,
+        endSurah: endSurah,
+        endAyah: endAyah,
+        forceReciter: true,
+      );
+    } catch (e) {
+      _showSnack(
+          (AppLocalizations.of(context)?.translate('audio_start_error') ??
+                  'Audio failed to start: {error}')
+              .replaceAll('{error}', '$e'));
+    }
   }
 
   Future<void> _togglePlayPause() async {
@@ -390,97 +592,20 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
       return;
     }
 
-    // No source loaded - need to start playback
-    // Step 1: Ensure reciter is selected
-    AudioRecitation? recitation = _selectedRecitation;
-    if (recitation == null && _audioPlayer.userSelectedReciter) {
-      recitation = _audioPlayer.getSelectedRecitation();
-    }
-    // If still null, prompt user to choose a reciter
-    if (recitation == null) {
-      recitation = await _ensureReciterSelected();
-      if (recitation == null) return; // User cancelled
-    }
-
-    // Step 2: Determine playback range from current page
-    // Highlighted verse has priority
-    final hs = widget.controller.highlightedSurah;
-    final hv = widget.controller.highlightedVerse;
-
-    int startSurah;
-    int startAyah;
-    int endSurah;
-    int endAyah;
-
-    // Use current page data helper
-    await AudioService.instance.initialize();
-    final currentPage = widget.controller.currentPage;
-    final pd = getPageData(currentPage);
-
-    // If page is empty (shouldn't happen for valid pages), default to Surah 1
-    if (pd.isEmpty) {
-      startSurah = 1;
-      startAyah = 1;
-      endSurah = 1;
-      endAyah = 7;
-    } else {
-      // Determine range from page content
-      final firstVerse = pd.first;
-      final lastVerse = pd.last;
-
-      final pageStartSurah = int.tryParse(firstVerse['surah'].toString()) ?? 1;
-      final pageStartAyah = int.tryParse(firstVerse['start'].toString()) ?? 1;
-      final pageEndSurah = int.tryParse(lastVerse['surah'].toString()) ?? 1;
-      final pageEndAyah = int.tryParse(lastVerse['end'].toString()) ?? 1;
-
-      // Check if highlighted verse belongs to current page
-      bool isHighlightOnCurrentPage = false;
-      if (hs != null && hv != null) {
-        try {
-          final p = getPageNumber(hs, hv);
-          if (p == currentPage) {
-            isHighlightOnCurrentPage = true;
-          }
-        } catch (_) {}
-      }
-
-      // If playing from specific highlighted verse ON THIS PAGE
-      if (isHighlightOnCurrentPage && hs != null && hv != null) {
-        startSurah = hs;
-        startAyah = hv;
-        // End at the end of the page
-        endSurah = pageEndSurah;
-        endAyah = pageEndAyah;
-      } else {
-        // Play whole page from start
-        startSurah = pageStartSurah;
-        startAyah = pageStartAyah;
-        endSurah = pageEndSurah;
-        endAyah = pageEndAyah;
-      }
-    }
-
-    // Step 3: Play Range Sequence (handling downloads automatically)
-    try {
-      await _audioPlayer.playRangeSequenceWithDownload(
-        context,
-        startSurah: startSurah,
-        startAyah: startAyah,
-        endSurah: endSurah,
-        endAyah: endAyah,
-        forceReciter: false,
-      );
-    } catch (e) {
-      _showSnack(
-          (AppLocalizations.of(context)?.translate('audio_start_error') ??
-                  'Audio failed to start: {error}')
-              .replaceAll('{error}', '$e'));
-    }
+    // No source loaded - start playback for current page with selected reciter
+    await _startPlaybackFromCurrentPage();
   }
 
   Future<void> _openAudioPicker() async {
     _selectedRecitation = null;
-    await _ensureReciterSelected(force: true);
+    final recitation = await _ensureReciterSelected(force: true);
+    if (recitation != null) {
+      // If already playing or paused on another reciter, restart immediately
+      if (_audioPlayer.isPlaying.value || _audioPlayer.hasSource) {
+        await _audioPlayer.stop();
+      }
+      await _startPlaybackFromCurrentPage();
+    }
   }
 
   Future<void> _navigateToDownloadSurah(int recitationId) async {
@@ -501,45 +626,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     await AudioService.instance.initialize();
     final recitations = await AudioService.instance.getAvailableRecitations();
     if (!mounted) return null;
-    final chosen = await showModalBottomSheet<AudioRecitation>(
-      context: context,
-      builder: (context) {
-        final maxHeight = MediaQuery.of(context).size.height * 0.7 > 520.0
-            ? 520.0
-            : MediaQuery.of(context).size.height * 0.7;
-        return SafeArea(
-          child: SizedBox(
-            height: maxHeight,
-            child: Column(
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Text(
-                      AppLocalizations.of(context)
-                              ?.translate('choose_reciter_title') ??
-                          'Choose Reciter',
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: recitations.length,
-                    itemBuilder: (context, index) {
-                      final r = recitations[index];
-                      return ListTile(
-                        title: Text(r.reciterName),
-                        subtitle: r.style != null ? Text(r.style!) : null,
-                        onTap: () => Navigator.pop(context, r),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+    final chosen = await showReciterPickerSheet(context, recitations);
     if (chosen != null) {
       _selectedRecitation = chosen;
       _audioPlayer.setRecitationInfo(id: chosen.id, name: chosen.reciterName);

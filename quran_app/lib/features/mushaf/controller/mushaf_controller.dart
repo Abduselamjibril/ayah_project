@@ -55,11 +55,9 @@ class MushafController extends ChangeNotifier {
   }
 
   void setHighlightedVerse(int? surah, int? verse) {
-    if (_highlightedSurah != surah || _highlightedVerse != verse) {
-      _highlightedSurah = surah;
-      _highlightedVerse = verse;
-      notifyListeners();
-    }
+    _highlightedSurah = surah;
+    _highlightedVerse = verse;
+    notifyListeners();
   }
 
   void clearHighlight() {

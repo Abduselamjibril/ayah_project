@@ -6,6 +6,7 @@ import 'data/page_data.dart';
 import 'data/juzs.dart';
 import 'data/suwar.dart';
 import 'data/quran_text.dart';
+
 import 'data/quarters.dart';
 
 export 'widgets/qcf_verse.dart';

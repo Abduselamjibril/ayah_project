@@ -2,6 +2,7 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:quran_app/app/app.dart';
 import '../../core/i18n/app_localizations.dart';
 import '../../core/services/notification_service.dart';
 
@@ -395,12 +396,33 @@ class _DownloadsScreenState extends State<DownloadsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent = BrandColors.accent;
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Downloads'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        leadingWidth: 100,
+        leading: TextButton.icon(
+          onPressed: () => Navigator.of(context).pop(),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: accent, size: 18),
+          label: Text(
+            'Settings',
+            style: TextStyle(
+                color: accent, fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          style: TextButton.styleFrom(padding: const EdgeInsets.only(left: 8)),
+        ),
+        title: Text(
+          'Downloads',
+          style: theme.textTheme.titleMedium
+              ?.copyWith(fontWeight: FontWeight.w700),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings),
+            icon: Icon(Icons.settings, color: accent),
             tooltip: 'Download Settings',
             onPressed: () {
               Navigator.push(
@@ -471,6 +493,8 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     }
 
     final sortedLanguages = groupedByLanguage.keys.toList()..sort();
+
+    print('Loaded translation languages: $sortedLanguages'); // Debug log
 
     return ListView.builder(
       itemCount: sortedLanguages.length,
@@ -581,6 +605,8 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     }
 
     final sortedLanguages = groupedByLanguage.keys.toList()..sort();
+
+    print('Loaded tafsir languages: $sortedLanguages'); // Debug log
 
     return ListView.builder(
       itemCount: sortedLanguages.length,

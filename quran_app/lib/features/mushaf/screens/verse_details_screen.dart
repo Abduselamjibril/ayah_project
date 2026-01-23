@@ -246,11 +246,15 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
                         ),
                         IconButton(
                           onPressed: () {
-                            showSharePreviewDialog(
-                              context: context,
-                              surahNumber: widget.surahNumber,
-                              ayahNumber: widget.ayahNumber,
-                            );
+
+                            // Share functionality
+
+                            // showSharePreviewDialog(
+                            //   context: context,
+                            //   surahNumber: widget.surahNumber,
+                            //   ayahNumber: widget.ayahNumber,
+                            // );
+
                           },
                           icon: Icon(
                             Icons.share,

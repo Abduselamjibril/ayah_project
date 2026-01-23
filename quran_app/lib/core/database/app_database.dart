@@ -22,7 +22,9 @@ class AppDatabase {
 
     return await openDatabase(
       path,
+
       version: 6, // Bump for translator/scholar columns
+
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
