@@ -44,6 +44,7 @@ class AudioPlayerService {
           androidNotificationChannelName: 'Quran Audio',
           androidNotificationOngoing: true,
           androidStopForegroundOnPause: true,
+          androidNotificationIcon: 'mipmap/ic_launcher',
         ),
       );
 
@@ -145,6 +146,10 @@ class AudioPlayerService {
   bool get hasSource => hasSourceNotifier.value;
 
   List<Map<String, dynamic>>? _currentPlaylistMetadata;
+
+  Uri _appArtworkUri() {
+    return Uri.parse('asset:///assets/images/Icon.jpg');
+  }
 
   // --- Reciter Management ---
 
@@ -313,9 +318,7 @@ class AudioPlayerService {
         album: surahName,
         title: title,
         artist: recitation.reciterName,
-        // Use mipmap launcher icon - Android notifications require resource format
-        artUri: Uri.parse(
-            'android.resource://com.example.quran_app/mipmap/ic_launcher'),
+        artUri: _appArtworkUri(),
         extras: {'surah': surah, 'ayah': ayah},
       );
 
