@@ -1,6 +1,6 @@
 {
-    "name": "quran_app",
-    "short_name": "quran_app",
+    "name": "Al Quran - القران",
+    "short_name": "Al Quran - القران",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
