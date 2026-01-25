@@ -63,21 +63,86 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
 
   Future<void> _updateKhatmahSettings(bool enabled, TimeOfDay time) async {
     if (enabled) {
-      final ok = await _ensureExactAlarms();
-      if (!ok) {
-        if (mounted) {
-          setState(() {
-            _khatmahEnabled = false;
-          });
-        }
+      // Request permission and redirect if needed
+      final granted = await _khatmahService.requestPermissions();
+      if (!granted && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Notification permission is required'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+        setState(() {
+          _khatmahEnabled = false;
+        });
+        return;
+      }
+
+      // Check exact alarm permission
+      final canSchedule = await _checkExactAlarms();
+      if (!canSchedule && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text('Exact alarm permission required for scheduled reminders'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+        setState(() {
+          _khatmahEnabled = false;
+        });
         return;
       }
     }
+
     setState(() {
       _khatmahEnabled = enabled;
       _khatmahTime = time;
     });
     await _khatmahService.setNotificationSettings(enabled, time);
+  }
+
+  Future<bool> _checkExactAlarms() async {
+    // iOS doesn't require exact alarm permission - always return true
+    if (!Theme.of(context).platform.toString().contains('android')) {
+      return true;
+    }
+
+    final notifService = AppNotificationService.instance;
+    final canExact = await notifService.canScheduleExactAlarms();
+    if (canExact) return true;
+
+    if (!mounted) return false;
+
+    // Show dialog (Android only)
+    final shouldOpen = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Permission Required'),
+        content: const Text(
+          'To send reminders at exact times, this app needs permission to schedule exact alarms. '
+          'You will be redirected to system settings to grant this permission.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldOpen == true) {
+      await notifService.openExactAlarmSettings();
+      await Future.delayed(const Duration(seconds: 1));
+      return await notifService.canScheduleExactAlarms();
+    }
+
+    return false;
   }
 
   Future<void> _updateVotdSettings(bool enabled, TimeOfDay time) async {

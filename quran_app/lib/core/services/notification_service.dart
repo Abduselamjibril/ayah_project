@@ -137,6 +137,7 @@ class AppNotificationService {
     return await android?.canScheduleExactNotifications() ?? true;
   }
 
+  /// Opens system settings for exact alarm permission
   Future<void> openExactAlarmSettings() async {
     if (!Platform.isAndroid) return;
     const intent = AndroidIntent(
@@ -145,24 +146,52 @@ class AppNotificationService {
     await intent.launch();
   }
 
+  /// Request all necessary notification permissions
+  /// Returns true if all permissions are granted
   Future<bool> requestPermissionsIfNeeded() async {
-    if (kIsWeb) return false; // Web notifications not implemented here
-    if (Platform.isIOS) {
+    if (kIsWeb) return false;
+
+    bool allGranted = true;
+
+    // 1. Request notification permission (Android 13+)
+    if (Platform.isAndroid) {
+      final android = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      final notifGranted =
+          await android?.requestNotificationsPermission() ?? true;
+      allGranted = allGranted && notifGranted;
+
+      if (!notifGranted) {
+        debugPrint('Notification permission denied');
+        return false;
+      }
+    } else if (Platform.isIOS) {
       final ios = _plugin.resolvePlatformSpecificImplementation<
           IOSFlutterLocalNotificationsPlugin>();
       final granted = await ios?.requestPermissions(
               alert: true, badge: true, sound: true) ??
           false;
-      return granted;
+      allGranted = allGranted && granted;
+
+      if (!granted) {
+        debugPrint('iOS notification permission denied');
+        return false;
+      }
     }
+
+    // 2. Check exact alarm permission (Android only)
     if (Platform.isAndroid) {
-      final android = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
-      final granted = await android?.requestNotificationsPermission() ??
-          true; // Android pre-13 returns true
-      return granted;
+      final canSchedule = await canScheduleExactAlarms();
+      allGranted = allGranted && canSchedule;
+
+      if (!canSchedule) {
+        debugPrint(
+            'Exact alarm permission not granted - needs user to enable in settings');
+        // Note: We can't programmatically request this, user must grant it in settings
+      }
     }
-    return true; // Other platforms
+
+    return allGranted;
   }
 
   NotificationDetails _progressDetails() {

@@ -80,9 +80,10 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
       final playing = _audioPlayer.isPlaying.value;
       setState(() {
         _isPlaying = playing;
-        if (!playing && !_isDownloading) {
+        // Keep expanded when paused (hasSource=true), only collapse when stopped
+        if (!playing && !_isDownloading && !_hasSource) {
           _showExpanded = false;
-        } else if (playing) {
+        } else if (playing || _hasSource) {
           _showExpanded = true;
         }
       });
@@ -98,7 +99,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         _isDownloading = downloading;
         if (downloading) {
           _showExpanded = true;
-        } else if (!_isPlaying) {
+        } else if (!_isPlaying && !_hasSource) {
           _showExpanded = false;
         }
       });
@@ -169,7 +170,8 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     final colorScheme = Theme.of(context).colorScheme;
     final accent = BrandColors.accent;
 
-    final showExpanded = _showExpanded || _isDownloading || _isPlaying;
+    // Always show expanded view when downloading, playing, or explicitly expanded
+    final showExpanded = _isDownloading || _showExpanded || _isPlaying;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
@@ -273,47 +275,64 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: _openAudioPicker,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _labelText,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: accent,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  child: _isDownloading
-                      ? Row(
-                          key: const ValueKey('downloading'),
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                value: _downloadProgress > 0
-                                    ? _downloadProgress
-                                    : null,
-                                strokeWidth: 2.5,
-                                color: accent,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
+        // Header with close button
+        Row(
+          children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: _openAudioPicker,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _labelText,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: accent,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 220),
+                        child: _isDownloading
+                            ? Row(
+                                key: const ValueKey('downloading'),
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      value: _downloadProgress > 0
+                                          ? _downloadProgress
+                                          : null,
+                                      strokeWidth: 2.5,
+                                      color: accent,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      _statusText,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: colorScheme.onSurface
+                                            .withOpacity(0.75),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Text(
                                 _statusText,
+                                key: const ValueKey('reciter'),
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   color:
@@ -321,22 +340,33 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                            ),
-                          ],
-                        )
-                      : Text(
-                          _statusText,
-                          key: const ValueKey('reciter'),
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: colorScheme.onSurface.withOpacity(0.75),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ),
-          ),
+            // Close/Stop button
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              ),
+              child: IconButton(
+                iconSize: 20,
+                padding: const EdgeInsets.all(8),
+                tooltip: 'Stop',
+                icon: Icon(
+                  Icons.close_rounded,
+                  color: colorScheme.onSurface.withOpacity(0.7),
+                ),
+                onPressed: () async {
+                  await _audioPlayer.stop();
+                  setState(() => _showExpanded = false);
+                },
+              ),
+            ),
+          ],
         ),
         if (_isDownloading)
           Padding(
