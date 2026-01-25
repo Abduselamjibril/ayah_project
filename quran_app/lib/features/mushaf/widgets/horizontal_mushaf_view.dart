@@ -54,6 +54,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   double _livePage =
       1.0; // Tracks the live scroll position for real-time pill updates
   bool _isSliderActive = false;
+  int _lastControllerPage = 1;
   late final AudioPlayerService _audioPlayer;
   late final VoidCallback _ayahListener;
   final Map<int, String> _surahNameCache = {};
@@ -95,6 +96,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     _pageController = PageController(
       initialPage: widget.controller.currentPage - 1,
     );
+    _lastControllerPage = widget.controller.currentPage;
     _sliderValue = widget.controller.currentPage.toDouble();
     _livePage = widget.controller.currentPage.toDouble();
     _pageController.addListener(_handlePageScroll);
@@ -138,7 +140,11 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   }
 
   void _onControllerChanged() {
-    final targetPage = widget.controller.currentPage - 1;
+    final controllerPage = widget.controller.currentPage;
+    if (controllerPage == _lastControllerPage) return;
+
+    _lastControllerPage = controllerPage;
+    final targetPage = controllerPage - 1;
     if (!_isSliderActive && _pageController.hasClients) {
       if (_pageController.position.isScrollingNotifier.value) return;
 
@@ -149,7 +155,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
       }
     }
     // Keep live page in sync when controller jumps (e.g., via nav stream)
-    _setLivePage(widget.controller.currentPage.toDouble());
+    _setLivePage(controllerPage.toDouble());
   }
 
   void _handlePageScroll() {
@@ -215,26 +221,32 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                       ),
                       child: Directionality(
                         textDirection: TextDirection.rtl,
-                        child: PageviewQuran(
-                          controller: _pageController,
-                          initialPageNumber: widget.controller.currentPage,
-                          scrollMode: ScrollMode.horizontal,
-                          onPageChanged: (page) {
-                            _setLivePage(page.toDouble());
-                            widget.controller.setPage(page);
+                        child: ListenableBuilder(
+                          listenable: widget.controller,
+                          builder: (context, _) {
+                            return PageviewQuran(
+                              controller: _pageController,
+                              initialPageNumber: widget.controller.currentPage,
+                              scrollMode: ScrollMode.horizontal,
+                              onPageChanged: (page) {
+                                _setLivePage(page.toDouble());
+                                widget.controller.setPage(page);
+                              },
+                              textColor:
+                                  Theme.of(context).colorScheme.onSurface,
+                              pageBackgroundColor:
+                                  Theme.of(context).scaffoldBackgroundColor,
+                              verseBackgroundColor: (s, v) =>
+                                  _getVerseBackgroundColor(bookmarkState, s, v),
+                              onLongPress: (surah, verse) => _showVerseOptions(
+                                  context, bookmarkState, surah, verse),
+                              onLongPressStart: (surah, verse, details) =>
+                                  widget.controller
+                                      .setHighlightedVerse(surah, verse),
+                              onLongPressCancel: (surah, verse) =>
+                                  widget.controller.clearHighlight(),
+                            );
                           },
-                          textColor: Theme.of(context).colorScheme.onSurface,
-                          pageBackgroundColor:
-                              Theme.of(context).scaffoldBackgroundColor,
-                          verseBackgroundColor: (s, v) =>
-                              _getVerseBackgroundColor(bookmarkState, s, v),
-                          onLongPress: (surah, verse) => _showVerseOptions(
-                              context, bookmarkState, surah, verse),
-                          onLongPressStart: (surah, verse, details) => widget
-                              .controller
-                              .setHighlightedVerse(surah, verse),
-                          onLongPressCancel: (surah, verse) =>
-                              widget.controller.clearHighlight(),
                         ),
                       ),
                     ),
@@ -251,6 +263,15 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
 
   Color? _getVerseBackgroundColor(
       BookmarkNotesNotifier state, int surah, int verse) {
+    final highlightedSurah = widget.controller.highlightedSurah;
+    final highlightedVerse = widget.controller.highlightedVerse;
+    if (highlightedSurah == surah && highlightedVerse == verse) {
+      return Theme.of(context)
+          .colorScheme
+          .primaryContainer
+          .withValues(alpha: 0.5);
+    }
+
     final b = state.bookmarkForVerse(surah, verse);
     if (b != null) {
       if (b.isKhatmahPin) return null;

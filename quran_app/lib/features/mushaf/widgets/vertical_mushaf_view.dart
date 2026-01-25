@@ -244,25 +244,31 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                           }
                           return false;
                         },
-                        child: PageviewQuran(
-                          initialPageNumber: widget.controller.currentPage,
-                          scrollMode: ScrollMode.vertical,
-                          itemScrollController: _itemScrollController,
-                          itemPositionsListener: _itemPositionsListener,
-                          textColor: Theme.of(context).colorScheme.onSurface,
-                          pageBackgroundColor:
-                              Theme.of(context).scaffoldBackgroundColor,
-                          verseBackgroundColor: (s, v) =>
-                              _getVerseBackgroundColor(bookmarkState, s, v),
-                          onLongPress: (surah, verse) => _showVerseOptions(
-                              context, bookmarkState, surah, verse),
-                          onLongPressStart: (surah, verse, details) => widget
-                              .controller
-                              .setHighlightedVerse(surah, verse),
-                          onLongPressCancel: (surah, verse) =>
-                              widget.controller.clearHighlight(),
-                          sp: 1.0,
-                          h: 1.0,
+                        child: ListenableBuilder(
+                          listenable: widget.controller,
+                          builder: (context, _) {
+                            return PageviewQuran(
+                              initialPageNumber: widget.controller.currentPage,
+                              scrollMode: ScrollMode.vertical,
+                              itemScrollController: _itemScrollController,
+                              itemPositionsListener: _itemPositionsListener,
+                              textColor:
+                                  Theme.of(context).colorScheme.onSurface,
+                              pageBackgroundColor:
+                                  Theme.of(context).scaffoldBackgroundColor,
+                              verseBackgroundColor: (s, v) =>
+                                  _getVerseBackgroundColor(bookmarkState, s, v),
+                              onLongPress: (surah, verse) => _showVerseOptions(
+                                  context, bookmarkState, surah, verse),
+                              onLongPressStart: (surah, verse, details) =>
+                                  widget.controller
+                                      .setHighlightedVerse(surah, verse),
+                              onLongPressCancel: (surah, verse) =>
+                                  widget.controller.clearHighlight(),
+                              sp: 1.0,
+                              h: 1.0,
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -280,6 +286,15 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
 
   Color? _getVerseBackgroundColor(
       BookmarkNotesNotifier state, int surah, int verse) {
+    final highlightedSurah = widget.controller.highlightedSurah;
+    final highlightedVerse = widget.controller.highlightedVerse;
+    if (highlightedSurah == surah && highlightedVerse == verse) {
+      return Theme.of(context)
+          .colorScheme
+          .primaryContainer
+          .withValues(alpha: 0.5);
+    }
+
     final b = state.bookmarkForVerse(surah, verse);
     if (b != null) {
       if (b.isKhatmahPin) {
