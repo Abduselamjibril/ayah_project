@@ -15,6 +15,7 @@ import 'package:quran_app/features/share/presentation/dialogs/share_preview_dial
 import '../controller/mushaf_controller.dart';
 import '../screens/verse_details_screen.dart';
 import 'play_range_dialog.dart';
+import 'surah_info_sheet.dart';
 import 'package:quran_app/app/app.dart';
 import 'package:quran_app/core/services/mushaf_settings_service.dart';
 import 'package:quran_app/core/services/theme_service.dart';
@@ -51,14 +52,15 @@ class HorizontalMushafView extends StatefulWidget {
 class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   late PageController _pageController;
   double? _sliderValue;
-  double _livePage =
-      1.0; // Tracks the live scroll position for real-time pill updates
+  // _livePage removed as it was unused after refactor
   bool _isSliderActive = false;
+  int _lastControllerPage = 1;
   late final AudioPlayerService _audioPlayer;
   late final VoidCallback _ayahListener;
   final Map<int, String> _surahNameCache = {};
   bool _overlayVisible = true;
   Timer? _autoHideTimer;
+  Timer? _highlightClearTimer;
   final bool _isSequentialMode = false;
 
   double _contentOpacity = 1.0;
@@ -95,16 +97,19 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     _pageController = PageController(
       initialPage: widget.controller.currentPage - 1,
     );
-    _sliderValue = widget.controller.currentPage.toDouble();
-    _livePage = widget.controller.currentPage.toDouble();
-    _pageController.addListener(_handlePageScroll);
+    _lastControllerPage = widget.controller.currentPage;
+    // _livePage and _sliderValue state moved to ValueNotifiers/local calculation
+    // Removed _handlePageScroll listener that caused setStates
+
     _audioPlayer = AudioPlayerService.instance;
     _ayahListener = () {
-      if (!mounted || !_isSequentialMode) return;
+      if (!mounted) return;
       final s = _audioPlayer.currentSurah.value;
       final a = _audioPlayer.currentAyah.value;
       if (s != null && a != null) {
         widget.controller.setHighlightedVerse(s, a);
+      } else {
+        widget.controller.clearHighlight();
       }
     };
     _audioPlayer.currentSurah.addListener(_ayahListener);
@@ -127,18 +132,42 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
 
   @override
   void dispose() {
-    _pageController.removeListener(_handlePageScroll);
+    // No listener to remove for _handlePageScroll
     _navSubscription?.cancel();
     _audioPlayer.currentSurah.removeListener(_ayahListener);
     _audioPlayer.currentAyah.removeListener(_ayahListener);
     widget.controller.removeListener(_onControllerChanged);
     _pageController.dispose();
     _autoHideTimer?.cancel();
+    _highlightClearTimer?.cancel();
     super.dispose();
   }
 
+  void _cancelHighlightClear() {
+    _highlightClearTimer?.cancel();
+    _highlightClearTimer = null;
+  }
+
+  void _scheduleHighlightClear() {
+    _highlightClearTimer?.cancel();
+    _highlightClearTimer = Timer(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      widget.controller.clearHighlight();
+    });
+  }
+
+  void _navigateToVerseWithTempHighlight(int surah, int verse) {
+    _cancelHighlightClear();
+    widget.controller.navigateToVerse(surah, verse);
+    _scheduleHighlightClear();
+  }
+
   void _onControllerChanged() {
-    final targetPage = widget.controller.currentPage - 1;
+    final controllerPage = widget.controller.currentPage;
+    if (controllerPage == _lastControllerPage) return;
+
+    _lastControllerPage = controllerPage;
+    final targetPage = controllerPage - 1;
     if (!_isSliderActive && _pageController.hasClients) {
       if (_pageController.position.isScrollingNotifier.value) return;
 
@@ -148,30 +177,16 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
         _pageController.jumpToPage(targetPage);
       }
     }
-    // Keep live page in sync when controller jumps (e.g., via nav stream)
-    _setLivePage(widget.controller.currentPage.toDouble());
   }
 
-  void _handlePageScroll() {
-    if (!_pageController.hasClients) return;
-    final page = _pageController.page;
-    if (page == null) return;
-    final live = (page + 1).clamp(1.0, 604.0);
-    _setLivePage(live);
-  }
-
-  double get _currentDisplayPage {
+  // Helper to get current display page from controller or slider
+  double _getDisplayPage() {
     if (_isSliderActive && _sliderValue != null) return _sliderValue!;
-    return _livePage;
-  }
-
-  void _setLivePage(double value) {
-    final clamped = value.clamp(1.0, 604.0);
-    if ((_livePage - clamped).abs() > 0.001) {
-      setState(() {
-        _livePage = clamped;
-      });
+    if (_pageController.hasClients &&
+        _pageController.position.hasContentDimensions) {
+      return (_pageController.page ?? 0) + 1;
     }
+    return widget.controller.currentPage.toDouble();
   }
 
   @override
@@ -215,26 +230,46 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                       ),
                       child: Directionality(
                         textDirection: TextDirection.rtl,
-                        child: PageviewQuran(
-                          controller: _pageController,
-                          initialPageNumber: widget.controller.currentPage,
-                          scrollMode: ScrollMode.horizontal,
-                          onPageChanged: (page) {
-                            _setLivePage(page.toDouble());
-                            widget.controller.setPage(page);
+                        child: ListenableBuilder(
+                          listenable: Listenable.merge(
+                              [widget.controller, ThemeService()]),
+                          builder: (context, _) {
+                            return PageviewQuran(
+                              controller: _pageController,
+                              initialPageNumber: widget.controller.currentPage,
+                              scrollMode: ScrollMode.horizontal,
+                              onPageChanged: (page) {
+                                // No setState here for live page, only controller update
+                                widget.controller.setPage(page);
+                              },
+                              textColor:
+                                  Theme.of(context).colorScheme.onSurface,
+                              pageBackgroundColor:
+                                  Theme.of(context).scaffoldBackgroundColor,
+                              verseBackgroundColor: (s, v) =>
+                                  _getVerseBackgroundColor(bookmarkState, s, v),
+                              onLongPress: (surah, verse) => _showVerseOptions(
+                                  context, bookmarkState, surah, verse),
+                              onLongPressStart: (surah, verse, details) {
+                                _cancelHighlightClear();
+                                widget.controller
+                                    .setHighlightedVerse(surah, verse);
+                              },
+                              onLongPressCancel: (surah, verse) =>
+                                  widget.controller.clearHighlight(),
+                              onSurahHeaderLongPress: (surahNumber) {
+                                showSurahInfoSheet(
+                                  context: context,
+                                  surahNumber: surahNumber,
+                                  onNavigateToVerse: (verseNumber) {
+                                    Navigator.pop(context);
+                                    _navigateToVerseWithTempHighlight(
+                                        surahNumber, verseNumber);
+                                  },
+                                );
+                              },
+                            );
                           },
-                          textColor: Theme.of(context).colorScheme.onSurface,
-                          pageBackgroundColor:
-                              Theme.of(context).scaffoldBackgroundColor,
-                          verseBackgroundColor: (s, v) =>
-                              _getVerseBackgroundColor(bookmarkState, s, v),
-                          onLongPress: (surah, verse) => _showVerseOptions(
-                              context, bookmarkState, surah, verse),
-                          onLongPressStart: (surah, verse, details) => widget
-                              .controller
-                              .setHighlightedVerse(surah, verse),
-                          onLongPressCancel: (surah, verse) =>
-                              widget.controller.clearHighlight(),
                         ),
                       ),
                     ),
@@ -251,6 +286,15 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
 
   Color? _getVerseBackgroundColor(
       BookmarkNotesNotifier state, int surah, int verse) {
+    final highlightedSurah = widget.controller.highlightedSurah;
+    final highlightedVerse = widget.controller.highlightedVerse;
+    if (highlightedSurah == surah && highlightedVerse == verse) {
+      return Theme.of(context)
+          .colorScheme
+          .primaryContainer
+          .withValues(alpha: 0.5);
+    }
+
     final b = state.bookmarkForVerse(surah, verse);
     if (b != null) {
       if (b.isKhatmahPin) return null;
@@ -266,10 +310,10 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
       bottom: 0,
       left: 0,
       right: 0,
-      child: ListenableBuilder(
-        listenable: widget.controller,
+      child: AnimatedBuilder(
+        animation: Listenable.merge([widget.controller, _pageController]),
         builder: (context, child) {
-          final currentDouble = _currentDisplayPage;
+          final currentDouble = _getDisplayPage();
           final currentPage = currentDouble.round();
           final surahName = _surahNameForPage(currentPage);
           final isSliding = _isSliderActive;
@@ -550,7 +594,6 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
       if (mounted) {
         setState(() {
           _contentOpacity = 0.5; // dim but keep page visible
-          _setLivePage(target.toDouble()); // pin pill immediately
         });
       }
 
@@ -584,7 +627,8 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
       backgroundColor: Colors.transparent,
       builder: (ctx) {
         ScrollMode mode = mushafSettings.scrollMode;
-        AppTheme theme = themeService.currentTheme;
+        ThemeMode themeMode = themeService.themeMode;
+        SurahHeaderStyle surahStyle = themeService.surahHeaderStyle;
 
         return DraggableScrollableSheet(
           minChildSize: 0.5,
@@ -672,7 +716,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                                 ),
                                 const SizedBox(height: 18),
                                 Text(
-                                  'Theme',
+                                  'Theme Mode',
                                   style: Theme.of(context)
                                       .textTheme
                                       .titleSmall
@@ -682,18 +726,71 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                                 Wrap(
                                   spacing: 12,
                                   runSpacing: 12,
-                                  children: AppTheme.values.map((t) {
-                                    final selected = t == theme;
-                                    return _ThemeCardTile(
-                                      theme: t,
+                                  children: ThemeMode.values
+                                      .where((t) => t != ThemeMode.system)
+                                      .map((t) {
+                                    final selected = t == themeMode;
+                                    String label;
+                                    IconData icon;
+                                    switch (t) {
+                                      case ThemeMode.light:
+                                        label = 'Light';
+                                        icon = Icons.wb_sunny;
+                                        break;
+                                      case ThemeMode.dark:
+                                        label = 'Dark';
+                                        icon = Icons.nightlight_round;
+                                        break;
+                                      default:
+                                        label = '';
+                                        icon = Icons.error;
+                                    }
+
+                                    return _ThemeModeTile(
+                                      label: label,
+                                      icon: icon,
                                       selected: selected,
                                       onTap: () {
-                                        themeService.setTheme(t);
-                                        setStateSheet(() => theme = t);
+                                        themeService.setThemeMode(t);
+                                        setStateSheet(() => themeMode = t);
                                       },
                                     );
                                   }).toList(),
                                 ),
+
+                                // Show Surah Header Style only if NOT strictly Dark mode
+                                // (It works in System too if system is Light, but simplest is to just show it generally or check brightness)
+                                if (themeMode != ThemeMode.dark) ...[
+                                  const SizedBox(height: 18),
+                                  Text(
+                                    'Surah Header Style',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(fontWeight: FontWeight.w700),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Wrap(
+                                    spacing: 12,
+                                    runSpacing: 12,
+                                    children: SurahHeaderStyle.values.map((s) {
+                                      final selected = s == surahStyle;
+                                      String label =
+                                          s == SurahHeaderStyle.golden
+                                              ? 'Golden'
+                                              : 'Green';
+                                      return _ThemeModeTile(
+                                        label: label,
+                                        icon: Icons.image,
+                                        selected: selected,
+                                        onTap: () {
+                                          themeService.setSurahHeaderStyle(s);
+                                          setStateSheet(() => surahStyle = s);
+                                        },
+                                      );
+                                    }).toList(),
+                                  ),
+                                ],
                                 const SizedBox(height: 18),
                                 Text(
                                   'Language',
@@ -825,46 +922,31 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   ({ShareCardBackground background, bool isDark, String frameAsset})
       _resolveShareCardTheme() {
     final themeService = ThemeService();
-    final appTheme = themeService.currentTheme;
+    // For sharing, we check the actual brightness context or just the mode.
+    // Since this is a method, we can check the current context brightness.
+    final brightness = Theme.of(context).brightness;
+    final isDarkMode = brightness == Brightness.dark;
 
     ShareCardBackground background;
-    bool isDark;
 
-    switch (appTheme) {
-      case AppTheme.goldenParchment:
-        background = ShareCardBackground.solid(const Color(0xFFFFF4DA));
-        isDark = false;
-        break;
-      case AppTheme.midnightBlueprint:
-        background = ShareCardBackground.solid(const Color(0xFF101417));
-        isDark = true;
-        break;
-      case AppTheme.mintGarden:
-        background = ShareCardBackground.gradient(
-          const LinearGradient(
-            colors: [Color(0xFF0B1A17), Color(0xFF1C3A2F)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        );
-        isDark = true;
-        break;
-      case AppTheme.ornateTwilight:
-        background = ShareCardBackground.gradient(
-          const LinearGradient(
-            colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        );
-        isDark = true;
-        break;
+    if (isDarkMode) {
+      // Dark Mode -> Ornate Twilight (Green/Blue Dark Gradient)
+      background = ShareCardBackground.gradient(
+        const LinearGradient(
+          colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      );
+    } else {
+      // Light Mode -> Golden Parchment (Solid)
+      background = ShareCardBackground.solid(const Color(0xFFFFF4DA));
     }
 
     return (
       background: background,
-      isDark: isDark,
-      frameAsset: themeService.mainframeImagePath,
+      isDark: isDarkMode,
+      frameAsset: themeService.getResponsiveMainframePath(brightness),
     );
   }
 
@@ -1031,7 +1113,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
           ),
         );
       },
-    );
+    ).whenComplete(_scheduleHighlightClear);
   }
 
   Widget _buildSectionLabel(String text, BuildContext context) {
@@ -1288,7 +1370,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
       BuildContext context, BookmarkNotesNotifier state, int surah, int verse) {
     final chips = <Widget>[];
     final existingColor =
-        state.bookmarkForVerse(surah, verse)?.colorHex?.toLowerCase();
+        state.bookmarkForVerse(surah, verse)?.colorHex.toLowerCase();
     for (var i = 0; i < _bookmarkColors.length; i++) {
       final hex = _bookmarkColors[i];
       final color = Color(_parseColor(hex));
@@ -1946,18 +2028,22 @@ class _SettingOptionTile extends StatelessWidget {
   }
 }
 
-class _ThemeCardTile extends StatelessWidget {
-  final AppTheme theme;
+class _ThemeModeTile extends StatelessWidget {
+  final String label;
+  final IconData icon;
   final bool selected;
   final VoidCallback onTap;
-  const _ThemeCardTile(
-      {required this.theme, required this.selected, required this.onTap});
+  const _ThemeModeTile(
+      {required this.label,
+      required this.icon,
+      required this.selected,
+      required this.onTap});
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
       child: Container(
-        width: 160,
+        width: 100,
         height: 84,
         decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
@@ -1966,9 +2052,17 @@ class _ThemeCardTile extends StatelessWidget {
                     ? BrandColors.accent
                     : Colors.grey.withOpacity(0.3),
                 width: selected ? 2 : 1)),
-        child: Center(
-            child: Text(ThemeService.getThemeName(theme),
-                style: const TextStyle(fontWeight: FontWeight.bold))),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: selected ? BrandColors.accent : Colors.grey),
+            const SizedBox(height: 8),
+            Text(label,
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: selected ? BrandColors.accent : null)),
+          ],
+        ),
       ),
     );
   }

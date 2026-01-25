@@ -55,24 +55,105 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
         await AppNotificationService.instance.canScheduleExactAlarms();
     if (canExact) return true;
 
-    await AppNotificationService.instance.openExactAlarmSettings();
-    final after =
-        await AppNotificationService.instance.canScheduleExactAlarms();
-    return after;
+    if (!mounted) return false;
+
+    // Show dialog (Android only)
+    final shouldOpen = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Permission Required'),
+        content: const Text(
+          'To send reminders at exact times, this app needs permission to schedule exact alarms. '
+          'You will be redirected to system settings to grant this permission.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldOpen == true) {
+      await AppNotificationService.instance.openExactAlarmSettings();
+      await Future.delayed(const Duration(seconds: 1));
+      final after =
+          await AppNotificationService.instance.canScheduleExactAlarms();
+      return after;
+    }
+    return false;
+  }
+
+  Future<bool> _checkNotificationPermission() async {
+    final service = AppNotificationService.instance;
+
+    // 1. Initial Check
+    bool enabled = await service.areNotificationsEnabled();
+    if (enabled) return true;
+
+    // 2. Request if not enabled
+    enabled = await service.requestPermissionsIfNeeded();
+    if (enabled) return true;
+
+    // 3. If still denied, show manual settings dialog
+    if (!mounted) return false;
+
+    final shouldOpen = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Notifications Disabled'),
+        content: const Text(
+          'Notifications are disabled for this app. Please enable them in settings to receive reminders.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldOpen == true) {
+      await service.openAppNotificationSettings();
+      // Wait a bit and check again
+      await Future.delayed(const Duration(seconds: 1));
+      return await service.areNotificationsEnabled();
+    }
+
+    return false;
   }
 
   Future<void> _updateKhatmahSettings(bool enabled, TimeOfDay time) async {
     if (enabled) {
-      final ok = await _ensureExactAlarms();
-      if (!ok) {
+      // 1. Check Notification Permission
+      final notifGranted = await _checkNotificationPermission();
+      if (!notifGranted) {
         if (mounted) {
-          setState(() {
-            _khatmahEnabled = false;
-          });
+          setState(() => _khatmahEnabled = false);
+        }
+        return;
+      }
+
+      // 2. Check Exact Alarm Permission (Android)
+      final exactGranted = await _ensureExactAlarms();
+      if (!exactGranted) {
+        if (mounted) {
+          setState(() => _khatmahEnabled = false);
         }
         return;
       }
     }
+
     setState(() {
       _khatmahEnabled = enabled;
       _khatmahTime = time;
@@ -82,16 +163,25 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
 
   Future<void> _updateVotdSettings(bool enabled, TimeOfDay time) async {
     if (enabled) {
-      final ok = await _ensureExactAlarms();
-      if (!ok) {
+      // 1. Check Notification Permission
+      final notifGranted = await _checkNotificationPermission();
+      if (!notifGranted) {
         if (mounted) {
-          setState(() {
-            _votdEnabled = false;
-          });
+          setState(() => _votdEnabled = false);
+        }
+        return;
+      }
+
+      // 2. Check Exact Alarm Permission (Android)
+      final exactGranted = await _ensureExactAlarms();
+      if (!exactGranted) {
+        if (mounted) {
+          setState(() => _votdEnabled = false);
         }
         return;
       }
     }
+
     setState(() {
       _votdEnabled = enabled;
       _votdTime = time;

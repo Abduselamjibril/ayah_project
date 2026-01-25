@@ -68,6 +68,9 @@ class PageviewQuran extends StatefulWidget {
     LongPressStartDetails details,
   )? onLongPressStart;
 
+  /// Callback when user long-presses on a surah header.
+  final void Function(int surahNumber)? onSurahHeaderLongPress;
+
   const PageviewQuran({
     super.key,
     this.initialPageNumber = 1,
@@ -88,6 +91,7 @@ class PageviewQuran extends StatefulWidget {
     this.onLongPressUp,
     this.onLongPressCancel,
     this.onLongPressStart,
+    this.onSurahHeaderLongPress,
   }) : assert(initialPageNumber >= 1 && initialPageNumber <= totalPagesCount);
 
   @override
@@ -251,6 +255,7 @@ class _PageviewQuranState extends State<PageviewQuran> {
                   onLongPressUp: widget.onLongPressUp,
                   onLongPressCancel: widget.onLongPressCancel,
                   onLongPressStart: widget.onLongPressStart,
+                  onSurahHeaderLongPress: widget.onSurahHeaderLongPress,
                   sp: widget.sp,
                   h: widget.h,
                 ),
@@ -298,6 +303,7 @@ class _PageviewQuranState extends State<PageviewQuran> {
                   onLongPressUp: widget.onLongPressUp,
                   onLongPressCancel: widget.onLongPressCancel,
                   onLongPressStart: widget.onLongPressStart,
+                  onSurahHeaderLongPress: widget.onSurahHeaderLongPress,
                   sp: widget.sp,
                   h: widget.h,
                   allowInternalScroll: false,
@@ -568,6 +574,9 @@ class QuranPageContent extends StatefulWidget {
     LongPressStartDetails details,
   )? onLongPressStart;
 
+  /// Callback when user long-presses on a surah header.
+  final void Function(int surahNumber)? onSurahHeaderLongPress;
+
   final bool allowInternalScroll;
 
   const QuranPageContent({
@@ -581,6 +590,7 @@ class QuranPageContent extends StatefulWidget {
     required this.onLongPressUp,
     required this.onLongPressCancel,
     required this.onLongPressStart,
+    this.onSurahHeaderLongPress,
     required this.sp,
     required this.h,
     this.allowInternalScroll = true,
@@ -624,7 +634,12 @@ class _QuranPageContentState extends State<QuranPageContent>
 
       for (int v = start; v <= end; v++) {
         if (v == start && v == 1) {
-          verseSpans.add(WidgetSpan(child: HeaderWidget(suraNumber: surah)));
+          verseSpans.add(WidgetSpan(
+            child: HeaderWidget(
+              suraNumber: surah,
+              onLongPress: () => widget.onSurahHeaderLongPress?.call(surah),
+            ),
+          ));
 
           verseSpans.add(const TextSpan(text: "\n"));
 

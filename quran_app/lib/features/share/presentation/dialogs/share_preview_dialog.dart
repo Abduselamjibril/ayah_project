@@ -49,59 +49,23 @@ class _ShareOptionsDialogState extends State<ShareOptionsDialog> {
     try {
       // 1. Determine current theme from ThemeService
       final themeService = ThemeService();
-      final currentTheme = themeService.currentTheme;
+      final brightness = Theme.of(context).brightness;
+      final isDarkMode = brightness == Brightness.dark;
 
       // 2. Map AppTheme to ShareCardBackground and proper configuration
       ShareCardBackground background;
-      bool isDark = true;
 
-      switch (currentTheme) {
-        case AppTheme.goldenParchment:
-          background = ShareCardBackground.solid(const Color(0xFFFFF4DA));
-          isDark = false;
-          break;
-        case AppTheme.midnightBlueprint:
-          background = ShareCardBackground.solid(const Color(0xFF101417));
-          isDark = true;
-          break;
-        case AppTheme.mintGarden:
-          // Using a nice green gradient/theme similar to "Olive" preset
-          // Matching Mint Garden's general vibe but optimized for card
-          background = ShareCardBackground.gradient(
-            const LinearGradient(
-              colors: [Color(0xFF0B1A17), Color(0xFF1C3A2F)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-          );
-          isDark =
-              true; // Dark text on light green might also work, but gradients usually look best with white text
-          // Actually Mint Garden is a Light theme in app.
-          // Let's check AppColors.greenLightSurface (D0EBD4).
-          // If the APP theme is light, maybe we should use a light card?
-          // But the user asked for "current style".
-          // If I use the Olive preset (dark), it might clash if the user expects light.
-          // Let's try to match the actual theme colors if possible.
-          // AppColors.greenLightSurface is 0xFFD0EBD4.
-          // background = ShareCardBackground.solid(AppColors.greenLightSurface);
-          // isDark = false;
-          // However, gradients look premium.
-          // Let's stick to the "Olive" preset for now as it's a safe "Green" theme.
-          // Or better: Let's use the actual surface color if it's solid.
-          // modifying to use the mapped presets from before for high quality:
-          break;
-        case AppTheme.ornateTwilight:
-          // "Night Blue" preset vibe or Dark Green?
-          // Ornate Twilight is Green Dark.
-          background = ShareCardBackground.gradient(
-            const LinearGradient(
-              colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          );
-          isDark = true;
-          break;
+      if (isDarkMode) {
+        // "Night Blue" preset vibe
+        background = ShareCardBackground.gradient(
+          const LinearGradient(
+            colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        );
+      } else {
+        background = ShareCardBackground.solid(const Color(0xFFFFF4DA));
       }
 
       // 3. Trigger ShareService off-screen capture
@@ -110,9 +74,9 @@ class _ShareOptionsDialogState extends State<ShareOptionsDialog> {
         surahNumber: widget.surahNumber,
         ayahNumber: widget.ayahNumber,
         background: background,
-        isDark: isDark,
+        isDark: isDarkMode,
         size: 400,
-        frameAsset: themeService.mainframeImagePath,
+        frameAsset: themeService.getResponsiveMainframePath(brightness),
         showSurahName: _showSurahName,
         showPageNumber: _showPageNumber,
         endAyahNumber: _endAyahNumber,

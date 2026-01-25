@@ -95,7 +95,9 @@ class MyApp extends StatelessWidget {
             // in the same way, but let's leave it default for now as we are actively setting `locale`.
             return locale;
           },
-          theme: themeService.themeData,
+          theme: themeService.lightTheme,
+          darkTheme: themeService.darkTheme,
+          themeMode: themeService.themeMode,
           // Use the generated route system
           onGenerateRoute: AppRouter.generateRoute,
           initialRoute: '/',

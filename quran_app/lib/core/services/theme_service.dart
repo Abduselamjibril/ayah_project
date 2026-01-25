@@ -3,16 +3,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_colors.dart';
 
 /// Custom theme enum for the app
-enum AppTheme {
-  goldenParchment, // mainframe.png
-  midnightBlueprint, // mainframe_dark.png
-  mintGarden, // green_mainframe.png
-  ornateTwilight, // green_mainframe_dark.png
+/// Style for the Surah name holder
+enum SurahHeaderStyle {
+  golden, // mainframe.png
+  green, // green_mainframe.png
 }
 
 class ThemeService extends ChangeNotifier {
   static final ThemeService _instance = ThemeService._internal();
-  static const String _themeKey = 'app_theme';
+  static const String _themeModeKey = 'app_theme_mode';
+  static const String _surahStyleKey = 'surah_header_style';
 
   factory ThemeService() {
     return _instance;
@@ -20,104 +20,110 @@ class ThemeService extends ChangeNotifier {
 
   ThemeService._internal();
 
-  AppTheme _currentTheme = AppTheme.goldenParchment;
+  ThemeMode _themeMode = ThemeMode.light;
+  SurahHeaderStyle _surahHeaderStyle = SurahHeaderStyle.golden;
 
-  AppTheme get currentTheme => _currentTheme;
+  ThemeMode get themeMode => _themeMode;
+  SurahHeaderStyle get surahHeaderStyle => _surahHeaderStyle;
 
-  /// Get the mainframe image path for the current theme
-  String get mainframeImagePath => getMainframeImagePath(_currentTheme);
+  /// Get the mainframe image path based on current theme mode and style
+  String get mainframeImagePath {
+    // In Dark mode, always use the Dark Green mainframe
+    if (_themeMode == ThemeMode.dark) {
+      return 'assets/images/green_mainframe_dark.png';
+    }
 
-  /// Get the mainframe image path for a specific theme
-  static String getMainframeImagePath(AppTheme theme) {
-    switch (theme) {
-      case AppTheme.goldenParchment:
-        return 'assets/images/mainframe.png';
-      case AppTheme.midnightBlueprint:
-        return 'assets/images/mainframe_dark.png';
-      case AppTheme.mintGarden:
-        return 'assets/images/green_mainframe.png';
-      case AppTheme.ornateTwilight:
-        return 'assets/images/green_mainframe_dark.png';
+    // In Light mode, check preference
+    return _surahHeaderStyle == SurahHeaderStyle.green
+        ? 'assets/images/green_mainframe.png'
+        : 'assets/images/mainframe.png';
+  }
+
+  /// Helper to get correct mainframe path given the actual brightness
+  String getResponsiveMainframePath(Brightness brightness) {
+    if (brightness == Brightness.dark) {
+      return 'assets/images/green_mainframe_dark.png';
+    } else {
+      return _surahHeaderStyle == SurahHeaderStyle.green
+          ? 'assets/images/green_mainframe.png'
+          : 'assets/images/mainframe.png';
     }
   }
 
-  /// Get the page number background image path for the current theme
-  String get pageBackgroundImagePath =>
-      getPageBackgroundImagePath(_currentTheme);
-
-  /// Get the page number background image path for a specific theme
-  static String getPageBackgroundImagePath(AppTheme theme) {
-    switch (theme) {
-      case AppTheme.goldenParchment:
-        return 'assets/images/Page.png';
-      case AppTheme.midnightBlueprint:
-        return 'assets/images/Page_dark.png';
-      case AppTheme.mintGarden:
-        return 'assets/images/Page_green.png';
-      case AppTheme.ornateTwilight:
-        return 'assets/images/Page_green_dark.png';
+  /// Get the page number background image path
+  String get pageBackgroundImagePath {
+    if (_themeMode == ThemeMode.dark) {
+      return 'assets/images/Page_green_dark.png';
     }
+    // Light mode
+    return _surahHeaderStyle == SurahHeaderStyle.green
+        ? 'assets/images/Page_green.png' // New requirement: Green style in Light mode uses green page
+        : 'assets/images/Page.png';
   }
 
-  /// Get the display name for a theme
-  static String getThemeName(AppTheme theme) {
-    switch (theme) {
-      case AppTheme.goldenParchment:
-        return 'Golden Parchment';
-      case AppTheme.midnightBlueprint:
-        return 'Midnight Blueprint';
-      case AppTheme.mintGarden:
-        return 'Mint Garden';
-      case AppTheme.ornateTwilight:
-        return 'Ornate Twilight';
-    }
+  /// Get the page number background image path for a specific brightness
+  /// Note: This static method can't access instances, so consumers should prefer the instance getter
+  /// or pass the style explicitly if needed. Kept for compatibility but might need refactoring if used statically.
+  static String getPageBackgroundImagePath(bool isDark) {
+    return isDark
+        ? 'assets/images/Page_green_dark.png'
+        : 'assets/images/Page.png';
   }
 
-  /// Initialize and load saved theme preference
+  /// Initialize and load saved prefs
   Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedTheme = prefs.getString(_themeKey);
 
-    if (savedTheme != null) {
-      _currentTheme = AppTheme.values.firstWhere(
-        (theme) => theme.toString() == savedTheme,
-        orElse: () => AppTheme.goldenParchment,
+    // Load Theme Mode
+    final savedMode = prefs.getString(_themeModeKey);
+    if (savedMode != null) {
+      _themeMode = ThemeMode.values.firstWhere(
+        (e) => e.toString() == savedMode,
+        orElse: () => ThemeMode.light,
       );
-      notifyListeners();
+      // If we accidentally loaded 'system' from old prefs, force Light
+      if (_themeMode == ThemeMode.system) {
+        _themeMode = ThemeMode.light;
+      }
     }
-  }
 
-  void setTheme(AppTheme theme) {
-    _currentTheme = theme;
-    _saveTheme();
+    // Load Surah Style
+    final savedStyle = prefs.getString(_surahStyleKey);
+    if (savedStyle != null) {
+      _surahHeaderStyle = SurahHeaderStyle.values.firstWhere(
+        (e) => e.toString() == savedStyle,
+        orElse: () => SurahHeaderStyle.golden,
+      );
+    }
+
     notifyListeners();
   }
 
-  /// Save theme preference to persistent storage
-  Future<void> _saveTheme() async {
+  void setThemeMode(ThemeMode mode) {
+    if (mode == ThemeMode.system) return; // Prevent setting system
+    _themeMode = mode;
+    _saveThemeMode();
+    notifyListeners();
+  }
+
+  void setSurahHeaderStyle(SurahHeaderStyle style) {
+    _surahHeaderStyle = style;
+    _saveSurahStyle();
+    notifyListeners();
+  }
+
+  Future<void> _saveThemeMode() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_themeKey, _currentTheme.toString());
+    await prefs.setString(_themeModeKey, _themeMode.toString());
   }
 
-  /// Get ThemeData for the current theme
-  ThemeData get themeData => getThemeData(_currentTheme);
-
-  /// Get ThemeData for a specific theme
-  ThemeData getThemeData(AppTheme theme) {
-    switch (theme) {
-      case AppTheme.goldenParchment:
-        return _goldenParchmentTheme;
-      case AppTheme.midnightBlueprint:
-        return _midnightBlueprintTheme;
-      case AppTheme.mintGarden:
-        return _mintGardenTheme;
-      case AppTheme.ornateTwilight:
-        return _ornateTwilightTheme;
-    }
+  Future<void> _saveSurahStyle() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_surahStyleKey, _surahHeaderStyle.toString());
   }
 
-  /// Golden Parchment Theme (Light)
-  ThemeData get _goldenParchmentTheme {
+  /// Light Theme (Golden Parchment)
+  ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
@@ -198,174 +204,8 @@ class ThemeService extends ChangeNotifier {
     );
   }
 
-  /// Midnight Blueprint Theme (Dark)
-  ThemeData get _midnightBlueprintTheme {
-    return ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.dark,
-      primaryColor: AppColors.darkAccent,
-      scaffoldBackgroundColor: AppColors.darkBackground,
-      colorScheme: const ColorScheme.dark(
-        primary: AppColors.darkAccent,
-        secondary: AppColors.darkAccent,
-        surface: AppColors.darkSurface,
-        surfaceContainerHighest: AppColors.darkSurfaceVariant,
-        primaryContainer: AppColors.darkAccentContainer,
-        onPrimary: Colors.white,
-        onSecondary: Colors.white,
-        onSurface: AppColors.darkText,
-        onPrimaryContainer: AppColors.darkOnAccentContainer,
-      ),
-      textTheme: const TextTheme(
-        displayLarge: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: AppColors.darkText),
-        titleLarge: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-            color: AppColors.darkText),
-        titleMedium: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: AppColors.darkText),
-        bodyLarge: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.normal,
-            color: AppColors.darkText),
-        bodyMedium: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.normal,
-            color: AppColors.darkText),
-        labelLarge: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: AppColors.darkText),
-      ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.darkSurface,
-        foregroundColor: AppColors.darkAccent,
-        elevation: 0,
-        centerTitle: false,
-        titleTextStyle: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: AppColors.darkAccent),
-      ),
-      cardTheme: CardThemeData(
-        color: AppColors.darkSurface,
-        elevation: 2,
-        shadowColor: Colors.black.withOpacity(0.3),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      ),
-      listTileTheme: const ListTileThemeData(
-        iconColor: AppColors.darkAccent,
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      ),
-      bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: AppColors.darkSurface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: AppColors.darkSurfaceVariant,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      ),
-    );
-  }
-
-  /// Mint Garden Theme (Green Light)
-  ThemeData get _mintGardenTheme {
-    return ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.light,
-      primaryColor: AppColors.greenLightAccent,
-      scaffoldBackgroundColor: AppColors.greenLightBackground,
-      colorScheme: const ColorScheme.light(
-        primary: AppColors.greenLightAccent,
-        secondary: AppColors.greenLightAccent,
-        surface: AppColors.greenLightSurface,
-        surfaceContainerHighest: AppColors.greenLightSurfaceVariant,
-        primaryContainer: AppColors.greenLightAccentContainer,
-        onPrimary: Colors.white,
-        onSecondary: Colors.white,
-        onSurface: AppColors.greenLightText,
-        onPrimaryContainer: AppColors.greenLightOnAccentContainer,
-      ),
-      textTheme: const TextTheme(
-        displayLarge: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: AppColors.greenLightText),
-        titleLarge: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-            color: AppColors.greenLightText),
-        titleMedium: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: AppColors.greenLightText),
-        bodyLarge: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.normal,
-            color: AppColors.greenLightText),
-        bodyMedium: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.normal,
-            color: AppColors.greenLightText),
-        labelLarge: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: AppColors.greenLightText),
-      ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.greenLightAccent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: false,
-        titleTextStyle: TextStyle(
-            fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white),
-      ),
-      cardTheme: CardThemeData(
-        color: AppColors.greenLightSurface,
-        elevation: 2,
-        shadowColor: Colors.black.withOpacity(0.1),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      ),
-      listTileTheme: const ListTileThemeData(
-        iconColor: AppColors.greenLightAccent,
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      ),
-      bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: AppColors.greenLightSurface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: AppColors.greenLightSurfaceVariant,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      ),
-    );
-  }
-
-  /// Ornate Twilight Theme (Green Dark)
-  ThemeData get _ornateTwilightTheme {
+  /// Dark Theme (Ornate Twilight)
+  ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
@@ -447,8 +287,4 @@ class ThemeService extends ChangeNotifier {
       ),
     );
   }
-
-  // Legacy compatibility - for any code still using ThemeMode
-  ThemeData get lightTheme => _goldenParchmentTheme;
-  ThemeData get darkTheme => _midnightBlueprintTheme;
 }

@@ -93,6 +93,27 @@ class MushafController extends ChangeNotifier {
     navigateToPage(page);
   }
 
+  Timer? _highlightTimer;
+
+  /// Navigates to a verse and highlights it temporarily for the given duration.
+  /// After the duration, the highlight is automatically cleared.
+  void navigateToVerseWithTempHighlight(
+    int surah,
+    int verse, {
+    Duration duration = const Duration(seconds: 3),
+  }) {
+    // Cancel any existing highlight timer
+    _highlightTimer?.cancel();
+
+    // Navigate to the verse (this sets the highlight)
+    navigateToVerse(surah, verse);
+
+    // Set up timer to clear highlight
+    _highlightTimer = Timer(duration, () {
+      clearHighlight();
+    });
+  }
+
   void _handleSettingsChanged() {
     final nextMode = _settings.scrollMode;
     if (nextMode != _scrollMode) {
@@ -104,6 +125,7 @@ class MushafController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _highlightTimer?.cancel();
     _settings.removeListener(_handleSettingsChanged);
     scrollModeListenable.dispose();
     _navigationController.close();

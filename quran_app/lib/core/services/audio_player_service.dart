@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
@@ -44,6 +47,7 @@ class AudioPlayerService {
           androidNotificationChannelName: 'Quran Audio',
           androidNotificationOngoing: true,
           androidStopForegroundOnPause: true,
+          androidNotificationIcon: 'mipmap/ic_launcher',
         ),
       );
 
@@ -146,6 +150,26 @@ class AudioPlayerService {
 
   List<Map<String, dynamic>>? _currentPlaylistMetadata;
 
+  Uri? _cachedArtUri;
+
+  Future<Uri> _getArtUri() async {
+    if (_cachedArtUri != null) return _cachedArtUri!;
+
+    try {
+      final byteData = await rootBundle.load('assets/images/Icon.jpg');
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/lockscreen_art.jpg');
+
+      await file.writeAsBytes(byteData.buffer.asUint8List());
+
+      _cachedArtUri = Uri.file(file.path);
+      return _cachedArtUri!;
+    } catch (e) {
+      debugPrint("Error loading artwork: $e");
+      return Uri.parse("https://via.placeholder.com/150");
+    }
+  }
+
   // --- Reciter Management ---
 
   void setRecitationInfo({required int id, required String name}) {
@@ -212,7 +236,7 @@ class AudioPlayerService {
 
   // --- Playback Logic ---
 
-  /// Play a custom range with download support.
+  /// Play a custom range with download support (progressive downloads).
   Future<void> playRangeSequenceWithDownload(
     BuildContext? context, {
     required int startSurah,
@@ -228,72 +252,160 @@ class AudioPlayerService {
         await _selectOrCachedReciter(context, forceReciter: forceReciter);
     if (recitation == null) return;
 
-    // 2. Download all Surahs in range
+    // 2. Initialize storage
     final local_audio.AudioService storage = local_audio.AudioService.instance;
     await storage.initialize();
 
-    for (var s = startSurah; s <= endSurah; s++) {
-      if (!(await storage.isSurahDownloaded(recitation.id, s))) {
-        final ok = await downloadSurahIfNeeded(recitation, s);
-        if (!ok) {
-          if (context != null && context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Failed to download Surah $s')));
-          }
-          return;
+    // 3. Download ONLY the first surah initially
+    if (!(await storage.isSurahDownloaded(recitation.id, startSurah))) {
+      final ok = await downloadSurahIfNeeded(recitation, startSurah);
+      if (!ok) {
+        if (context != null && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to download Surah $startSurah')));
         }
+        return;
       }
     }
 
-    // 3. Build Playlist
-    final List<AudioSource> sources = [];
+    // 4. Build playlist for the first surah and start playback
+    final concatenatingSource = ConcatenatingAudioSource(children: []);
     final List<Map<String, dynamic>> metadata = [];
 
-    for (var s = startSurah; s <= endSurah; s++) {
-      final totalAyahs = getVerseCount(s);
-      final first = (s == startSurah) ? startAyah : 1;
-      final last = (s == endSurah) ? endAyah : totalAyahs;
+    // Add first surah to playlist
+    await _addSurahToPlaylist(
+      concatenatingSource,
+      metadata,
+      storage,
+      recitation,
+      startSurah,
+      startAyah: (startSurah == startSurah) ? startAyah : 1,
+      endAyah: (startSurah == endSurah) ? endAyah : getVerseCount(startSurah),
+    );
 
-      final file = await storage.getLocalSurahFile(recitation.id, s);
-      final segments = await storage.getLocalSegments(recitation.id, s);
-
-      if (file == null || segments == null) continue;
-
-      for (var ayah = first; ayah <= last; ayah++) {
-        final segment = segments.firstWhere((seg) => seg.ayahNumber == ayah,
-            orElse: () => segments.first);
-        final surahName = getSurahName(s);
-        final title = '$surahName : $ayah';
-
-        final mediaItem = MediaItem(
-          id: '${file.path}_$ayah', // Unique ID helps just_audio
-          album: surahName,
-          title: title,
-          artist: recitation.reciterName,
-          artUri: Uri.parse('asset:///assets/images/Icon.jpg'),
-          extras: {'surah': s, 'ayah': ayah},
-        );
-
-        final source = ClippingAudioSource(
-          child: AudioSource.file(file.path),
-          start: Duration(milliseconds: segment.timestampFrom),
-          end: Duration(milliseconds: segment.timestampTo),
-          tag: mediaItem,
-        );
-
-        sources.add(source);
-        metadata.add({'surah': s, 'ayah': ayah, 'item': mediaItem});
-      }
-    }
-
-    if (sources.isEmpty) return;
+    if (concatenatingSource.children.isEmpty) return;
     _currentPlaylistMetadata = metadata;
     hasSourceNotifier.value = true;
 
-    // 4. Play
-    // ConcatenatingAudioSource makes gapless playback possible with buffering
-    await _handler.setAudioSource(ConcatenatingAudioSource(children: sources));
+    // 5. Start playback immediately
+    await _handler.setAudioSource(concatenatingSource);
     await _handler.play();
+
+    // 6. Download and add remaining surahs in the background
+    if (startSurah < endSurah) {
+      _downloadAndAppendRemainingSurahs(
+        context,
+        concatenatingSource,
+        metadata,
+        storage,
+        recitation,
+        startSurah: startSurah + 1,
+        startAyah: 1,
+        endSurah: endSurah,
+        endAyah: endAyah,
+      );
+    }
+  }
+
+  /// Helper to add a surah's ayahs to the playlist
+  Future<void> _addSurahToPlaylist(
+    ConcatenatingAudioSource playlist,
+    List<Map<String, dynamic>> metadata,
+    local_audio.AudioService storage,
+    AudioRecitation recitation,
+    int surah, {
+    required int startAyah,
+    required int endAyah,
+  }) async {
+    final file = await storage.getLocalSurahFile(recitation.id, surah);
+    final segments = await storage.getLocalSegments(recitation.id, surah);
+
+    if (file == null || segments == null) return;
+
+    final surahName = getSurahName(surah);
+    final sources = <AudioSource>[];
+
+    final artUri = await _getArtUri();
+
+    for (var ayah = startAyah; ayah <= endAyah; ayah++) {
+      final segment = segments.firstWhere(
+        (seg) => seg.ayahNumber == ayah,
+        orElse: () => segments.first,
+      );
+      final title = '$surahName : $ayah';
+
+      final mediaItem = MediaItem(
+        id: '${file.path}_$ayah',
+        album: surahName,
+        title: title,
+        artist: recitation.reciterName,
+        artUri: artUri,
+        extras: {'surah': surah, 'ayah': ayah},
+      );
+
+      final source = ClippingAudioSource(
+        child: AudioSource.file(file.path),
+        start: Duration(milliseconds: segment.timestampFrom),
+        end: Duration(milliseconds: segment.timestampTo),
+        tag: mediaItem,
+      );
+
+      sources.add(source);
+      metadata.add({'surah': surah, 'ayah': ayah, 'item': mediaItem});
+    }
+
+    // Add all sources at once for better performance
+    await playlist.addAll(sources);
+  }
+
+  /// Background task to download and append remaining surahs
+  Future<void> _downloadAndAppendRemainingSurahs(
+    BuildContext? context,
+    ConcatenatingAudioSource playlist,
+    List<Map<String, dynamic>> metadata,
+    local_audio.AudioService storage,
+    AudioRecitation recitation, {
+    required int startSurah,
+    required int startAyah,
+    required int endSurah,
+    required int endAyah,
+  }) async {
+    for (var s = startSurah; s <= endSurah; s++) {
+      // Download if needed
+      if (!(await storage.isSurahDownloaded(recitation.id, s))) {
+        final ok = await downloadSurahIfNeeded(recitation, s);
+        if (!ok) {
+          // Download failed, show notification but don't stop playback
+          if (context != null && context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    'Failed to download Surah $s. Playback will stop at current surah.'),
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+          break; // Stop downloading further surahs
+        }
+      }
+
+      // Add to playlist
+      final first = (s == startSurah) ? startAyah : 1;
+      final last = (s == endSurah) ? endAyah : getVerseCount(s);
+
+      await _addSurahToPlaylist(
+        playlist,
+        metadata,
+        storage,
+        recitation,
+        s,
+        startAyah: first,
+        endAyah: last,
+      );
+
+      // Update the metadata reference
+      _currentPlaylistMetadata = metadata;
+    }
   }
 
   // Helpers

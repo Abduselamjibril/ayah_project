@@ -17,7 +17,7 @@ class VerseOfTheDayService {
 
   int? _surahNumber;
   int? _verseNumber;
-  bool _enabled = true;
+  bool _enabled = false; // OFF by default
   TimeOfDay _notificationTime = const TimeOfDay(hour: 8, minute: 0);
 
   int? get surahNumber => _surahNumber;
@@ -29,7 +29,7 @@ class VerseOfTheDayService {
     final prefs = await SharedPreferences.getInstance();
 
     // Load settings
-    _enabled = prefs.getBool(_keyEnabled) ?? true;
+    _enabled = prefs.getBool(_keyEnabled) ?? false; // OFF by default
     final hour = prefs.getInt(_keyTimeHour) ?? 8;
     final minute = prefs.getInt(_keyTimeMinute) ?? 0;
     _notificationTime = TimeOfDay(hour: hour, minute: minute);

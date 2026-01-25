@@ -11,6 +11,7 @@ class AppColors {
   static const Color lightTextSecondary = Color(0xFF6B5629);
   static const Color lightOnAccentContainer = Color(0xFF2A2108);
 
+  /*
   // Theme Name: "Midnight Blueprint" - Enhanced contrast
   static const Color darkBackground = Color(0xFF050A14);
   static const Color darkSurface = Color(0xFF0A1423);
@@ -30,6 +31,7 @@ class AppColors {
   static const Color greenLightText = Color(0xFF1A2E1E);
   static const Color greenLightTextSecondary = Color(0xFF3A6B47);
   static const Color greenLightOnAccentContainer = Color(0xFF0D2A1A);
+  */
 
   // Theme Name: "Ornate Twilight" - Enhanced contrast
   static const Color greenDarkBackground = Color(0xFF050505);

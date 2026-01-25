@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/khatmah.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -49,6 +51,7 @@ class KhatmahService {
 
     await _notificationsPlugin.initialize(initializationSettings);
     tz.initializeTimeZones();
+    await _configureLocalTimeZone();
 
     if (Platform.isAndroid) {
       final android =
@@ -69,10 +72,21 @@ class KhatmahService {
     }
   }
 
-  Future<void> requestPermissions() async {
+  /// Configure local timezone for cross-platform notification scheduling
+  Future<void> _configureLocalTimeZone() async {
+    if (kIsWeb) return;
+    try {
+      final timeZoneName = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timeZoneName));
+    } catch (_) {
+      tz.setLocalLocation(tz.getLocation('UTC'));
+    }
+  }
+
+  Future<bool> requestPermissions() async {
     await _ensureInitialized();
     if (Platform.isIOS) {
-      await _notificationsPlugin
+      final granted = await _notificationsPlugin
           .resolvePlatformSpecificImplementation<
               IOSFlutterLocalNotificationsPlugin>()
           ?.requestPermissions(
@@ -80,13 +94,17 @@ class KhatmahService {
             badge: true,
             sound: true,
           );
+      return granted ?? false;
     } else if (Platform.isAndroid) {
       final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
           _notificationsPlugin.resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>();
 
-      await androidImplementation?.requestNotificationsPermission();
+      final granted =
+          await androidImplementation?.requestNotificationsPermission();
+      return granted ?? true; // Android pre-13 doesn't require permission
     }
+    return true; // Other platforms
   }
 
   Future<void> _migrateLegacyData() async {
@@ -199,6 +217,19 @@ class KhatmahService {
     await _notificationsPlugin
         .cancelAll(); // Cancel existing before scheduling new
 
+    // Determine schedule mode based on platform capabilities
+    AndroidScheduleMode scheduleMode = AndroidScheduleMode.exactAllowWhileIdle;
+    if (Platform.isAndroid) {
+      final android =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      final canExact = await android?.canScheduleExactNotifications() ?? false;
+      if (!canExact) {
+        // Fallback for Android versions without exact alarm permission
+        scheduleMode = AndroidScheduleMode.inexactAllowWhileIdle;
+      }
+    }
+
     await _notificationsPlugin.zonedSchedule(
       0,
       'Read Quran',
@@ -218,7 +249,7 @@ class KhatmahService {
           presentSound: true,
         ),
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: scheduleMode,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
