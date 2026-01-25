@@ -15,6 +15,7 @@ import 'package:quran_app/features/share/presentation/dialogs/share_preview_dial
 import '../controller/mushaf_controller.dart';
 import '../screens/verse_details_screen.dart';
 import 'play_range_dialog.dart';
+import 'surah_info_sheet.dart';
 import 'package:quran_app/app/app.dart';
 import 'package:quran_app/core/services/mushaf_settings_service.dart';
 import 'package:quran_app/core/services/theme_service.dart';
@@ -245,6 +246,20 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                                       .setHighlightedVerse(surah, verse),
                               onLongPressCancel: (surah, verse) =>
                                   widget.controller.clearHighlight(),
+                              onSurahHeaderLongPress: (surahNumber) {
+                                showSurahInfoSheet(
+                                  context: context,
+                                  surahNumber: surahNumber,
+                                  onNavigateToVerse: (verseNumber) {
+                                    Navigator.pop(context);
+                                    widget.controller
+                                        .navigateToVerseWithTempHighlight(
+                                      surahNumber,
+                                      verseNumber,
+                                    );
+                                  },
+                                );
+                              },
                             );
                           },
                         ),

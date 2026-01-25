@@ -4,7 +4,13 @@ import 'package:quran_app/core/services/theme_service.dart';
 
 class HeaderWidget extends StatelessWidget {
   final int suraNumber;
-  const HeaderWidget({super.key, required this.suraNumber});
+  final VoidCallback? onLongPress;
+
+  const HeaderWidget({
+    super.key,
+    required this.suraNumber,
+    this.onLongPress,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -20,30 +26,33 @@ class HeaderWidget extends StatelessWidget {
 
     final imageWidth = referenceWidth * 0.85;
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        decoration: const BoxDecoration(),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Image.asset(
-              frameAsset,
-              width: imageWidth,
-            ),
-            RichText(
-              textAlign: TextAlign.center,
-              text: TextSpan(
-                text: "$suraNumber",
-                style: TextStyle(
-                  fontFamily: "arsura",
-                  fontSize:
-                      29, // Fixed reference font size (scales with fittedbox)
-                  color: Theme.of(context).colorScheme.onSurface,
+    return GestureDetector(
+      onLongPress: onLongPress,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          decoration: const BoxDecoration(),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Image.asset(
+                frameAsset,
+                width: imageWidth,
+              ),
+              RichText(
+                textAlign: TextAlign.center,
+                text: TextSpan(
+                  text: "$suraNumber",
+                  style: TextStyle(
+                    fontFamily: "arsura",
+                    fontSize:
+                        29, // Fixed reference font size (scales with fittedbox)
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

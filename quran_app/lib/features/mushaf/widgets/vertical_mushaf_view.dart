@@ -23,6 +23,7 @@ import 'package:quran_app/features/share/presentation/dialogs/share_preview_dial
 import 'package:quran_app/features/share/presentation/widgets/share_card.dart';
 import 'package:quran_app/features/share/services/share_service.dart';
 import 'play_range_dialog.dart';
+import 'surah_info_sheet.dart';
 
 // Result type for the verse menu editor dialog
 class _MenuEditResult {
@@ -265,6 +266,20 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                                       .setHighlightedVerse(surah, verse),
                               onLongPressCancel: (surah, verse) =>
                                   widget.controller.clearHighlight(),
+                              onSurahHeaderLongPress: (surahNumber) {
+                                showSurahInfoSheet(
+                                  context: context,
+                                  surahNumber: surahNumber,
+                                  onNavigateToVerse: (verseNumber) {
+                                    Navigator.pop(context);
+                                    widget.controller
+                                        .navigateToVerseWithTempHighlight(
+                                      surahNumber,
+                                      verseNumber,
+                                    );
+                                  },
+                                );
+                              },
                               sp: 1.0,
                               h: 1.0,
                             );
