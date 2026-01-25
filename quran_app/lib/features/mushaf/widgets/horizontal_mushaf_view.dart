@@ -167,16 +167,15 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     if (controllerPage == _lastControllerPage) return;
 
     _lastControllerPage = controllerPage;
-    final targetPage = controllerPage - 1;
-    if (!_isSliderActive && _pageController.hasClients) {
-      if (_pageController.position.isScrollingNotifier.value) return;
+    // final targetPage = controllerPage - 1; // Removed as part of fix
 
-      if ((_pageController.page?.round() ?? -1) != targetPage) {
-        _sliderValue = null;
-        _isSliderActive = false;
-        _pageController.jumpToPage(targetPage);
-      }
-    }
+    // Only update the local tracker.
+    // Programmatic jumps (e.g. from search/surah list) are handled via navigationStream.
+    // Manual scrolling updates currentPage via onPageChanged.
+    // We do NOT want to force a jump here because:
+    // 1. It causes "fighting" if the user is mid-scroll.
+    // 2. It causes reset jumps if notifyListeners() is called for non-page-change events (e.g. highlights)
+    //    and round() calculations are slightly off.
   }
 
   // Helper to get current display page from controller or slider
