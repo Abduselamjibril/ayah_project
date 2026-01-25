@@ -24,11 +24,6 @@ class _DailyVerseSettingsPageState extends State<DailyVerseSettingsPage> {
   }
 
   Future<bool> _ensureExactAlarms() async {
-    // iOS doesn't require exact alarm permission - always return true
-    if (!Theme.of(context).platform.toString().contains('android')) {
-      return true;
-    }
-
     final canExact =
         await AppNotificationService.instance.canScheduleExactAlarms();
     if (canExact) return true;
@@ -69,44 +64,71 @@ class _DailyVerseSettingsPageState extends State<DailyVerseSettingsPage> {
     return false;
   }
 
+  Future<bool> _checkNotificationPermission() async {
+    final service = AppNotificationService.instance;
+
+    // 1. Initial Check
+    bool enabled = await service.areNotificationsEnabled();
+    if (enabled) return true;
+
+    // 2. Request if not enabled
+    enabled = await service.requestPermissionsIfNeeded();
+    if (enabled) return true;
+
+    // 3. If still denied, show manual settings dialog
+    if (!mounted) return false;
+
+    final shouldOpen = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Notifications Disabled'),
+        content: const Text(
+          'Notifications are disabled for this app. Please enable them in settings to receive receiving verses.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldOpen == true) {
+      await service.openAppNotificationSettings();
+      // Wait a bit and check again
+      await Future.delayed(const Duration(seconds: 1));
+      return await service.areNotificationsEnabled();
+    }
+
+    return false;
+  }
+
   Future<void> _toggleEnabled(bool value) async {
     if (value) {
-      // Request notification permission first
-      final permGranted =
-          await AppNotificationService.instance.requestPermissionsIfNeeded();
-      if (!permGranted) {
+      // 1. Check Notification Permission
+      final notifGranted = await _checkNotificationPermission();
+      if (!notifGranted) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Notification permission is required'),
-              duration: Duration(seconds: 3),
-            ),
-          );
-          setState(() {
-            _enabled = false;
-          });
+          setState(() => _enabled = false);
         }
         return;
       }
 
-      // Then check exact alarm permission
-      final ok = await _ensureExactAlarms();
-      if (!ok) {
+      // 2. Check Exact Alarm Permission
+      final exactGranted = await _ensureExactAlarms();
+      if (!exactGranted) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                  'Exact alarm permission is required for daily notifications'),
-              duration: Duration(seconds: 3),
-            ),
-          );
-          setState(() {
-            _enabled = false;
-          });
+          setState(() => _enabled = false);
         }
         return;
       }
     }
+
     await _service.setEnabled(value);
     setState(() {
       _enabled = value;

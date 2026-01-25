@@ -35,9 +35,16 @@ class HeaderWidget extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              Image.asset(
-                frameAsset,
-                width: imageWidth,
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+                child: Image.asset(
+                  frameAsset,
+                  key: ValueKey<String>(frameAsset),
+                  width: imageWidth,
+                ),
               ),
               RichText(
                 textAlign: TextAlign.center,

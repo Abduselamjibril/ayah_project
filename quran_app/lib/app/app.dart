@@ -21,7 +21,9 @@ class App extends StatelessWidget {
       builder: (context, _) {
         return MaterialApp(
           title: 'Quran App',
-          theme: themeService.themeData,
+          theme: themeService.lightTheme,
+          darkTheme: themeService.darkTheme,
+          themeMode: themeService.themeMode,
           // Use the generated route system
           onGenerateRoute: AppRouter.generateRoute,
           initialRoute: '/', // Start with mushaf screen, or change to your home

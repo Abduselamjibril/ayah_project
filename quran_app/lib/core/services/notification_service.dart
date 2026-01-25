@@ -7,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:app_settings/app_settings.dart';
 
 class AppNotificationService {
   AppNotificationService._();
@@ -14,6 +15,28 @@ class AppNotificationService {
 
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
+
+  /// Opens system notification settings for the app
+  Future<void> openAppNotificationSettings() async {
+    await AppSettings.openAppSettings(type: AppSettingsType.notification);
+  }
+
+  /// Checks if notification permission is granted (Android 13+ and iOS)
+  Future<bool> areNotificationsEnabled() async {
+    if (kIsWeb) return false;
+
+    if (Platform.isAndroid) {
+      final android = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      return await android?.areNotificationsEnabled() ?? true;
+    } else if (Platform.isIOS) {
+      final ios = _plugin.resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin>();
+      final settings = await ios?.checkPermissions();
+      return settings?.isEnabled ?? false;
+    }
+    return true;
+  }
 
   static const AndroidNotificationChannel _downloadChannel =
       AndroidNotificationChannel(

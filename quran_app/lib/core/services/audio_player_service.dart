@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
@@ -147,8 +150,24 @@ class AudioPlayerService {
 
   List<Map<String, dynamic>>? _currentPlaylistMetadata;
 
-  Uri _appArtworkUri() {
-    return Uri.parse('asset:///assets/images/Icon.jpg');
+  Uri? _cachedArtUri;
+
+  Future<Uri> _getArtUri() async {
+    if (_cachedArtUri != null) return _cachedArtUri!;
+
+    try {
+      final byteData = await rootBundle.load('assets/images/Icon.jpg');
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/lockscreen_art.jpg');
+
+      await file.writeAsBytes(byteData.buffer.asUint8List());
+
+      _cachedArtUri = Uri.file(file.path);
+      return _cachedArtUri!;
+    } catch (e) {
+      debugPrint("Error loading artwork: $e");
+      return Uri.parse("https://via.placeholder.com/150");
+    }
   }
 
   // --- Reciter Management ---
@@ -306,6 +325,8 @@ class AudioPlayerService {
     final surahName = getSurahName(surah);
     final sources = <AudioSource>[];
 
+    final artUri = await _getArtUri();
+
     for (var ayah = startAyah; ayah <= endAyah; ayah++) {
       final segment = segments.firstWhere(
         (seg) => seg.ayahNumber == ayah,
@@ -318,7 +339,7 @@ class AudioPlayerService {
         album: surahName,
         title: title,
         artist: recitation.reciterName,
-        artUri: _appArtworkUri(),
+        artUri: artUri,
         extras: {'surah': surah, 'ayah': ayah},
       );
 

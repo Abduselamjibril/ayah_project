@@ -166,18 +166,15 @@ String getVerse(
   int verseNumber, {
   bool verseEndSymbol = false,
 }) {
-  String verse = '';
-  for (var i in quranText) {
-    if (i['surah_number'] == surahNumber && i['verse_number'] == verseNumber) {
-      verse = i['content'].toString();
-      break;
-    }
-  }
+  _initQuranTextIndex();
+  final key = "$surahNumber:$verseNumber";
+  final item = _quranTextIndex![key];
 
-  if (verse == '') {
+  if (item == null) {
     throw "No verse found with given surahNumber and verseNumber.";
   }
 
+  final verse = item['content'].toString();
   return verse + (verseEndSymbol ? getVerseEndSymbol(verseNumber) : '');
 }
 
