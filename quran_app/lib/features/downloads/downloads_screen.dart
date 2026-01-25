@@ -436,6 +436,9 @@ class _DownloadsScreenState extends State<DownloadsScreen>
         ],
         bottom: TabBar(
           controller: _tabController,
+          labelColor: accent,
+          unselectedLabelColor: theme.textTheme.bodyMedium?.color,
+          indicatorColor: accent,
           tabs: [
             Tab(
                 text: AppLocalizations.of(context)
@@ -497,6 +500,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     print('Loaded translation languages: $sortedLanguages'); // Debug log
 
     return ListView.builder(
+      padding: const EdgeInsets.all(12),
       itemCount: sortedLanguages.length,
       itemBuilder: (context, index) {
         final langName = sortedLanguages[index];
@@ -511,63 +515,93 @@ class _DownloadsScreenState extends State<DownloadsScreen>
 
         final translations = groupedByLanguage[langName]!;
 
-        return ExpansionTile(
-          leading: Text(
-            displayFlag,
-            style: const TextStyle(fontSize: 24),
-          ),
-          title: Text(
-            displayName,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          subtitle: Text(
-              (AppLocalizations.of(context)?.translate('translation_count') ??
-                      '{count} translation{s}')
-                  .replaceAll('{count}', '${translations.length}')),
-          children: translations.map((edition) {
-            final isDownloaded =
-                _downloadedTranslations.contains(edition.id.toString());
-            final isDownloading = _isDownloading[edition.id.toString()] == true;
-            final progress = _downloadProgress[edition.id.toString()];
-            const isSelected = false; // selection managed in TafsirScreen only
-            final percent =
-                ((_downloadProgress[edition.id.toString()] ?? 0) * 100)
-                    .clamp(0, 100)
-                    .toStringAsFixed(0);
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: ExpansionTile(
+            leading: Text(
+              displayFlag,
+              style: const TextStyle(fontSize: 24),
+            ),
+            title: Text(
+              displayName,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text(
+                (AppLocalizations.of(context)?.translate('translation_count') ??
+                        '{count} translation{s}')
+                    .replaceAll('{count}', '${translations.length}')),
+            children: translations.map((edition) {
+              final isDownloaded =
+                  _downloadedTranslations.contains(edition.id.toString());
+              final isDownloading =
+                  _isDownloading[edition.id.toString()] == true;
+              final progress = _downloadProgress[edition.id.toString()];
+              final percent =
+                  ((_downloadProgress[edition.id.toString()] ?? 0) * 100)
+                      .clamp(0, 100)
+                      .toStringAsFixed(0);
 
-            return ListTile(
-              title: Text(edition.name),
-              subtitle: isDownloading
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        LinearProgressIndicator(value: progress),
-                        const SizedBox(height: 4),
-                        Text('$percent%'),
-                      ],
-                    )
-                  : Text(isDownloaded ? 'Downloaded' : 'Not downloaded'),
-              onTap: null,
-              trailing: isDownloading
-                  ? const SizedBox.shrink()
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (isDownloaded)
-                          IconButton(
-                            icon: const Icon(Icons.delete),
-                            onPressed: () => _deleteTranslation(
-                                edition.id.toString(), edition.name),
-                          )
-                        else
-                          IconButton(
-                            icon: const Icon(Icons.download),
-                            onPressed: () => _downloadTranslation(edition),
-                          ),
-                      ],
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Column(
+                  children: [
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(edition.name,
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: isDownloading
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                LinearProgressIndicator(value: progress),
+                                const SizedBox(height: 4),
+                                Text('$percent%'),
+                              ],
+                            )
+                          : Row(
+                              children: [
+                                _StatusChip(
+                                  label: isDownloaded
+                                      ? 'Downloaded'
+                                      : 'Not downloaded',
+                                  color: isDownloaded
+                                      ? Colors.green.shade100
+                                      : Colors.orange.shade100,
+                                  textColor: isDownloaded
+                                      ? Colors.green.shade900
+                                      : Colors.orange.shade900,
+                                ),
+                              ],
+                            ),
+                      trailing: isDownloading
+                          ? const SizedBox.shrink()
+                          : Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isDownloaded)
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline),
+                                    onPressed: () => _deleteTranslation(
+                                        edition.id.toString(), edition.name),
+                                  )
+                                else
+                                  FilledButton.icon(
+                                    onPressed: () =>
+                                        _downloadTranslation(edition),
+                                    icon: const Icon(Icons.download),
+                                    label: const Text('Download'),
+                                  ),
+                              ],
+                            ),
                     ),
-            );
-          }).toList(),
+                    const Divider(height: 1),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
         );
       },
     );
@@ -609,6 +643,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     print('Loaded tafsir languages: $sortedLanguages'); // Debug log
 
     return ListView.builder(
+      padding: const EdgeInsets.all(12),
       itemCount: sortedLanguages.length,
       itemBuilder: (context, index) {
         final langName = sortedLanguages[index];
@@ -623,63 +658,92 @@ class _DownloadsScreenState extends State<DownloadsScreen>
 
         final tafsirs = groupedByLanguage[langName]!;
 
-        return ExpansionTile(
-          leading: Text(
-            displayFlag,
-            style: const TextStyle(fontSize: 24),
-          ),
-          title: Text(
-            displayName,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          subtitle: Text(
-              (AppLocalizations.of(context)?.translate('tafsir_count') ??
-                      '{count} tafsir{s}')
-                  .replaceAll('{count}', '${tafsirs.length}')),
-          children: tafsirs.map((edition) {
-            final isDownloaded =
-                _downloadedTafsirs.contains(edition.id.toString());
-            final isDownloading = _isDownloading[edition.id.toString()] == true;
-            final progress = _downloadProgress[edition.id.toString()];
-            const isSelected = false; // selection managed in TafsirScreen only
-            final percent =
-                ((_downloadProgress[edition.id.toString()] ?? 0) * 100)
-                    .clamp(0, 100)
-                    .toStringAsFixed(0);
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: ExpansionTile(
+            leading: Text(
+              displayFlag,
+              style: const TextStyle(fontSize: 24),
+            ),
+            title: Text(
+              displayName,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text(
+                (AppLocalizations.of(context)?.translate('tafsir_count') ??
+                        '{count} tafsir{s}')
+                    .replaceAll('{count}', '${tafsirs.length}')),
+            children: tafsirs.map((edition) {
+              final isDownloaded =
+                  _downloadedTafsirs.contains(edition.id.toString());
+              final isDownloading =
+                  _isDownloading[edition.id.toString()] == true;
+              final progress = _downloadProgress[edition.id.toString()];
+              final percent =
+                  ((_downloadProgress[edition.id.toString()] ?? 0) * 100)
+                      .clamp(0, 100)
+                      .toStringAsFixed(0);
 
-            return ListTile(
-              title: Text(edition.name),
-              subtitle: isDownloading
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        LinearProgressIndicator(value: progress),
-                        const SizedBox(height: 4),
-                        Text('$percent%'),
-                      ],
-                    )
-                  : Text(isDownloaded ? 'Downloaded' : 'Not downloaded'),
-              onTap: null,
-              trailing: isDownloading
-                  ? const SizedBox.shrink()
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (isDownloaded)
-                          IconButton(
-                            icon: const Icon(Icons.delete),
-                            onPressed: () => _deleteTafsir(
-                                edition.id.toString(), edition.name),
-                          )
-                        else
-                          IconButton(
-                            icon: const Icon(Icons.download),
-                            onPressed: () => _downloadTafsir(edition),
-                          ),
-                      ],
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Column(
+                  children: [
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(edition.name,
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: isDownloading
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                LinearProgressIndicator(value: progress),
+                                const SizedBox(height: 4),
+                                Text('$percent%'),
+                              ],
+                            )
+                          : Row(
+                              children: [
+                                _StatusChip(
+                                  label: isDownloaded
+                                      ? 'Downloaded'
+                                      : 'Not downloaded',
+                                  color: isDownloaded
+                                      ? Colors.green.shade100
+                                      : Colors.orange.shade100,
+                                  textColor: isDownloaded
+                                      ? Colors.green.shade900
+                                      : Colors.orange.shade900,
+                                ),
+                              ],
+                            ),
+                      trailing: isDownloading
+                          ? const SizedBox.shrink()
+                          : Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isDownloaded)
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline),
+                                    onPressed: () => _deleteTafsir(
+                                        edition.id.toString(), edition.name),
+                                  )
+                                else
+                                  FilledButton.icon(
+                                    onPressed: () => _downloadTafsir(edition),
+                                    icon: const Icon(Icons.download),
+                                    label: const Text('Download'),
+                                  ),
+                              ],
+                            ),
                     ),
-            );
-          }).toList(),
+                    const Divider(height: 1),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
         );
       },
     );
@@ -710,6 +774,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     }
 
     return ListView.builder(
+      padding: const EdgeInsets.all(12),
       itemCount: _availableRecitations.length,
       itemBuilder: (context, index) {
         final r = _availableRecitations[index];
@@ -717,33 +782,73 @@ class _DownloadsScreenState extends State<DownloadsScreen>
         final isAnyDownloading = _isDownloading.entries
             .any((e) => e.key.startsWith(keyPrefix) && e.value == true);
         final downloadedSurahs = _downloadedAudioSurahs[r.id] ?? [];
-        return ListTile(
-          title: Text(r.reciterName),
-          subtitle: Text((AppLocalizations.of(context)
-                      ?.translate('downloaded_surahs_label') ??
-                  'Downloaded surahs: {list}')
-              .replaceAll('{list}', downloadedSurahs.join(', '))),
-          trailing: isAnyDownloading
-              ? SizedBox(
-                  width: 100,
-                  child: LinearProgressIndicator(
-                    value: _downloadProgress.entries
-                        .where((e) => e.key.startsWith(keyPrefix))
-                        .map((e) => e.value)
-                        .fold<double>(0.0, (a, b) => b),
-                  ),
-                )
-              : const Icon(Icons.chevron_right),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => AudioSurahListPage(recitation: r),
-              ),
-            );
-          },
+        final latestProgress = _downloadProgress.entries
+            .where((e) => e.key.startsWith(keyPrefix))
+            .map((e) => e.value)
+            .fold<double>(0.0, (a, b) => b);
+
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: ListTile(
+            title: Text(r.reciterName,
+                style: const TextStyle(fontWeight: FontWeight.w700)),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text((AppLocalizations.of(context)
+                            ?.translate('downloaded_surahs_label') ??
+                        'Downloaded surahs: {list}')
+                    .replaceAll(
+                        '{list}',
+                        downloadedSurahs.isEmpty
+                            ? 'None'
+                            : downloadedSurahs.join(', '))),
+                const SizedBox(height: 6),
+                if (isAnyDownloading)
+                  LinearProgressIndicator(value: latestProgress),
+              ],
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AudioSurahListPage(recitation: r),
+                ),
+              );
+            },
+          ),
         );
       },
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({
+    required this.label,
+    required this.color,
+    required this.textColor,
+  });
+
+  final String label;
+  final Color color;
+  final Color textColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(color: textColor, fontSize: 12),
+      ),
     );
   }
 }
