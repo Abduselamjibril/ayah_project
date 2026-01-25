@@ -103,11 +103,13 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
 
     _audioPlayer = AudioPlayerService.instance;
     _ayahListener = () {
-      if (!mounted || !_isSequentialMode) return;
+      if (!mounted) return;
       final s = _audioPlayer.currentSurah.value;
       final a = _audioPlayer.currentAyah.value;
       if (s != null && a != null) {
         widget.controller.setHighlightedVerse(s, a);
+      } else {
+        widget.controller.clearHighlight();
       }
     };
     _audioPlayer.currentSurah.addListener(_ayahListener);

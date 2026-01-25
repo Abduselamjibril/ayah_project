@@ -267,10 +267,12 @@ class ThemeSettingsPage extends StatelessWidget {
                 child: ClipRect(
                   child: Align(
                     alignment: Alignment.centerRight,
-                    widthFactor: 0.5, // Show right half of the image
+                    widthFactor: 0.5, // Show right half of the image space
                     child: Image.asset(
                       assetPath,
                       fit: BoxFit.cover,
+                      alignment: Alignment
+                          .centerRight, // Effectively show the right side of the source image
                       height: double.infinity,
                       width: double.infinity,
                     ),

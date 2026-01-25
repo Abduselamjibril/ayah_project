@@ -72,19 +72,22 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     _loopMode = _audioPlayer.loopMode.value;
 
     _reciterName = _audioPlayer.recitationName;
-    _showExpanded =
-        _audioPlayer.isPlaying.value || _audioPlayer.isDownloading.value;
+    _showExpanded = _audioPlayer.isPlaying.value ||
+        _audioPlayer.isDownloading.value ||
+        _audioPlayer.hasSourceNotifier.value;
 
     _playerStateListener = () {
       if (!mounted) return;
       final playing = _audioPlayer.isPlaying.value;
+      final hasSource = _audioPlayer.hasSourceNotifier.value;
       setState(() {
         _isPlaying = playing;
+        _hasSource = hasSource;
         // Keep expanded when paused (hasSource=true), only collapse when stopped
-        if (!playing && !_isDownloading && !_hasSource) {
-          _showExpanded = false;
-        } else if (playing || _hasSource) {
+        if (playing || hasSource || _isDownloading) {
           _showExpanded = true;
+        } else {
+          _showExpanded = false;
         }
       });
     };

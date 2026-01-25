@@ -115,6 +115,8 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
       final a = _audioPlayer.currentAyah.value;
       if (s != null && a != null) {
         widget.controller.setHighlightedVerse(s, a);
+      } else {
+        widget.controller.clearHighlight();
       }
     };
 
