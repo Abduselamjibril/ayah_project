@@ -60,6 +60,15 @@ class BookmarkNotesNotifier extends ChangeNotifier {
     return _notesByKey[_verseKey(surahId, ayahId)];
   }
 
+  Future<void> deleteBookmark(int surahId, int ayahId) async {
+    final key = _verseKey(surahId, ayahId);
+    if (_bookmarksByKey.containsKey(key)) {
+      await _repository.deleteBookmarkForVerse(surahId, ayahId);
+      _bookmarksByKey.remove(key);
+      notifyListeners();
+    }
+  }
+
   Future<void> toggleBookmark({
     required int surahId,
     required int ayahId,

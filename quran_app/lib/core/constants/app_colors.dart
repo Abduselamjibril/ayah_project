@@ -33,13 +33,20 @@ class AppColors {
   static const Color greenLightOnAccentContainer = Color(0xFF0D2A1A);
   */
 
-  // Theme Name: "Ornate Twilight" - Enhanced contrast
-  static const Color greenDarkBackground = Color(0xFF050505);
-  static const Color greenDarkSurface = Color(0xFF1A1A1A);
-  static const Color greenDarkSurfaceVariant = Color(0xFF2E2E2E);
-  static const Color greenDarkAccent = Color(0xFFC0C0C0);
-  static const Color greenDarkAccentContainer = Color(0xFF666666);
-  static const Color greenDarkText = Color(0xFFF0F0F0);
-  static const Color greenDarkTextSecondary = Color(0xFFB0B0B0);
-  static const Color greenDarkOnAccentContainer = Color(0xFFF0F0F0);
+  // Theme Name: "Ornate Twilight" - User customized dark mode
+  static const Color greenDarkBackground = Color(0xFF1A1C1E); // Deep Charcoal
+  static const Color greenDarkSurface =
+      Color(0xFF2D3436); // Forest Border (for cards/surfaces)
+  static const Color greenDarkSurfaceVariant =
+      Color(0xFF2D3436); // Forest Border
+  static const Color greenDarkAccent =
+      Color(0xFF00A36C); // Emerald Green (Primary/Action)
+  static const Color greenDarkAccentContainer =
+      Color(0xFF86EFAC); // Mint Glow (Secondary/Success)
+  static const Color greenDarkText =
+      Color(0xFFFFFFFF); // Pure White (Primary Text)
+  static const Color greenDarkTextSecondary =
+      Color(0xFF94A3B8); // Silver Mist (Secondary Text)
+  static const Color greenDarkOnAccentContainer =
+      Color(0xFFFFFFFF); // Pure White
 }

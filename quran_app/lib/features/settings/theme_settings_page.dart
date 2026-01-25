@@ -101,6 +101,39 @@ class ThemeSettingsPage extends StatelessWidget {
                 ],
               ),
 
+              // Pure Black Background - Only show in Dark mode
+              if (themeService.themeMode == ThemeMode.dark) ...[
+                SizedBox(height: headerGap),
+                Padding(
+                  padding: EdgeInsets.only(bottom: titleSpacing),
+                  child: Text(
+                    'Dark Mode Options',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: ResponsiveLayout.scaled(context, 18,
+                            min: 16, max: 20)),
+                  ),
+                ),
+                Card(
+                  margin: EdgeInsets.symmetric(vertical: sectionGap / 2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: SwitchListTile(
+                    title: const Text(
+                      'Pure Black Background',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle:
+                        const Text('Use pure black for Mushaf background'),
+                    value: themeService.pureBlackBackground,
+                    onChanged: (value) =>
+                        themeService.setPureBlackBackground(value),
+                    activeColor: accent,
+                  ),
+                ),
+              ],
+
               // Surah Name Holder - Only show if current effective mode allows choice
               if (themeService.themeMode != ThemeMode.dark) ...[
                 SizedBox(height: headerGap),

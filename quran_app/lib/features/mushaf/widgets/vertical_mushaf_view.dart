@@ -78,12 +78,10 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   int _scrollGeneration = 0;
 
   static const List<String> _bookmarkColors = [
-    '#FFB300',
-    '#4DB6AC',
-    '#29B6F6',
-    '#AB47BC',
-    '#EF5350',
-    '#8D6E63',
+    '#EF5350', // Red
+    '#FFB300', // Yellow
+    '#66BB6A', // Green
+    '#42A5F5', // Blue
   ];
 
   static const List<String> _defaultSectionOrder = [
@@ -277,8 +275,9 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                               itemPositionsListener: _itemPositionsListener,
                               textColor:
                                   Theme.of(context).colorScheme.onSurface,
-                              pageBackgroundColor:
-                                  Theme.of(context).scaffoldBackgroundColor,
+                              pageBackgroundColor: ThemeService()
+                                  .getMushafBackgroundColor(
+                                      Theme.of(context).brightness),
                               verseBackgroundColor: (s, v) =>
                                   _getVerseBackgroundColor(bookmarkState, s, v),
                               onLongPress: (surah, verse) => _showVerseOptions(
@@ -1100,6 +1099,34 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                                     );
                                   }).toList(),
                                 ),
+                                if (themeMode == ThemeMode.dark) ...[
+                                  const SizedBox(height: 18),
+                                  Text(
+                                    'Dark Mode Options',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(fontWeight: FontWeight.w700),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  SwitchListTile(
+                                    title: const Text(
+                                      'Pure Black Background',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w600),
+                                    ),
+                                    subtitle:
+                                        const Text('Use pure black for Mushaf'),
+                                    value: themeService.pureBlackBackground,
+                                    onChanged: (value) {
+                                      themeService
+                                          .setPureBlackBackground(value);
+                                      setStateSheet(() {});
+                                    },
+                                    activeColor: BrandColors.accent,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ],
                                 if (themeMode != ThemeMode.dark) ...[
                                   const SizedBox(height: 18),
                                   Text(
@@ -1598,15 +1625,16 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
         child: InkWell(
           onTap: () {
             Navigator.pop(context);
-            unawaited(() async {
-              await state.saveBookmark(
-                  surahId: surah,
-                  ayahId: verse,
-                  colorHex: hex,
-                  category: 'Highlight');
-              if (!mounted) return;
-              _showBookmarkSnackbar(context, false);
-            }());
+            if (isSelected) {
+              state.deleteBookmark(surah, verse);
+            } else {
+              state.saveBookmark(
+                surahId: surah,
+                ayahId: verse,
+                colorHex: hex,
+                category: _getCategoryName(hex),
+              );
+            }
           },
           borderRadius: BorderRadius.circular(20),
           child: Container(
@@ -1625,6 +1653,14 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
       ));
     }
     return Row(children: chips);
+  }
+
+  String _getCategoryName(String hex) {
+    if (hex == '#EF5350') return 'Red';
+    if (hex == '#FFB300') return 'Yellow';
+    if (hex == '#66BB6A') return 'Green';
+    if (hex == '#42A5F5') return 'Blue';
+    return 'Bookmark';
   }
 
   Widget _buildQuickActions(BuildContext context, BookmarkNotesNotifier state,
