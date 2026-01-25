@@ -400,11 +400,20 @@ class _SurahDrawerState extends State<SurahDrawer>
   }
 
   Widget _buildBottomBar(BuildContext context) {
-    // Your custom bottom navigation bar UI from HEAD
+    // Keep original theme color and restore elevation-based shadow
+    final theme = Theme.of(context);
+    final Color navBg = theme.bottomNavigationBarTheme.backgroundColor ??
+        theme.colorScheme.surface;
+    final double navElevation = theme.bottomNavigationBarTheme.elevation ?? 8.0;
+
     return SafeArea(
       top: false,
+      bottom: false,
+      minimum: EdgeInsets.zero,
       child: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
+        backgroundColor: navBg,
+        elevation: navElevation,
         currentIndex: _selectedTabIndex,
         onTap: (index) {
           setState(() {
@@ -412,8 +421,7 @@ class _SurahDrawerState extends State<SurahDrawer>
           });
         },
         selectedItemColor: BrandColors.accent,
-        unselectedItemColor:
-            Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+        unselectedItemColor: theme.colorScheme.onSurface.withOpacity(0.6),
         items: [
           BottomNavigationBarItem(
             icon: const Icon(Icons.menu_book_rounded),

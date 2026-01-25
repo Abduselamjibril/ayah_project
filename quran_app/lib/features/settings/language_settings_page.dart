@@ -26,7 +26,7 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
     final cardBg = theme.cardColor.withOpacity(0.5);
 
     final leadingWidth =
-        ResponsiveLayout.scaled(context, 100, min: 88, max: 130);
+        ResponsiveLayout.scaled(context, 132, min: 110, max: 150);
     final backIconSize = ResponsiveLayout.scaled(context, 18, min: 16, max: 22);
     final backFontSize = ResponsiveLayout.scaled(context, 16, min: 14, max: 18);
     final titleFontSize =
@@ -51,6 +51,9 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
               color: accent, size: backIconSize),
           label: Text(
             'Settings',
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
                 color: accent,
                 fontSize: backFontSize,

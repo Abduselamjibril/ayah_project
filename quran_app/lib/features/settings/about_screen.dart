@@ -12,7 +12,7 @@ class AboutScreen extends StatelessWidget {
     final accent = BrandColors.accent;
     final cardBg = theme.colorScheme.onSurface.withOpacity(0.12);
     final leadingWidth =
-        ResponsiveLayout.scaled(context, 120, min: 96, max: 140);
+        ResponsiveLayout.scaled(context, 132, min: 110, max: 150);
     final backIconSize = ResponsiveLayout.scaled(context, 18, min: 16, max: 22);
     final backFontSize = ResponsiveLayout.scaled(context, 15, min: 13, max: 17);
     final titleFontSize =

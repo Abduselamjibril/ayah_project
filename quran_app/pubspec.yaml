@@ -29,6 +29,7 @@ dependencies:
   flutter_html: ^3.0.0
   html_unescape: ^2.0.0
   wakelock_plus: ^1.2.6
+  device_preview: ^1.2.0
   share_plus: ^10.1.2
   screenshot: ^3.0.0
   home_widget: ^0.8.1
