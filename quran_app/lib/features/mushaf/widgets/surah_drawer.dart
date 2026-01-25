@@ -142,8 +142,12 @@ class _SurahDrawerState extends State<SurahDrawer>
 
   Widget _buildTopBar(BuildContext context) {
     // Your custom top bar UI from HEAD
+    final double topInset = MediaQuery.of(context).viewPadding.top;
+    final double topPadding = topInset > 0 ? topInset + 8 : 32;
+    final double backIconLift = topPadding - 32;
     return Padding(
-      padding: const EdgeInsets.only(top: 32, left: 16, right: 16, bottom: 10),
+      padding:
+          EdgeInsets.only(top: topPadding, left: 16, right: 16, bottom: 10),
       child: Column(
         children: [
           Row(
@@ -190,21 +194,26 @@ class _SurahDrawerState extends State<SurahDrawer>
                 ),
               ),
               const SizedBox(width: 12),
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color:
-                      Theme.of(context).colorScheme.onSurface.withOpacity(0.14),
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  padding: EdgeInsets.zero,
-                  icon: Icon(
-                    Icons.chevron_right,
-                    color: BrandColors.accent,
+              Transform.translate(
+                offset: Offset(0, -backIconLift),
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.14),
+                    shape: BoxShape.circle,
                   ),
-                  onPressed: () => Navigator.of(context).maybePop(),
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    icon: Icon(
+                      Icons.chevron_right,
+                      color: BrandColors.accent,
+                    ),
+                    onPressed: () => Navigator.of(context).maybePop(),
+                  ),
                 ),
               ),
             ],
