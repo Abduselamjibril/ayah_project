@@ -116,7 +116,7 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
               ],
             ),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisSize: MainAxisSize.max,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
@@ -147,255 +147,251 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                   ],
                 ),
                 const SizedBox(height: 18),
-                FutureBuilder<HijriDateResponse?>(
-                  future: _dateFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 12.0),
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      );
-                    }
-
-                    final data = snapshot.data?.data;
-                    final hijri = data?.hijri;
-                    final greg = data?.gregorian;
-
-                    Widget buildCard(
-                        {required String month, required String day}) {
-                      return Expanded(
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 6),
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 14, horizontal: 12),
-                          decoration: BoxDecoration(
-                            color:
-                                theme.colorScheme.onSurface.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                month,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.onSurface
-                                      .withOpacity(0.7),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                day,
-                                style: theme.textTheme.headlineMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  color: theme.colorScheme.onSurface,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-
-                    return Row(
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        buildCard(
-                          month: (hijri?.monthName ?? '').toUpperCase(),
-                          day: hijri != null ? '${hijri.day}' : '--',
-                        ),
-                        buildCard(
-                          month: (greg?.monthName ?? '').toUpperCase(),
-                          day: greg != null ? '${greg.day}' : '--',
-                        ),
-                      ],
-                    );
-                  },
-                ),
-                const SizedBox(height: 28),
-                Text(
-                  AppLocalizations.of(context)
-                          ?.translate('verse_of_the_day_title') ??
-                      'Verse of the Day',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.onSurface.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Directionality(
-                        textDirection: TextDirection.rtl,
-                        child: Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(
-                                text: verseText,
-                                style: TextStyle(
-                                  fontFamily:
-                                      'QCF_P${getPageNumber(surah, verse).toString().padLeft(3, '0')}',
-                                  fontSize: 22,
-                                  height: 1.7,
-                                  color: theme.colorScheme.onSurface,
+                        FutureBuilder<HijriDateResponse?>(
+                          future: _dateFuture,
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 12.0),
+                                  child: CircularProgressIndicator(strokeWidth: 2),
                                 ),
-                              ),
-                              TextSpan(
-                                text: verseNumberSymbol,
-                                style: TextStyle(
-                                  fontFamily:
-                                      'QCF_P${getPageNumber(surah, verse).toString().padLeft(3, '0')}',
-                                  fontSize: 22,
-                                  height: 1.7,
-                                  color: theme.primaryColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                          textAlign: TextAlign.left,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Divider(
-                        height: 1,
-                        color: theme.colorScheme.onSurface.withOpacity(0.08),
-                      ),
-                      const SizedBox(height: 8),
-                      InkWell(
-                        borderRadius: BorderRadius.circular(10),
-                        onTap: () {
-                          if (_hasSelectedTranslation &&
-                              _translationText != null) {
-                            setState(() {
-                              _showTranslation = !_showTranslation;
-                            });
-                          }
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 6, horizontal: 4),
-                          child: Row(
-                            children: [
-                              Text(
-                                AppLocalizations.of(context)
-                                        ?.translate('translation') ??
-                                    'Translation',
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  color: theme.primaryColor,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const Spacer(),
-                              Icon(
-                                _showTranslation
-                                    ? Icons.expand_less_rounded
-                                    : Icons.chevron_right_rounded,
-                                color: theme.primaryColor,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      if (!_isLoadingTranslation) ...[
-                        if (_hasSelectedTranslation && _translationText != null)
-                          AnimatedCrossFade(
-                            firstChild: const SizedBox.shrink(),
-                            secondChild: Padding(
-                              padding: const EdgeInsets.only(top: 8, bottom: 4),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _translationText ?? '',
-                                    style: theme.textTheme.bodyLarge?.copyWith(
-                                      height: 1.6,
-                                    ),
+                              );
+                            }
+
+                            final data = snapshot.data?.data;
+                            final hijri = data?.hijri;
+                            final greg = data?.gregorian;
+
+                            Widget buildCard(
+                                {required String month, required String day}) {
+                              return Expanded(
+                                child: Container(
+                                  margin: const EdgeInsets.symmetric(horizontal: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 14, horizontal: 12),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.onSurface.withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(14),
                                   ),
-                                  if (_translatorName != null) ...[
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      _translatorName!,
-                                      style:
-                                          theme.textTheme.bodySmall?.copyWith(
-                                        color: theme.colorScheme.onSurface
-                                            .withOpacity(0.6),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        month,
+                                        style: theme.textTheme.bodyMedium?.copyWith(
+                                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                            crossFadeState: _showTranslation
-                                ? CrossFadeState.showSecond
-                                : CrossFadeState.showFirst,
-                            duration: const Duration(milliseconds: 200),
-                          )
-                        else
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8, bottom: 4),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        day,
+                                        style: theme.textTheme.headlineMedium?.copyWith(
+                                          fontWeight: FontWeight.w800,
+                                          color: theme.colorScheme.onSurface,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
+
+                            return Row(
                               children: [
-                                Text(
-                                  AppLocalizations.of(context)?.translate(
-                                          'no_translation_selected') ??
-                                      'Select a translation to see it here',
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: theme.colorScheme.onSurface
-                                        .withOpacity(0.7),
-                                  ),
+                                buildCard(
+                                  month: (hijri?.monthName ?? '').toUpperCase(),
+                                  day: hijri != null ? '${hijri.day}' : '--',
                                 ),
-                                const SizedBox(height: 6),
-                                TextButton.icon(
-                                  style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 0),
-                                    foregroundColor: theme.primaryColor,
-                                  ),
-                                  onPressed: () async {
-                                    await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => const DownloadsScreen(),
-                                      ),
-                                    );
-                                    if (mounted) _loadTranslation();
-                                  },
-                                  icon: const Icon(Icons.download_for_offline),
-                                  label: Text(
-                                    AppLocalizations.of(context)
-                                            ?.translate('select_translation') ??
-                                        'Select Translation',
-                                  ),
+                                buildCard(
+                                  month: (greg?.monthName ?? '').toUpperCase(),
+                                  day: greg != null ? '${greg.day}' : '--',
                                 ),
                               ],
-                            ),
-                          )
-                      ] else
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8.0),
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                            );
+                          },
                         ),
-                    ],
+                        const SizedBox(height: 28),
+                        Text(
+                          AppLocalizations.of(context)
+                                  ?.translate('verse_of_the_day_title') ??
+                              'Verse of the Day',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.onSurface.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Directionality(
+                                textDirection: TextDirection.rtl,
+                                child: Text.rich(
+                                  TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: verseText,
+                                        style: TextStyle(
+                                          fontFamily: 'QCF_P${getPageNumber(surah, verse).toString().padLeft(3, '0')}',
+                                          fontSize: 22,
+                                          height: 1.7,
+                                          color: theme.colorScheme.onSurface,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: verseNumberSymbol,
+                                        style: TextStyle(
+                                          fontFamily: 'QCF_P${getPageNumber(surah, verse).toString().padLeft(3, '0')}',
+                                          fontSize: 22,
+                                          height: 1.7,
+                                          color: theme.primaryColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  textAlign: TextAlign.left,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Divider(
+                                height: 1,
+                                color: theme.colorScheme.onSurface.withOpacity(0.08),
+                              ),
+                              const SizedBox(height: 8),
+                              InkWell(
+                                borderRadius: BorderRadius.circular(10),
+                                onTap: () {
+                                  if (_hasSelectedTranslation && _translationText != null) {
+                                    setState(() {
+                                      _showTranslation = !_showTranslation;
+                                    });
+                                  }
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                                  child: Row(
+                                    children: [
+                                      Text(
+                                        AppLocalizations.of(context)?.translate('translation') ??
+                                            'Translation',
+                                        style: theme.textTheme.titleMedium?.copyWith(
+                                          color: theme.primaryColor,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      Icon(
+                                        _showTranslation
+                                            ? Icons.expand_less_rounded
+                                            : Icons.chevron_right_rounded,
+                                        color: theme.primaryColor,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              if (!_isLoadingTranslation) ...[
+                                if (_hasSelectedTranslation && _translationText != null)
+                                  AnimatedCrossFade(
+                                    firstChild: const SizedBox.shrink(),
+                                    secondChild: Padding(
+                                      padding: const EdgeInsets.only(top: 8, bottom: 4),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            _translationText ?? '',
+                                            style: theme.textTheme.bodyLarge?.copyWith(
+                                              height: 1.6,
+                                            ),
+                                          ),
+                                          if (_translatorName != null) ...[
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              _translatorName!,
+                                              style: theme.textTheme.bodySmall?.copyWith(
+                                                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                    crossFadeState:
+                                        _showTranslation ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+                                    duration: const Duration(milliseconds: 200),
+                                  )
+                                else
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8, bottom: 4),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          AppLocalizations.of(context)?.translate('no_translation_selected') ??
+                                              'Select a translation to see it here',
+                                          style: theme.textTheme.bodyMedium?.copyWith(
+                                            color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        TextButton.icon(
+                                          style: TextButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(horizontal: 0),
+                                            foregroundColor: theme.primaryColor,
+                                          ),
+                                          onPressed: () async {
+                                            await Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) => const DownloadsScreen(),
+                                              ),
+                                            );
+                                            if (mounted) _loadTranslation();
+                                          },
+                                          icon: const Icon(Icons.download_for_offline),
+                                          label: Text(
+                                            AppLocalizations.of(context)?.translate('select_translation') ??
+                                                'Select Translation',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                              ] else
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
                 // RULE 3: Integrating the company's Share button into your UI layout.
                 Row(
                   children: [
                     IconButton(
-                      icon:
-                          Icon(Icons.share_rounded, color: BrandColors.accent),
+                      icon: Icon(Icons.share_rounded, color: BrandColors.accent),
                       tooltip: 'Share',
                       onPressed: () async {
                         await showSharePreviewDialog(
@@ -421,9 +417,7 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                           });
                         },
                         child: Text(
-                          AppLocalizations.of(context)
-                                  ?.translate('read_in_mushaf') ??
-                              'Read in Mushaf',
+                          AppLocalizations.of(context)?.translate('read_in_mushaf') ?? 'Read in Mushaf',
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ),

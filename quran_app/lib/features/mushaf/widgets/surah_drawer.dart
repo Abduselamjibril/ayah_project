@@ -38,10 +38,15 @@ class _SurahDrawerState extends State<SurahDrawer>
   NavigationMode _navigationMode = NavigationMode.surah;
   final Map<int, String> _verseTextCache = {};
   bool _isEditingBookmarks = false;
+  // Controller and keys for scrolling within the drawer list
+  final ScrollController _drawerScrollController = ScrollController();
+  final Map<int, GlobalKey> _juzHeaderKeys = {};
+  final Map<int, GlobalKey> _juzItemKeys = {};
 
   @override
   void dispose() {
     _noteSearchController.dispose();
+    _drawerScrollController.dispose();
     super.dispose();
   }
 
@@ -61,80 +66,79 @@ class _SurahDrawerState extends State<SurahDrawer>
   }) {
     return SizedBox(
       width: 18,
-      child: NotificationListener<ScrollNotification>(
-        onNotification: (_) => true,
-        child: ListView.builder(
-          itemCount: itemCount,
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(vertical: 1),
-          itemBuilder: (context, index) {
-            final number = index + 1;
-            return GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () {
-                onTapNumber(number);
-                Navigator.pop(context);
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 0.5),
-                child: Center(
-                  child: Text(
-                    number.toString(),
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 10,
-                      color: BrandColors.accent,
-                    ),
+      child: ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: itemCount,
+        padding: const EdgeInsets.symmetric(vertical: 1),
+        itemBuilder: (context, index) {
+          final number = index + 1;
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              // Scroll within the drawer list; do not close the drawer
+              onTapNumber(number);
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 0.5),
+              child: Center(
+                child: Text(
+                  number.toString(),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 10,
+                    color: BrandColors.accent,
                   ),
                 ),
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final drawerWidth = screenWidth;
+    final mediaQuery = MediaQuery.of(context);
+    final drawerWidth = mediaQuery.size.width;
+    final double sidebarRightInset = 6;
 
-    // Using your Stack-based UI layout from HEAD
+    // Place sidebar inside content area: under app bar and above bottom nav
     return Drawer(
       width: drawerWidth,
-      child: Stack(
+      child: Column(
         children: [
-          Column(
-            children: [
-              if (_selectedTabIndex == 0) _buildTopBar(context),
-              Expanded(child: _buildCurrentTab()),
-              _buildBottomBar(context),
-            ],
+          if (_selectedTabIndex == 0) _buildTopBar(context),
+          Expanded(
+            child: _selectedTabIndex == 0
+                ? Stack(
+                    children: [
+                      _buildCurrentTab(),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Padding(
+                          padding: EdgeInsets.only(right: sidebarRightInset),
+                          child: _navigationMode == NavigationMode.surah
+                              ? _buildNumberSidebar(
+                                  itemCount: juz.length,
+                                  onTapNumber: (number) {
+                                    _scrollToJuzInSurahList(number);
+                                  },
+                                )
+                              : _buildNumberSidebar(
+                                  itemCount: juz.length,
+                                  onTapNumber: (number) {
+                                    _scrollToJuzItem(number);
+                                  },
+                                ),
+                        ),
+                      ),
+                    ],
+                  )
+                : _buildCurrentTab(),
           ),
-          if (_selectedTabIndex == 0)
-            Positioned(
-              top: 80,
-              right: 0,
-              bottom: 60,
-              child: _navigationMode == NavigationMode.surah
-                  ? _buildNumberSidebar(
-                      itemCount: surah.length,
-                      onTapNumber: (number) {
-                        widget.controller.navigateToSurah(number);
-                      },
-                    )
-                  : _buildNumberSidebar(
-                      itemCount: juz.length,
-                      onTapNumber: (number) {
-                        final targetJuz =
-                            juz.firstWhere((item) => item['id'] == number);
-                        final surahs = targetJuz['surahs'] as List<dynamic>;
-                        final startingSurah = surahs.first as int;
-                        widget.controller.navigateToSurah(startingSurah);
-                      },
-                    ),
-            ),
+          _buildBottomBar(context),
         ],
       ),
     );
@@ -299,19 +303,9 @@ class _SurahDrawerState extends State<SurahDrawer>
   Widget _buildSurahList() {
     // Your ListView implementation from HEAD
     return _navigationMode == NavigationMode.surah
-        ? ListView.separated(
-            itemCount: surah.length,
-            separatorBuilder: (_, __) => Divider(
-              height: 1,
-              thickness: 0.6,
-              indent: 76,
-              endIndent: 0,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
-            ),
-            itemBuilder: (context, index) =>
-                _buildSurahItem(index + 1, surah[index]),
-          )
+        ? _buildSurahListGroupedByJuz()
         : ListView.separated(
+            controller: _drawerScrollController,
             itemCount: juz.length,
             separatorBuilder: (_, __) => Divider(
               height: 1,
@@ -320,8 +314,130 @@ class _SurahDrawerState extends State<SurahDrawer>
               endIndent: 0,
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
             ),
-            itemBuilder: (context, index) => _buildJuzItem(juz[index]),
+            itemBuilder: (context, index) {
+              final info = juz[index];
+              final juzNumber = info['id'] as int;
+              _juzItemKeys.putIfAbsent(juzNumber, () => GlobalKey());
+              return Container(
+                key: _juzItemKeys[juzNumber],
+                child: _buildJuzItem(info),
+              );
+            },
           );
+  }
+
+  Widget _buildSurahListGroupedByJuz() {
+    final entries = _buildSurahEntries();
+    return ListView.builder(
+      controller: _drawerScrollController,
+      itemCount: entries.length,
+      itemBuilder: (context, index) {
+        final entry = entries[index];
+        if (entry.isHeader) {
+          final label =
+              '${AppLocalizations.of(context)?.translate('juz_prefix') ?? 'Part'} ${entry.juzNumber}';
+          _juzHeaderKeys.putIfAbsent(entry.juzNumber, () => GlobalKey());
+          return Container(
+            key: _juzHeaderKeys[entry.juzNumber],
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
+              child: Text(
+                label.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                ),
+              ),
+            ),
+          );
+        }
+
+        final surahInfo = entry.surahInfo!;
+        final surahNumber = surahInfo['id'] as int;
+        return Column(
+          children: [
+            _buildSurahItem(surahNumber, surahInfo),
+            Divider(
+              height: 1,
+              thickness: 0.6,
+              indent: 76,
+              endIndent: 0,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _scrollToJuzInSurahList(int juzNumber) {
+    final entries = _buildSurahEntries();
+    final index = entries.indexWhere(
+      (e) => e.isHeader && e.juzNumber == juzNumber,
+    );
+    if (index == -1) return;
+
+    // Try precise scroll if the header is already built
+    final key = _juzHeaderKeys[juzNumber];
+    final ctx = key?.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeInOut,
+        alignment: 0.0,
+      );
+      return;
+    }
+
+    // Fallback: approximate scroll by index
+    const double itemExtent = 76.0; // avg combined height of header/items
+    _drawerScrollController.animateTo(
+      index * itemExtent,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _scrollToJuzItem(int juzNumber) {
+    final juzIndex = juz.indexWhere((j) => j['id'] == juzNumber);
+    if (juzIndex == -1) return;
+
+    final key = _juzItemKeys[juzNumber];
+    final ctx = key?.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeInOut,
+        alignment: 0.0,
+      );
+      return;
+    }
+
+    const double itemExtent = 76.0;
+    _drawerScrollController.animateTo(
+      juzIndex * itemExtent,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  List<_SurahListEntry> _buildSurahEntries() {
+    final List<_SurahListEntry> entries = [];
+    for (final juzInfo in juz) {
+      final juzNumber = juzInfo['id'] as int;
+      entries.add(_SurahListEntry.header(juzNumber));
+      final surahsInJuz = (juzInfo['surahs'] as List<dynamic>?) ?? [];
+      for (final s in surahsInJuz) {
+        final surahNumber = s as int;
+        final surahInfo = surah[surahNumber - 1];
+        entries.add(_SurahListEntry.surah(juzNumber, surahInfo));
+      }
+    }
+    return entries;
   }
 
   Widget _buildSurahItem(int surahNumber, Map<String, dynamic> surahInfo) {
@@ -337,14 +453,14 @@ class _SurahDrawerState extends State<SurahDrawer>
       leading: _buildSurahCircleAvatar(surahNumber, context),
       title: Text(
         surahName,
-        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 19),
+        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
       ),
       subtitle: Padding(
         padding: const EdgeInsets.only(top: 4),
         child: Text(
           subtitle,
           style: TextStyle(
-            fontSize: 13,
+            fontSize: 12,
             color: Theme.of(context).colorScheme.onSurface.withOpacity(0.65),
           ),
         ),
@@ -353,15 +469,15 @@ class _SurahDrawerState extends State<SurahDrawer>
         widget.controller.navigateToSurah(surahNumber);
         Navigator.pop(context);
       },
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     );
   }
 
   Widget _buildSurahCircleAvatar(int surahNumber, BuildContext context) {
     // Your custom circular avatar styling from HEAD
     return Container(
-      width: 36,
-      height: 36,
+      width: 32,
+      height: 32,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.onSurface.withOpacity(0.12),
         shape: BoxShape.circle,
@@ -376,7 +492,7 @@ class _SurahDrawerState extends State<SurahDrawer>
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w700,
-            fontSize: 15,
+            fontSize: 14,
           ),
         ),
       ),
@@ -394,17 +510,17 @@ class _SurahDrawerState extends State<SurahDrawer>
       leading: _buildSurahCircleAvatar(juzNumber, context),
       title: Text(
         '${AppLocalizations.of(context)?.translate('juz_prefix') ?? 'Juz'} $juzNumber',
-        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 19),
+        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
       ),
       subtitle: Padding(
         padding: const EdgeInsets.only(top: 4),
-        child: Text(surahName, style: const TextStyle(fontSize: 13)),
+        child: Text(surahName, style: const TextStyle(fontSize: 12)),
       ),
       onTap: () {
         widget.controller.navigateToSurah(startingSurah);
         Navigator.pop(context);
       },
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     );
   }
 
@@ -803,4 +919,19 @@ class _SurahDrawerState extends State<SurahDrawer>
       ),
     );
   }
+}
+
+class _SurahListEntry {
+  final bool isHeader;
+  final int juzNumber;
+  final Map<String, dynamic>? surahInfo;
+
+  const _SurahListEntry._(this.isHeader, this.juzNumber, this.surahInfo);
+
+  factory _SurahListEntry.header(int juzNumber) =>
+      _SurahListEntry._(true, juzNumber, null);
+
+  factory _SurahListEntry.surah(
+          int juzNumber, Map<String, dynamic> surahInfo) =>
+      _SurahListEntry._(false, juzNumber, surahInfo);
 }
