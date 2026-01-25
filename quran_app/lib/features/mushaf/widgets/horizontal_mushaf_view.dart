@@ -68,12 +68,10 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   bool _isFading = false;
 
   static const List<String> _bookmarkColors = [
-    '#FFB300',
-    '#4DB6AC',
-    '#29B6F6',
-    '#AB47BC',
-    '#EF5350',
-    '#8D6E63',
+    '#EF5350', // Red
+    '#FFB300', // Yellow
+    '#66BB6A', // Green
+    '#42A5F5', // Blue
   ];
 
   static const List<String> _defaultSectionOrder = [
@@ -1379,15 +1377,16 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
         child: InkWell(
           onTap: () {
             Navigator.pop(context);
-            unawaited(() async {
-              await state.saveBookmark(
-                  surahId: surah,
-                  ayahId: verse,
-                  colorHex: hex,
-                  category: 'Highlight');
-              if (!mounted) return;
-              _showBookmarkSnackbar(context, false);
-            }());
+            if (isSelected) {
+              state.deleteBookmark(surah, verse);
+            } else {
+              state.saveBookmark(
+                surahId: surah,
+                ayahId: verse,
+                colorHex: hex,
+                category: _getCategoryName(hex),
+              );
+            }
           },
           borderRadius: BorderRadius.circular(20),
           child: Container(
@@ -1399,13 +1398,21 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                   isSelected ? color.withOpacity(0.3) : color.withOpacity(0.18),
               border: Border.all(color: color, width: 2),
             ),
-            child: Icon(isSelected ? Icons.check : Icons.brush,
-                size: 18, color: color),
+            child:
+                isSelected ? Icon(Icons.check, color: color, size: 20) : null,
           ),
         ),
       ));
     }
     return Row(children: chips);
+  }
+
+  String _getCategoryName(String hex) {
+    if (hex == '#EF5350') return 'Red';
+    if (hex == '#FFB300') return 'Yellow';
+    if (hex == '#66BB6A') return 'Green';
+    if (hex == '#42A5F5') return 'Blue';
+    return 'Bookmark';
   }
 
   Widget _buildQuickActions(BuildContext context, BookmarkNotesNotifier state,

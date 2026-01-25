@@ -38,6 +38,8 @@ class _SurahDrawerState extends State<SurahDrawer>
   NavigationMode _navigationMode = NavigationMode.surah;
   final Map<int, String> _verseTextCache = {};
   bool _isEditingBookmarks = false;
+  String? _selectedBookmarkColor;
+
   // Controller and keys for scrolling within the drawer list
   final ScrollController _drawerScrollController = ScrollController();
   final Map<int, GlobalKey> _juzHeaderKeys = {};
@@ -646,13 +648,30 @@ class _SurahDrawerState extends State<SurahDrawer>
             ),
             itemBuilder: (context, index) {
               const labels = ['Red', 'Yellow', 'Green', 'Blue'];
-              const colors = [0xFFF44336, 0xFFFFC107, 0xFF4CAF50, 0xFF2196F3];
+              const colors = [
+                '#EF5350',
+                '#FFB300',
+                '#66BB6A',
+                '#42A5F5'
+              ]; // Hex strings for logic
+              final colorValues = [
+                0xFFEF5350,
+                0xFFFFB300,
+                0xFF66BB6A,
+                0xFF42A5F5
+              ]; // Int for display
+
+              final hex = colors[index];
+              final isSelected = _selectedBookmarkColor == hex;
+
               return ListTile(
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 leading: Icon(
-                  Icons.bookmark_border_rounded,
-                  color: Color(colors[index]),
+                  isSelected
+                      ? Icons.check_circle
+                      : Icons.bookmark_border_rounded,
+                  color: Color(colorValues[index]),
                   size: 24,
                 ),
                 title: Text(
@@ -660,11 +679,27 @@ class _SurahDrawerState extends State<SurahDrawer>
                   style: const TextStyle(
                       fontSize: 17, fontWeight: FontWeight.w600),
                 ),
-                onTap: () {},
+                tileColor: isSelected
+                    ? Color(colorValues[index]).withOpacity(0.1)
+                    : null,
+                onTap: () {
+                  setState(() {
+                    _selectedBookmarkColor = isSelected ? null : hex;
+                  });
+                },
               );
             },
           ),
         );
+
+        final filteredBookmarks = _selectedBookmarkColor == null
+            ? state.bookmarks
+            : state.bookmarks.where((b) {
+                final bColor = b.colorHex.replaceAll('#', '').toUpperCase();
+                final fColor =
+                    _selectedBookmarkColor!.replaceAll('#', '').toUpperCase();
+                return bColor.contains(fColor) || fColor.contains(bColor);
+              }).toList();
 
         Widget bookmarksSection;
         if (state.bookmarks.isEmpty) {
@@ -677,59 +712,86 @@ class _SurahDrawerState extends State<SurahDrawer>
                       'No bookmarks yet',
             ),
           );
+        } else if (filteredBookmarks.isEmpty) {
+          bookmarksSection = Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: _buildEmptyState(
+              icon: Icons.filter_list_off,
+              message: 'No bookmarks match filter',
+            ),
+          );
         } else {
           bookmarksSection = ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: state.bookmarks.length,
+            itemCount: filteredBookmarks.length,
             separatorBuilder: (_, __) => Divider(
               height: 1,
               indent: 72,
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06),
             ),
             itemBuilder: (context, index) {
-              final bookmark = state.bookmarks[index];
+              final bookmark = filteredBookmarks[index];
               final surahName = surah[bookmark.surahId - 1]['name'] ?? 'Surah';
               final verseText =
                   _getVerseTextCached(bookmark.surahId, bookmark.ayahId);
               final color = Color(_parseColor(bookmark.colorHex));
 
-              return ListTile(
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                leading: Icon(
-                  bookmark.isKhatmahPin
-                      ? Icons.push_pin
-                      : Icons.bookmark_outline_rounded,
-                  color: color,
+              return Dismissible(
+                key: ValueKey('${bookmark.surahId}:${bookmark.ayahId}'),
+                direction: DismissDirection.horizontal,
+                background: Container(
+                  color: Colors.red,
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: const Icon(Icons.delete, color: Colors.white),
                 ),
-                title: Text(
-                  '$surahName • ${bookmark.surahId}:${bookmark.ayahId}',
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w600),
+                secondaryBackground: Container(
+                  color: Colors.red,
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: const Icon(Icons.delete, color: Colors.white),
                 ),
-                subtitle: Directionality(
-                  textDirection: TextDirection.rtl,
-                  child: Text(
-                    verseText,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                trailing: _isEditingBookmarks
-                    ? IconButton(
-                        icon: const Icon(Icons.delete_outline),
-                        onPressed: () => state.toggleBookmark(
-                          surahId: bookmark.surahId,
-                          ayahId: bookmark.ayahId,
-                        ),
-                      )
-                    : null,
-                onTap: () {
-                  widget.controller
-                      .navigateToVerse(bookmark.surahId, bookmark.ayahId);
-                  Navigator.pop(context);
+                onDismissed: (direction) {
+                  state.deleteBookmark(bookmark.surahId, bookmark.ayahId);
                 },
+                child: ListTile(
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  leading: Icon(
+                    bookmark.isKhatmahPin
+                        ? Icons.push_pin
+                        : Icons.bookmark_outline_rounded,
+                    color: color,
+                  ),
+                  title: Text(
+                    '$surahName • ${bookmark.surahId}:${bookmark.ayahId}',
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: Text(
+                      verseText,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  trailing: _isEditingBookmarks
+                      ? IconButton(
+                          icon: const Icon(Icons.delete_outline),
+                          onPressed: () => state.toggleBookmark(
+                            surahId: bookmark.surahId,
+                            ayahId: bookmark.ayahId,
+                          ),
+                        )
+                      : null,
+                  onTap: () {
+                    widget.controller
+                        .navigateToVerse(bookmark.surahId, bookmark.ayahId);
+                    Navigator.pop(context);
+                  },
+                ),
               );
             },
           );
