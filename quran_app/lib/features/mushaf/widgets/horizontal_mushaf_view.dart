@@ -61,6 +61,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   final Map<int, String> _surahNameCache = {};
   bool _overlayVisible = true;
   Timer? _autoHideTimer;
+  Timer? _highlightClearTimer;
   final bool _isSequentialMode = false;
 
   double _contentOpacity = 1.0;
@@ -137,7 +138,27 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     widget.controller.removeListener(_onControllerChanged);
     _pageController.dispose();
     _autoHideTimer?.cancel();
+    _highlightClearTimer?.cancel();
     super.dispose();
+  }
+
+  void _cancelHighlightClear() {
+    _highlightClearTimer?.cancel();
+    _highlightClearTimer = null;
+  }
+
+  void _scheduleHighlightClear() {
+    _highlightClearTimer?.cancel();
+    _highlightClearTimer = Timer(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      widget.controller.clearHighlight();
+    });
+  }
+
+  void _navigateToVerseWithTempHighlight(int surah, int verse) {
+    _cancelHighlightClear();
+    widget.controller.navigateToVerse(surah, verse);
+    _scheduleHighlightClear();
   }
 
   void _onControllerChanged() {
@@ -241,9 +262,11 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                                   _getVerseBackgroundColor(bookmarkState, s, v),
                               onLongPress: (surah, verse) => _showVerseOptions(
                                   context, bookmarkState, surah, verse),
-                              onLongPressStart: (surah, verse, details) =>
-                                  widget.controller
-                                      .setHighlightedVerse(surah, verse),
+                              onLongPressStart: (surah, verse, details) {
+                                _cancelHighlightClear();
+                                widget.controller
+                                    .setHighlightedVerse(surah, verse);
+                              },
                               onLongPressCancel: (surah, verse) =>
                                   widget.controller.clearHighlight(),
                               onSurahHeaderLongPress: (surahNumber) {
@@ -252,11 +275,8 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                                   surahNumber: surahNumber,
                                   onNavigateToVerse: (verseNumber) {
                                     Navigator.pop(context);
-                                    widget.controller
-                                        .navigateToVerseWithTempHighlight(
-                                      surahNumber,
-                                      verseNumber,
-                                    );
+                                    _navigateToVerseWithTempHighlight(
+                                        surahNumber, verseNumber);
                                   },
                                 );
                               },
@@ -1067,7 +1087,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
           ),
         );
       },
-    );
+    ).whenComplete(_scheduleHighlightClear);
   }
 
   Widget _buildSectionLabel(String text, BuildContext context) {
@@ -1324,7 +1344,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
       BuildContext context, BookmarkNotesNotifier state, int surah, int verse) {
     final chips = <Widget>[];
     final existingColor =
-        state.bookmarkForVerse(surah, verse)?.colorHex?.toLowerCase();
+        state.bookmarkForVerse(surah, verse)?.colorHex.toLowerCase();
     for (var i = 0; i < _bookmarkColors.length; i++) {
       final hex = _bookmarkColors[i];
       final color = Color(_parseColor(hex));

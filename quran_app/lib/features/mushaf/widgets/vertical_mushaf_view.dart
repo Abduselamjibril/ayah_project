@@ -64,6 +64,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   final Map<int, String> _surahNameCache = {};
   bool _overlayVisible = true;
   Timer? _autoHideTimer;
+  Timer? _highlightClearTimer;
 
   double _contentOpacity = 1.0;
   static const Duration _fadeDuration = Duration(milliseconds: 220);
@@ -172,7 +173,27 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     widget.controller.removeListener(_onControllerChanged);
     _stopAutoScroll();
     _autoHideTimer?.cancel();
+    _highlightClearTimer?.cancel();
     super.dispose();
+  }
+
+  void _cancelHighlightClear() {
+    _highlightClearTimer?.cancel();
+    _highlightClearTimer = null;
+  }
+
+  void _scheduleHighlightClear() {
+    _highlightClearTimer?.cancel();
+    _highlightClearTimer = Timer(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      widget.controller.clearHighlight();
+    });
+  }
+
+  void _navigateToVerseWithTempHighlight(int surah, int verse) {
+    _cancelHighlightClear();
+    widget.controller.navigateToVerse(surah, verse);
+    _scheduleHighlightClear();
   }
 
   void _onControllerChanged() {
@@ -272,11 +293,8 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                                   surahNumber: surahNumber,
                                   onNavigateToVerse: (verseNumber) {
                                     Navigator.pop(context);
-                                    widget.controller
-                                        .navigateToVerseWithTempHighlight(
-                                      surahNumber,
-                                      verseNumber,
-                                    );
+                                    _navigateToVerseWithTempHighlight(
+                                        surahNumber, verseNumber);
                                   },
                                 );
                               },
@@ -940,8 +958,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   Future<void> _openPageSettingsSheet() async {
     final mushafSettings = MushafSettingsService();
     final themeService = ThemeService();
-    final prefs = await SharedPreferences.getInstance();
-    bool searchGesture = prefs.getBool('search_gesture_enabled') ?? false;
+    await SharedPreferences.getInstance();
 
     await showModalBottomSheet(
       context: context,
@@ -1516,7 +1533,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
       BuildContext context, BookmarkNotesNotifier state, int surah, int verse) {
     final chips = <Widget>[];
     final existingColor =
-        state.bookmarkForVerse(surah, verse)?.colorHex?.toLowerCase();
+        state.bookmarkForVerse(surah, verse)?.colorHex.toLowerCase();
     for (var i = 0; i < _bookmarkColors.length; i++) {
       final hex = _bookmarkColors[i];
       final color = Color(_parseColor(hex));
