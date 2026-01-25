@@ -275,8 +275,9 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                               itemPositionsListener: _itemPositionsListener,
                               textColor:
                                   Theme.of(context).colorScheme.onSurface,
-                              pageBackgroundColor:
-                                  Theme.of(context).scaffoldBackgroundColor,
+                              pageBackgroundColor: ThemeService()
+                                  .getMushafBackgroundColor(
+                                      Theme.of(context).brightness),
                               verseBackgroundColor: (s, v) =>
                                   _getVerseBackgroundColor(bookmarkState, s, v),
                               onLongPress: (surah, verse) => _showVerseOptions(
@@ -1098,6 +1099,34 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                                     );
                                   }).toList(),
                                 ),
+                                if (themeMode == ThemeMode.dark) ...[
+                                  const SizedBox(height: 18),
+                                  Text(
+                                    'Dark Mode Options',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(fontWeight: FontWeight.w700),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  SwitchListTile(
+                                    title: const Text(
+                                      'Pure Black Background',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w600),
+                                    ),
+                                    subtitle:
+                                        const Text('Use pure black for Mushaf'),
+                                    value: themeService.pureBlackBackground,
+                                    onChanged: (value) {
+                                      themeService
+                                          .setPureBlackBackground(value);
+                                      setStateSheet(() {});
+                                    },
+                                    activeColor: BrandColors.accent,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ],
                                 if (themeMode != ThemeMode.dark) ...[
                                   const SizedBox(height: 18),
                                   Text(

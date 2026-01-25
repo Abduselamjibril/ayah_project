@@ -13,6 +13,7 @@ class ThemeService extends ChangeNotifier {
   static final ThemeService _instance = ThemeService._internal();
   static const String _themeModeKey = 'app_theme_mode';
   static const String _surahStyleKey = 'surah_header_style';
+  static const String _pureBlackBackgroundKey = 'pure_black_background';
 
   factory ThemeService() {
     return _instance;
@@ -22,9 +23,21 @@ class ThemeService extends ChangeNotifier {
 
   ThemeMode _themeMode = ThemeMode.light;
   SurahHeaderStyle _surahHeaderStyle = SurahHeaderStyle.golden;
+  bool _pureBlackBackground = false;
 
   ThemeMode get themeMode => _themeMode;
   SurahHeaderStyle get surahHeaderStyle => _surahHeaderStyle;
+  bool get pureBlackBackground => _pureBlackBackground;
+
+  /// Get the effective Mushaf background color
+  Color getMushafBackgroundColor(Brightness brightness) {
+    if (brightness == Brightness.dark && _pureBlackBackground) {
+      return Colors.black;
+    }
+    return brightness == Brightness.dark
+        ? AppColors.greenDarkBackground
+        : AppColors.lightBackground;
+  }
 
   /// Get the mainframe image path based on current theme mode and style
   String get mainframeImagePath {
@@ -96,6 +109,9 @@ class ThemeService extends ChangeNotifier {
       );
     }
 
+    // Load Pure Black Background preference
+    _pureBlackBackground = prefs.getBool(_pureBlackBackgroundKey) ?? false;
+
     notifyListeners();
   }
 
@@ -120,6 +136,17 @@ class ThemeService extends ChangeNotifier {
   Future<void> _saveSurahStyle() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_surahStyleKey, _surahHeaderStyle.toString());
+  }
+
+  void setPureBlackBackground(bool value) {
+    _pureBlackBackground = value;
+    _savePureBlackBackground();
+    notifyListeners();
+  }
+
+  Future<void> _savePureBlackBackground() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_pureBlackBackgroundKey, _pureBlackBackground);
   }
 
   /// Light Theme (Golden Parchment)

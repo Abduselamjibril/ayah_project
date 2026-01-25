@@ -241,8 +241,9 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                               },
                               textColor:
                                   Theme.of(context).colorScheme.onSurface,
-                              pageBackgroundColor:
-                                  Theme.of(context).scaffoldBackgroundColor,
+                              pageBackgroundColor: ThemeService()
+                                  .getMushafBackgroundColor(
+                                      Theme.of(context).brightness),
                               verseBackgroundColor: (s, v) =>
                                   _getVerseBackgroundColor(bookmarkState, s, v),
                               onLongPress: (surah, verse) => _showVerseOptions(
@@ -754,6 +755,34 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                                     );
                                   }).toList(),
                                 ),
+                                if (themeMode == ThemeMode.dark) ...[
+                                  const SizedBox(height: 18),
+                                  Text(
+                                    'Dark Mode Options',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(fontWeight: FontWeight.w700),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  SwitchListTile(
+                                    title: const Text(
+                                      'Pure Black Background',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w600),
+                                    ),
+                                    subtitle:
+                                        const Text('Use pure black for Mushaf'),
+                                    value: themeService.pureBlackBackground,
+                                    onChanged: (value) {
+                                      themeService
+                                          .setPureBlackBackground(value);
+                                      setStateSheet(() {});
+                                    },
+                                    activeColor: BrandColors.accent,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ],
 
                                 // Show Surah Header Style only if NOT strictly Dark mode
                                 // (It works in System too if system is Light, but simplest is to just show it generally or check brightness)
