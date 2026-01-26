@@ -398,7 +398,8 @@ class _DownloadsScreenState extends State<DownloadsScreen>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final accent = BrandColors.accent;
-    final settingsLabel = AppLocalizations.of(context)?.translate('settings_title') ?? 'Settings';
+    final settingsLabel =
+        AppLocalizations.of(context)?.translate('settings_title') ?? 'Settings';
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
