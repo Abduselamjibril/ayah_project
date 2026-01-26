@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:quran_app/app/app.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:quran_app/core/ui/responsive.dart';
 
@@ -12,7 +13,7 @@ class AboutScreen extends StatelessWidget {
     final accent = BrandColors.accent;
     final cardBg = theme.colorScheme.onSurface.withOpacity(0.12);
     final leadingWidth =
-        ResponsiveLayout.scaled(context, 132, min: 110, max: 150);
+        ResponsiveLayout.scaled(context, 170, min: 140, max: 210);
     final backIconSize = ResponsiveLayout.scaled(context, 18, min: 16, max: 22);
     final backFontSize = ResponsiveLayout.scaled(context, 15, min: 13, max: 17);
     final titleFontSize =
@@ -38,15 +39,19 @@ class AboutScreen extends StatelessWidget {
           onPressed: () => Navigator.of(context).pop(),
           icon: Icon(Icons.arrow_back_ios_new_rounded,
               color: accent, size: backIconSize),
-          label: Text(
-            'Settings',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            softWrap: false,
-            style: TextStyle(
-              color: accent,
-              fontSize: backFontSize,
-              fontWeight: FontWeight.w600,
+          label: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: 60, maxWidth: 120),
+            child: Text(
+              AppLocalizations.of(context)?.translate('settings_title') ??
+                  'Settings',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              style: TextStyle(
+                color: accent,
+                fontSize: backFontSize,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           style: TextButton.styleFrom(

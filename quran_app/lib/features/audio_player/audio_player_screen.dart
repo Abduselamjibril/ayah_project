@@ -16,13 +16,17 @@ import 'package:quran_app/features/mushaf/widgets/mushaf_audio_navigation.dart';
 /// Reusable audio player card used by mushaf views.
 class AudioPlayerCard extends StatefulWidget {
   final MushafController controller;
-  const AudioPlayerCard({Key? key, required this.controller}) : super(key: key);
+  final ValueChanged<bool>? onExpandChanged;
+  const AudioPlayerCard(
+      {Key? key, required this.controller, this.onExpandChanged})
+      : super(key: key);
 
   @override
   State<AudioPlayerCard> createState() => _AudioPlayerCardState();
 }
 
 class _AudioPlayerCardState extends State<AudioPlayerCard> {
+  bool? _lastReportedExpanded;
   late final AudioPlayerService _audioPlayer;
   late final VoidCallback _playerStateListener;
   late final VoidCallback _labelListener;
@@ -76,6 +80,10 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         _audioPlayer.isDownloading.value ||
         _audioPlayer.hasSourceNotifier.value;
 
+    void notifyExpand() {
+      widget.onExpandChanged?.call(_showExpanded);
+    }
+
     _playerStateListener = () {
       if (!mounted) return;
       final playing = _audioPlayer.isPlaying.value;
@@ -89,6 +97,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         } else {
           _showExpanded = false;
         }
+        notifyExpand();
       });
     };
     _labelListener = () {
@@ -105,6 +114,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         } else if (!_isPlaying && !_hasSource) {
           _showExpanded = false;
         }
+        notifyExpand();
       });
     };
     _downloadProgressListener = () {
@@ -175,6 +185,14 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
 
     // Always show expanded view when downloading, playing, or explicitly expanded
     final showExpanded = _isDownloading || _showExpanded || _isPlaying;
+
+    // Notify parent if expanded/collapsed state changes
+    if (_lastReportedExpanded != showExpanded) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) widget.onExpandChanged?.call(showExpanded);
+      });
+      _lastReportedExpanded = showExpanded;
+    }
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),

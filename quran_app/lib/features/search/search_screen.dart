@@ -222,44 +222,50 @@ class _SearchScreenState extends State<SearchScreen>
     return Padding(
       padding: EdgeInsets.zero,
       child: Container(
-        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
-          color: theme.colorScheme.onSurface.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(14),
+          color: theme.colorScheme.onSurface.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: TextField(
-          controller: _searchController,
-          focusNode: _focusNode,
-          autofocus: true,
-          onChanged: _updateSuggestions,
-          onSubmitted: (v) {
-            _runSearch(initial: true);
-            _focusNode.unfocus();
-          },
-          textInputAction: TextInputAction.search,
-          decoration: InputDecoration(
-            hintText: AppLocalizations.of(context)?.translate('search_hint') ??
-                'Type a word or page number',
-            hintStyle: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.55),
+        child: Row(
+          children: [
+            Icon(Icons.search,
+                color: theme.colorScheme.onSurface.withOpacity(0.6)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                controller: _searchController,
+                focusNode: _focusNode,
+                autofocus: true,
+                onChanged: _updateSuggestions,
+                onSubmitted: (v) {
+                  _runSearch(initial: true);
+                  _focusNode.unfocus();
+                },
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  hintText:
+                      AppLocalizations.of(context)?.translate('search_hint') ??
+                          'Type a word or page number',
+                  hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.55),
+                  ),
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.close_rounded, size: 20),
+                          onPressed: () {
+                            _searchController.clear();
+                            _updateSuggestions('');
+                          },
+                        )
+                      : null,
+                ),
+              ),
             ),
-            prefixIcon: Icon(
-              Icons.search_rounded,
-              color: theme.colorScheme.onSurface.withOpacity(0.6),
-              size: 22,
-            ),
-            suffixIcon: _searchController.text.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.close_rounded, size: 20),
-                    onPressed: () {
-                      _searchController.clear();
-                      _updateSuggestions('');
-                    },
-                  )
-                : null,
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(vertical: 12),
-          ),
+          ],
         ),
       ),
     );

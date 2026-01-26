@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:quran_app/app/app.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
 import 'package:quran_app/core/services/language_service.dart';
 import 'package:quran_app/core/ui/responsive.dart';
 
@@ -26,7 +27,7 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
     final cardBg = theme.cardColor.withOpacity(0.5);
 
     final leadingWidth =
-        ResponsiveLayout.scaled(context, 132, min: 110, max: 150);
+        ResponsiveLayout.scaled(context, 170, min: 140, max: 210);
     final backIconSize = ResponsiveLayout.scaled(context, 18, min: 16, max: 22);
     final backFontSize = ResponsiveLayout.scaled(context, 16, min: 14, max: 18);
     final titleFontSize =
@@ -49,15 +50,19 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
           onPressed: () => Navigator.of(context).pop(),
           icon: Icon(Icons.arrow_back_ios_new_rounded,
               color: accent, size: backIconSize),
-          label: Text(
-            'Settings',
-            maxLines: 1,
-            softWrap: false,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-                color: accent,
-                fontSize: backFontSize,
-                fontWeight: FontWeight.w600),
+          label: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: 60, maxWidth: 120),
+            child: Text(
+              AppLocalizations.of(context)?.translate('settings_title') ??
+                  'Settings',
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  color: accent,
+                  fontSize: backFontSize,
+                  fontWeight: FontWeight.w600),
+            ),
           ),
           style: TextButton.styleFrom(
               padding: EdgeInsets.only(

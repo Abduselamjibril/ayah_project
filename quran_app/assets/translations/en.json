@@ -152,6 +152,7 @@
     "download_surah_error": "Could not download audio for Surah {surah}",
     "audio_start_error": "Audio failed to start: {error}",
     "drawer_title": "Al-Quran",
+    "tab_contents": "Contents",
     "tab_surah": "Surah",
     "tab_bookmarks": "Bookmarks",
     "tab_khatmah": "Khatmah",

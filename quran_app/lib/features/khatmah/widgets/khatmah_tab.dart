@@ -57,11 +57,12 @@ class _KhatmahTabState extends State<KhatmahTab> {
 
   @override
   Widget build(BuildContext context) {
-    // RULE 1: Using your complete UI structure from HEAD.
     final theme = Theme.of(context);
     final background = theme.scaffoldBackgroundColor;
-    final onBackground = theme.colorScheme.onSurface;
     final accent = BrandColors.accent;
+
+    // Use a small fixed top padding for consistent spacing across devices
+    final double topPadding = 12;
 
     Widget bodyContent;
     Widget? floatingActionButton;
@@ -92,52 +93,46 @@ class _KhatmahTabState extends State<KhatmahTab> {
 
     return Scaffold(
       backgroundColor: background,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Khatmah',
-                      style: TextStyle(
-                        fontSize: 34,
-                        fontWeight: FontWeight.w800,
-                        color: onBackground,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: onBackground.withOpacity(0.08),
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      icon: Icon(
-                        Icons.arrow_forward_ios,
-                        size: 18,
-                        color: BrandColors.accent,
-                      ),
-                      onPressed: () {
-                        Navigator.of(context).maybePop();
-                      },
-                    ),
-                  ),
-                ],
-              ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Material(
+            elevation: 2,
+            shadowColor: Colors.black.withOpacity(0.08),
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.only(top: topPadding, left: 16, right: 16),
+              color: background,
+              alignment: Alignment.center,
+              // No controls, just dynamic height for app bar
             ),
-            Expanded(child: bodyContent),
-          ],
-        ),
+          ),
+          Expanded(
+            child: SafeArea(
+              top: false,
+              bottom: false,
+              child: bodyContent,
+            ),
+          ),
+          Material(
+            elevation: 2,
+            shadowColor: Colors.black.withOpacity(0.08),
+            child: Container(
+              width: double.infinity,
+              height: 0,
+              color: background,
+            ),
+          ),
+        ],
       ),
-      floatingActionButton: floatingActionButton,
+      floatingActionButton: floatingActionButton == null
+          ? null
+          : Material(
+              elevation: 2,
+              shadowColor: Colors.black.withOpacity(0.08),
+              type: MaterialType.transparency,
+              child: floatingActionButton,
+            ),
     );
   }
 

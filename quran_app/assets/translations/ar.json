@@ -152,6 +152,7 @@
     "download_surah_error": "تعذر تنزيل صوت السورة {surah}",
     "audio_start_error": "فشل بدء الصوت: {error}",
     "drawer_title": "القرآن الكريم",
+    "tab_contents": "المحتوى",
     "tab_surah": "السور",
     "tab_bookmarks": "العلامات",
     "tab_khatmah": "الختمة",

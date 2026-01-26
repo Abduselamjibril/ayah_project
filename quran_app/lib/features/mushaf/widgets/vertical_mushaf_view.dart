@@ -77,6 +77,8 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   double _autoScrollSpeed = 30.0;
   int _scrollGeneration = 0;
 
+  // Track if audio player is expanded
+  bool _audioPlayerExpanded = false;
   static const List<String> _bookmarkColors = [
     '#EF5350', // Red
     '#FFB300', // Yellow
@@ -583,101 +585,302 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     if (!_overlayVisible) return const SizedBox.shrink();
     final media = MediaQuery.of(context);
     final top = media.padding.top + 64;
-    final bottom = media.padding.bottom + 170;
+    // Add extra bottom padding if audio player is expanded
+    final bottom = media.padding.bottom + (_audioPlayerExpanded ? 250 : 170);
 
     return ValueListenableBuilder<double>(
-        valueListenable: _livePageNotifier,
-        builder: (context, livePage, _) {
-          final currentDouble = _getDisplayPage();
-          final currentPage = currentDouble.round();
+      valueListenable: _livePageNotifier,
+      builder: (context, livePage, _) {
+        final currentDouble = _getDisplayPage();
+        final currentPage = currentDouble.round();
 
-          return Positioned(
-            left: 10,
-            top: top,
-            bottom: bottom,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final height = constraints.maxHeight;
-                const pillHeight = 26.0;
-                final trackHeight =
-                    (height - pillHeight).clamp(1.0, double.infinity);
+        return Positioned(
+          left: 10,
+          top: top,
+          bottom: bottom,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final height = constraints.maxHeight;
+              const pillHeight = 26.0;
+              final trackHeight =
+                  (height - pillHeight).clamp(1.0, double.infinity);
 
-                void handleDrag(double dy) {
-                  final clamped = (dy - pillHeight / 2).clamp(0, trackHeight);
-                  final t = clamped / trackHeight;
-                  final value = 1 + t * 603;
-                  _stopAutoScroll();
-                  setState(() {
-                    _isSliderActive = true;
-                    _sliderValue = value;
-                    _overlayVisible = true;
-                  });
-                  _scheduleAutoHide();
-                }
+              // Responsive font size based on screen width
+              final screenWidth = MediaQuery.of(context).size.width;
+              double fontSize = 12;
+              if (screenWidth < 300) {
+                final media = MediaQuery.of(context);
+                final top = media.padding.top +
+                    48; // Reduce top padding for more height
+                // Add extra bottom padding if audio player is expanded
+                final bottom = media.padding.bottom +
+                    (_audioPlayerExpanded
+                        ? 220
+                        : 120); // Reduce bottom padding for more height
 
-                void handleEnd() {
-                  final value =
-                      (_sliderValue ?? currentDouble).clamp(1.0, 604.0);
-                  final page = value.round();
-                  setState(() {
-                    _isSliderActive = false;
-                    _sliderValue = null;
-                  });
-                  _navigateWithFade(page);
-                  _scheduleAutoHide();
-                }
+                return ValueListenableBuilder<double>(
+                  valueListenable: _livePageNotifier,
+                  builder: (context, livePage, _) {
+                    final currentDouble = _getDisplayPage();
+                    final currentPage = currentDouble.round();
 
-                final t = (currentDouble - 1) / 603;
-                final pillTop = (trackHeight * t).clamp(0, trackHeight);
+                    return Positioned(
+                      left: 4, // Move slider closer to the edge
+                      top: top,
+                      bottom: bottom,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final height = constraints.maxHeight;
+                          const pillHeight = 40.0; // Increased pill height
+                          final trackHeight =
+                              (height - pillHeight).clamp(1.0, double.infinity);
 
-                return GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onPanDown: (details) => handleDrag(details.localPosition.dy),
-                  onPanUpdate: (details) =>
-                      handleDrag(details.localPosition.dy),
-                  onPanEnd: (_) => handleEnd(),
-                  onTapDown: (details) => handleDrag(details.localPosition.dy),
-                  onTapUp: (_) => handleEnd(),
-                  child: Container(
-                    width: 32,
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.18),
-                      borderRadius: BorderRadius.circular(9),
-                    ),
-                    child: Stack(
-                      children: [
-                        Positioned(
-                          left: 4,
-                          right: 4,
-                          top: pillTop.toDouble(),
-                          child: Container(
-                            height: pillHeight,
-                            decoration: BoxDecoration(
-                              color: BrandColors.accent,
-                              borderRadius: BorderRadius.circular(7),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              '$currentPage',
-                              textScaler: const TextScaler.linear(1.0),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 12,
-                                height: 1.05,
+                          // Responsive font size based on screen width
+                          final screenWidth = MediaQuery.of(context).size.width;
+                          double fontSize = 16; // Increased font size
+                          if (screenWidth < 300) {
+                            fontSize = 12;
+                          } else if (screenWidth < 400) {
+                            fontSize = 13;
+                          } else if (screenWidth > 600) {
+                            fontSize = 18;
+                          }
+
+                          void handleDrag(double dy) {
+                            final clamped =
+                                (dy - pillHeight / 2).clamp(0, trackHeight);
+                            final t = clamped / trackHeight;
+                            final value = 1 + t * 603;
+                            _stopAutoScroll();
+                            setState(() {
+                              _isSliderActive = true;
+                              _sliderValue = value;
+                              _overlayVisible = true;
+                            });
+                            _scheduleAutoHide();
+                          }
+
+                          void handleEnd() {
+                            final value = (_sliderValue ?? currentDouble)
+                                .clamp(1.0, 604.0);
+                            final page = value.round();
+                            _navigateWithFade(page).then((_) {
+                              if (mounted) {/* Lines 637-641 omitted */}
+                            });
+                            _scheduleAutoHide();
+                          }
+
+                          final t = (currentDouble - 1) / 603;
+                          final pillTop =
+                              (trackHeight * t).clamp(0, trackHeight);
+
+                          // Colors for progress and background (theme-based, mushaf page aware)
+                          final Color passedColor = Colors.black.withOpacity(
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? 0.18
+                                  : 0.10);
+                          final Color notPassedColor =
+                              Theme.of(context).colorScheme.surface;
+
+                          return GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onPanDown: (details) =>
+                                handleDrag(details.localPosition.dy),
+                            onPanUpdate: (details) =>
+                                handleDrag(details.localPosition.dy),
+                            onPanEnd: (_) => handleEnd(),
+                            onTapDown: (details) =>
+                                handleDrag(details.localPosition.dy),
+                            onTapUp: (_) => handleEnd(),
+                            child: Container(
+                              width: 48, // Increased bar width
+                              decoration: BoxDecoration(
+                                color: notPassedColor,
+                                borderRadius:
+                                    BorderRadius.circular(14), // More rounded
+                                // Removed boxShadow for no shadow
+                                border: Border.all(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .outline
+                                      .withOpacity(0.18),
+                                  width: 1.2,
+                                ),
                               ),
+                              child: Stack(
+                                children: [
+                                  // Passed area (darker area)
+                                  Positioned(
+                                    left: 0,
+                                    right: 0,
+                                    top: 0,
+                                    height: pillTop + pillHeight / 2,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: passedColor,
+                                        borderRadius: BorderRadius.vertical(
+                                          top: Radius.circular(14),
+                                          bottom: Radius.circular(0),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  // The pill
+                                  Positioned(
+                                    left: 0,
+                                    right: 0,
+                                    top: pillTop.toDouble(),
+                                    height: pillHeight,
+                                    child: Center(
+                                      child: Container(
+                                        width: 44, // Increased pill width
+                                        height: pillHeight,
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary,
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                          border: Border.all(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .outline
+                                                .withOpacity(0.18),
+                                            width: 1.2,
+                                          ),
+                                          // No shadow
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            currentPage.toString(),
+                                            style: TextStyle(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onPrimary,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: fontSize,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                );
+              }
+              // Normal slider for wider screens
+              void handleDrag(double dy) {
+                final clamped = (dy - pillHeight / 2).clamp(0, trackHeight);
+                final t = clamped / trackHeight;
+                final value = 1 + t * 603;
+                _stopAutoScroll();
+                setState(() {
+                  _isSliderActive = true;
+                  _sliderValue = value;
+                  _overlayVisible = true;
+                });
+                _scheduleAutoHide();
+              }
+
+              void handleEnd() {
+                final value = (_sliderValue ?? currentDouble).clamp(1.0, 604.0);
+                final page = value.round();
+                _navigateWithFade(page).then((_) {
+                  if (mounted) {/* Lines 637-641 omitted */}
+                });
+                _scheduleAutoHide();
+              }
+
+              final t = (currentDouble - 1) / 603;
+              final pillTop = (trackHeight * t).clamp(0, trackHeight);
+
+              // Colors for progress and background (theme-based, mushaf page aware)
+              final Color passedColor = Colors.black.withOpacity(
+                  Theme.of(context).brightness == Brightness.dark
+                      ? 0.18
+                      : 0.10);
+              final Color notPassedColor =
+                  Theme.of(context).colorScheme.surface;
+
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onPanDown: (details) => handleDrag(details.localPosition.dy),
+                onPanUpdate: (details) => handleDrag(details.localPosition.dy),
+                onPanEnd: (_) => handleEnd(),
+                onTapDown: (details) => handleDrag(details.localPosition.dy),
+                onTapUp: (_) => handleEnd(),
+                child: Container(
+                  width: 32,
+                  decoration: BoxDecoration(
+                    color: notPassedColor,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .outline
+                          .withOpacity(0.18),
+                      width: 1.2,
+                    ),
+                  ),
+                  child: Stack(
+                    children: [
+                      // Passed area (darker area)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        top: 0,
+                        height: pillTop + pillHeight / 2,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: passedColor,
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(10),
+                              bottom: Radius.circular(0),
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      // The pill (expanded to fit bar width)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        top: pillTop.toDouble(),
+                        child: Container(
+                          height: pillHeight,
+                          decoration: BoxDecoration(
+                            color: BrandColors.accent,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            '$currentPage',
+                            textScaler: const TextScaler.linear(1.0),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: fontSize,
+                              height: 1.05,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                );
-              },
-            ),
-          );
-        });
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildAudioPlayerCard() {
@@ -687,12 +890,42 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520),
           child: Material(
-            elevation: 8,
+            elevation: 2, // Lowered elevation for a softer shadow
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: AudioPlayerCard(controller: widget.controller),
+              child: _audioPlayerExpanded
+                  ? Container(
+                      decoration: BoxDecoration(
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.10),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: AudioPlayerCard(
+                        controller: widget.controller,
+                        onExpandChanged: (expanded) {
+                          // Always call setState to force a rebuild and update the slider padding
+                          setState(() {
+                            _audioPlayerExpanded = expanded;
+                          });
+                        },
+                      ),
+                    )
+                  : AudioPlayerCard(
+                      controller: widget.controller,
+                      onExpandChanged: (expanded) {
+                        if (_audioPlayerExpanded != expanded) {
+                          setState(() {
+                            _audioPlayerExpanded = expanded;
+                          });
+                        }
+                      },
+                    ),
             ),
           ),
         ),
@@ -945,6 +1178,11 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
       await Future.delayed(half);
       if (!mounted) return;
 
+      // Fix: update slider state before jumping
+      setState(() {
+        _sliderValue = target.toDouble();
+        _isSliderActive = false;
+      });
       widget.controller.navigateToPage(target);
 
       if (mounted) {
