@@ -96,6 +96,7 @@ class ShareCardDesign extends StatelessWidget {
                       isDark: isDark,
                       showReference: false,
                       referenceText: '',
+                      size: size,
                     ),
                   ),
                   const SizedBox(height: 18),
@@ -179,6 +180,7 @@ class _AyahBody extends StatelessWidget {
   final bool isDark;
   final String referenceText;
   final bool showReference;
+  final double size;
 
   const _AyahBody({
     required this.surahNumber,
@@ -189,10 +191,18 @@ class _AyahBody extends StatelessWidget {
     required this.isDark,
     required this.referenceText,
     required this.showReference,
+    required this.size,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Scale font size based on width, assuming base width of ~430 (like header)
+    final double scaleFactor = size / 430;
+    final double verseFontSize = 23 * scaleFactor;
+    final double verseNumberFontSize = 23 * scaleFactor;
+    final double translationFontSize = 15 * scaleFactor;
+    final double referenceFontSize = 18 * scaleFactor;
+
     final spans = <InlineSpan>[];
     final lastAyah = endAyahNumber ?? ayahNumber;
 
@@ -209,8 +219,9 @@ class _AyahBody extends StatelessWidget {
           ),
           style: TextStyle(
             fontFamily: fontFamily,
-            fontSize: 23,
+            fontSize: verseFontSize,
             color: textColor,
+            height: 1.7, // Add height
           ),
         ),
       );
@@ -221,8 +232,9 @@ class _AyahBody extends StatelessWidget {
           text: ' ${getVerseNumberQCF(surahNumber, i)} ',
           style: TextStyle(
             fontFamily: fontFamily,
-            fontSize: 23,
+            fontSize: verseNumberFontSize,
             color: textColor, // Use accent color if desired, currently plain
+            height: 1.7, // Add height
           ),
         ),
       );
@@ -238,24 +250,24 @@ class _AyahBody extends StatelessWidget {
           textDirection: TextDirection.rtl,
         ),
         if (translationText != null) ...[
-          const SizedBox(height: 8),
+          SizedBox(height: 8 * scaleFactor),
           Text(
             translationText!,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: translationFontSize,
               height: 1.4,
               color: textColor.withValues(alpha: 0.7),
             ),
           ),
         ],
         if (showReference) ...[
-          const SizedBox(height: 8),
+          SizedBox(height: 8 * scaleFactor),
           Text(
             referenceText,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 20,
+              fontSize: referenceFontSize,
               letterSpacing: 0.4,
               color: textColor.withValues(alpha: 0.75),
               fontWeight: FontWeight.w500,
