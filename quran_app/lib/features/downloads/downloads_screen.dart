@@ -398,6 +398,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final accent = BrandColors.accent;
+    final settingsLabel = AppLocalizations.of(context)?.translate('settings_title') ?? 'Settings';
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
@@ -409,7 +410,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
           onPressed: () => Navigator.of(context).pop(),
           icon: Icon(Icons.arrow_back_ios_new_rounded, color: accent, size: 18),
           label: Text(
-            'Settings',
+            settingsLabel,
             style: TextStyle(
                 color: accent, fontSize: 16, fontWeight: FontWeight.w600),
           ),

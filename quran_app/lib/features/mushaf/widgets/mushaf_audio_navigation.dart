@@ -31,7 +31,6 @@ Future<AudioRecitation?> showReciterPickerSheet(
   BuildContext context,
   List<AudioRecitation> recitations,
 ) async {
-  final searchController = TextEditingController();
   final result = await showModalBottomSheet<AudioRecitation>(
     context: context,
     isScrollControlled: true,
@@ -61,6 +60,13 @@ Future<AudioRecitation?> showReciterPickerSheet(
             ),
             child: StatefulBuilder(
               builder: (context, setState) {
+                final searchController = TextEditingController();
+                // Dispose controller when modal closes
+                void closeModal([AudioRecitation? result]) {
+                  searchController.dispose();
+                  Navigator.of(context).pop(result);
+                }
+
                 final query = searchController.text.trim().toLowerCase();
                 final filtered = recitations.where((r) {
                   final name = r.reciterName.toLowerCase();
@@ -70,173 +76,179 @@ Future<AudioRecitation?> showReciterPickerSheet(
                       style.contains(query);
                 }).toList();
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        TextButton(
-                          onPressed: () {},
-                          style: TextButton.styleFrom(
-                            foregroundColor: BrandColors.accent,
-                          ),
-                          child: const Text('Edit'),
-                        ),
-                        const Spacer(),
-                        const Text(
-                          'Select Recitation',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 18,
-                          ),
-                        ),
-                        const Spacer(),
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color:
-                                theme.colorScheme.onSurface.withOpacity(0.08),
-                            shape: BoxShape.circle,
-                          ),
-                          child: IconButton(
-                            padding: EdgeInsets.zero,
-                            icon: const Icon(Icons.close, size: 18),
-                            color: theme.colorScheme.onSurface.withOpacity(0.8),
-                            onPressed: () => Navigator.of(context).pop(),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.onSurface.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
+                return SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          Icon(Icons.search,
+                          TextButton(
+                            onPressed: () {},
+                            style: TextButton.styleFrom(
+                              foregroundColor: BrandColors.accent,
+                            ),
+                            child: const Text('Edit'),
+                          ),
+                          const Spacer(),
+                          const Text(
+                            'Select Recitation',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
                               color:
-                                  theme.colorScheme.onSurface.withOpacity(0.6)),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextField(
-                              controller: searchController,
-                              decoration: const InputDecoration(
-                                hintText: 'Search',
-                                border: InputBorder.none,
-                                isDense: true,
-                              ),
-                              onChanged: (_) => setState(() {}),
+                                  theme.colorScheme.onSurface.withOpacity(0.08),
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              icon: const Icon(Icons.close, size: 18),
+                              color:
+                                  theme.colorScheme.onSurface.withOpacity(0.8),
+                              onPressed: () => closeModal(),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'All Recitations',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Expanded(
-                      child: ListView.separated(
-                        padding: EdgeInsets.zero,
-                        itemCount: filtered.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (context, index) {
-                          final r = filtered[index];
-                          return InkWell(
-                            borderRadius: BorderRadius.circular(16),
-                            onTap: () => Navigator.pop(context, r),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 14),
-                              decoration: BoxDecoration(
-                                color: cardColor,
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    width: 34,
-                                    height: 34,
-                                    decoration: BoxDecoration(
-                                      color: theme.colorScheme.onSurface
-                                          .withOpacity(0.08),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      Icons.volume_up_outlined,
-                                      size: 20,
-                                      color: theme.colorScheme.onSurface
-                                          .withOpacity(0.7),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          r.reciterName,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 16,
-                                          ),
-                                        ),
-                                        if (r.style != null &&
-                                            r.style!.trim().isNotEmpty)
-                                          Padding(
-                                            padding:
-                                                const EdgeInsets.only(top: 2),
-                                            child: Text(
-                                              r.style!,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                color: theme
-                                                    .colorScheme.onSurface
-                                                    .withOpacity(0.7),
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                  Container(
-                                    width: 32,
-                                    height: 32,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border:
-                                          Border.all(color: BrandColors.accent),
-                                    ),
-                                    child: const Icon(
-                                      Icons.info_outline,
-                                      size: 18,
-                                      color: BrandColors.accent,
-                                    ),
-                                  ),
-                                ],
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.onSurface.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.search,
+                                color: theme.colorScheme.onSurface
+                                    .withOpacity(0.6)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextField(
+                                controller: searchController,
+                                decoration: const InputDecoration(
+                                  hintText: 'Search',
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                ),
+                                onChanged: (_) => setState(() {}),
                               ),
                             ),
-                          );
-                        },
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      const Text(
+                        'All Recitations',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: maxHeight * 0.5,
+                        child: ListView.separated(
+                          padding: EdgeInsets.zero,
+                          itemCount: filtered.length,
+                          shrinkWrap: true,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final r = filtered[index];
+                            return InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: () => closeModal(r),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 14),
+                                decoration: BoxDecoration(
+                                  color: cardColor,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      width: 34,
+                                      height: 34,
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.onSurface
+                                            .withOpacity(0.08),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.volume_up_outlined,
+                                        size: 20,
+                                        color: theme.colorScheme.onSurface
+                                            .withOpacity(0.7),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            r.reciterName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                          if (r.style != null &&
+                                              r.style!.trim().isNotEmpty)
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.only(top: 2),
+                                              child: Text(
+                                                r.style!,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  color: theme
+                                                      .colorScheme.onSurface
+                                                      .withOpacity(0.7),
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    Container(
+                                      width: 32,
+                                      height: 32,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                            color: BrandColors.accent),
+                                      ),
+                                      child: const Icon(
+                                        Icons.info_outline,
+                                        size: 18,
+                                        color: BrandColors.accent,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 );
               },
             ),
@@ -245,8 +257,6 @@ Future<AudioRecitation?> showReciterPickerSheet(
       );
     },
   );
-
-  searchController.dispose();
   return result;
 }
 
