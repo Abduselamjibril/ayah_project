@@ -64,8 +64,18 @@ class AudioPlayerService {
         loopMode.value = mode;
       });
 
-      _handler.mediaItem.listen((item) {
-        if (item != null) {
+      // Track current index and update metadata accordingly
+      _handler.currentIndexStream.listen((index) {
+        if (index != null &&
+            _currentPlaylistMetadata != null &&
+            index < _currentPlaylistMetadata!.length) {
+          final meta = _currentPlaylistMetadata![index];
+          final item = meta['item'] as MediaItem;
+
+          // Update the mediaItem for lock screen and notification
+          _handler.mediaItem.add(item);
+
+          // Update our state notifiers
           currentLabel.value = item.title;
           if (item.extras != null) {
             final s = item.extras!['surah'] as int?;
@@ -73,39 +83,6 @@ class AudioPlayerService {
             if (s != null) currentSurah.value = s;
             if (a != null) currentAyah.value = a;
           }
-        }
-      });
-
-      // just_audio's currentIndexStream logic is encapsulated in handler's metadata update if configured,
-      // but we can also listen to handler's queue or custom stream if exposed.
-      // Our handler exposes currentIndexStream.
-      _handler.currentIndexStream.listen((index) {
-        // We rely on MediaItem updates from just_audio_background (if used) or manual updates.
-        // But wait, using ClippingAudioSource with tag, just_audio updates the 'sequenceState'.
-        // 'audio_service' with just_audio integration usually updates MediaItem automatically if configured?
-        // No, we need to map index to MediaItem manually in the handler or here.
-        // Since we didn't add logic in Handler to map index -> MediaItem, we should do it here if possible,
-        // OR update Handler to do it.
-        // BETTER: AudioPlayerService knows the playlist.
-        if (index != null &&
-            _currentPlaylistMetadata != null &&
-            index < _currentPlaylistMetadata!.length) {
-          final meta = _currentPlaylistMetadata![index];
-          final item = meta['item'] as MediaItem;
-          // We manually push this item as 'current' to the handler so lock screen updates
-          // _handler.playMediaItem(
-          //     item); // specific method I added, but wait, this might restart playback?
-          // My 'playMediaItem' implementation:
-          // mediaItem.add(item); setUrl/FilePath...
-          // That restarts playback! Bad!
-
-          // We need a way to just Update Metadata without changing source.
-          // BaseAudioHandler has `mediaItem.add(item)`.
-          // So we can just call that on handler.
-          // But `_handler` field is `QuranAudioHandler`.
-          // I should expose a method `updateCurrentItem(MediaItem item)`.
-          // Or just access `.mediaItem.add`.
-          _handler.mediaItem.add(item);
         }
       });
 
@@ -236,7 +213,8 @@ class AudioPlayerService {
 
   // --- Playback Logic ---
 
-  /// Play a custom range with download support (progressive downloads).
+  /// Play a custom range with download support.
+  /// Pre-downloads at least 3 suras before starting playback, and plays only one sura at a time.
   Future<void> playRangeSequenceWithDownload(
     BuildContext? context, {
     required int startSurah,
@@ -256,30 +234,50 @@ class AudioPlayerService {
     final local_audio.AudioService storage = local_audio.AudioService.instance;
     await storage.initialize();
 
-    // 3. Download ONLY the first surah initially
-    if (!(await storage.isSurahDownloaded(recitation.id, startSurah))) {
-      final ok = await downloadSurahIfNeeded(recitation, startSurah);
-      if (!ok) {
-        if (context != null && context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to download Surah $startSurah')));
+    // 3. Pre-download at least 3 suras (or all if range is smaller)
+    final totalSurasInRange = endSurah - startSurah + 1;
+    final surasToPreDownload = totalSurasInRange < 3 ? totalSurasInRange : 3;
+
+    if (context != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              Text('Preparing audio... downloading $surasToPreDownload suras'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+
+    for (var i = 0; i < surasToPreDownload; i++) {
+      final surahToDownload = startSurah + i;
+      if (!(await storage.isSurahDownloaded(recitation.id, surahToDownload))) {
+        final ok = await downloadSurahIfNeeded(recitation, surahToDownload);
+        if (!ok) {
+          if (context != null && context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to download Surah $surahToDownload'),
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+          return;
         }
-        return;
       }
     }
 
-    // 4. Build playlist for the first surah and start playback
+    // 4. Build playlist for ONLY the first surah
     final concatenatingSource = ConcatenatingAudioSource(children: []);
     final List<Map<String, dynamic>> metadata = [];
 
-    // Add first surah to playlist
+    // Add only the first surah to playlist (stops after this sura)
     await _addSurahToPlaylist(
       concatenatingSource,
       metadata,
       storage,
       recitation,
       startSurah,
-      startAyah: (startSurah == startSurah) ? startAyah : 1,
+      startAyah: startAyah,
       endAyah: (startSurah == endSurah) ? endAyah : getVerseCount(startSurah),
     );
 
@@ -287,22 +285,18 @@ class AudioPlayerService {
     _currentPlaylistMetadata = metadata;
     hasSourceNotifier.value = true;
 
-    // 5. Start playback immediately
+    // 5. Start playback
     await _handler.setAudioSource(concatenatingSource);
     await _handler.play();
 
-    // 6. Download and add remaining surahs in the background
-    if (startSurah < endSurah) {
-      _downloadAndAppendRemainingSurahs(
+    // 6. Download remaining suras in the background (but don't add to playlist)
+    if (startSurah < endSurah && surasToPreDownload < totalSurasInRange) {
+      _downloadRemainingSurasInBackground(
         context,
-        concatenatingSource,
-        metadata,
         storage,
         recitation,
-        startSurah: startSurah + 1,
-        startAyah: 1,
+        startSurah: startSurah + surasToPreDownload,
         endSurah: endSurah,
-        endAyah: endAyah,
       );
     }
   }
@@ -358,53 +352,24 @@ class AudioPlayerService {
     await playlist.addAll(sources);
   }
 
-  /// Background task to download and append remaining surahs
-  Future<void> _downloadAndAppendRemainingSurahs(
+  /// Background task to download remaining suras (without adding to playlist)
+  Future<void> _downloadRemainingSurasInBackground(
     BuildContext? context,
-    ConcatenatingAudioSource playlist,
-    List<Map<String, dynamic>> metadata,
     local_audio.AudioService storage,
     AudioRecitation recitation, {
     required int startSurah,
-    required int startAyah,
     required int endSurah,
-    required int endAyah,
   }) async {
     for (var s = startSurah; s <= endSurah; s++) {
       // Download if needed
       if (!(await storage.isSurahDownloaded(recitation.id, s))) {
         final ok = await downloadSurahIfNeeded(recitation, s);
         if (!ok) {
-          // Download failed, show notification but don't stop playback
-          if (context != null && context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                    'Failed to download Surah $s. Playback will stop at current surah.'),
-                duration: Duration(seconds: 3),
-              ),
-            );
-          }
+          // Download failed, but don't show notification since it's background
+          debugPrint('Background download failed for Surah $s');
           break; // Stop downloading further surahs
         }
       }
-
-      // Add to playlist
-      final first = (s == startSurah) ? startAyah : 1;
-      final last = (s == endSurah) ? endAyah : getVerseCount(s);
-
-      await _addSurahToPlaylist(
-        playlist,
-        metadata,
-        storage,
-        recitation,
-        s,
-        startAyah: first,
-        endAyah: last,
-      );
-
-      // Update the metadata reference
-      _currentPlaylistMetadata = metadata;
     }
   }
 
@@ -478,15 +443,11 @@ class AudioPlayerService {
     downloadingSurah.value = surah;
     downloadProgress.value = 0;
     try {
-      final notifId = surah; // Use surah ID as notification ID
       return await local_audio.AudioService.instance
           .downloadSurahAudio(recitation, surah, onProgress: (p) {
         downloadProgress.value = p;
-        AppNotificationService.instance
-            .showProgress(notifId, 'Downloading Surah $surah', p);
       });
     } finally {
-      AppNotificationService.instance.cancel(surah);
       isDownloading.value = false;
       downloadingSurah.value = null;
     }

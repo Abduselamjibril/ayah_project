@@ -3,32 +3,20 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:quran_app/core/services/language_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:quran_app/core/quran/widgets/quran_pageview.dart';
 import '../../../core/quran/qcf_quran.dart';
 import '../../../core/services/audio_player_service.dart';
 import '../../audio_player/audio_player_screen.dart';
-import 'package:quran_app/features/bookmarks/bookmark_screen.dart';
-import 'package:quran_app/features/downloads/downloads_screen.dart';
 import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart';
-import 'package:quran_app/features/share/presentation/dialogs/share_preview_dialog.dart';
 import '../controller/mushaf_controller.dart';
-import '../screens/verse_details_screen.dart';
-import 'play_range_dialog.dart';
 import 'surah_info_sheet.dart';
 import 'package:quran_app/app/app.dart';
-import 'package:quran_app/core/services/mushaf_settings_service.dart';
 import 'package:quran_app/core/services/theme_service.dart';
 import 'package:quran_app/core/ui/responsive.dart';
-import 'package:quran_app/features/share/presentation/widgets/share_card.dart';
-import 'package:quran_app/features/share/services/share_service.dart';
 
 // Result type for the verse menu editor dialog
-class _MenuEditResult {
-  _MenuEditResult({required this.order, required this.hidden});
-  final List<String> order;
-  final List<String> hidden;
-}
+import 'verse_options_sheet.dart';
+import 'page_settings_sheet.dart';
 
 enum _ShareFormat { image, text, textWithoutDiacritics }
 
@@ -55,7 +43,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   int _lastControllerPage = 1;
   late final AudioPlayerService _audioPlayer;
   late final VoidCallback _ayahListener;
-  final Map<int, String> _surahNameCache = {};
+
   bool _overlayVisible = true;
   Timer? _autoHideTimer;
   Timer? _highlightClearTimer;
@@ -63,26 +51,6 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   double _contentOpacity = 1.0;
   static const Duration _fadeDuration = Duration(milliseconds: 220);
   bool _isFading = false;
-
-  static const List<String> _bookmarkColors = [
-    '#EF5350', // Red
-    '#FFB300', // Yellow
-    '#66BB6A', // Green
-    '#42A5F5', // Blue
-  ];
-
-  static const List<String> _defaultSectionOrder = [
-    'bookmarks',
-    'recitation',
-    'downloads',
-    'sharing',
-    'highlight',
-  ];
-
-  List<String> _sectionOrder = List.from(_defaultSectionOrder);
-  List<String> _hiddenSections = [];
-  static const _sectionOrderKey = 'verse_menu_order';
-  static const _hiddenSectionKey = 'verse_menu_hidden';
 
   StreamSubscription<int>? _navSubscription;
 
@@ -119,8 +87,6 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       widget.onOverlayVisibilityChanged?.call(true);
     });
-
-    _loadSectionOrder();
   }
 
   @override
@@ -228,8 +194,17 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                                       Theme.of(context).brightness),
                               verseBackgroundColor: (s, v) =>
                                   _getVerseBackgroundColor(bookmarkState, s, v),
-                              onLongPress: (surah, verse) => _showVerseOptions(
-                                  context, bookmarkState, surah, verse),
+                              onLongPress: (surah, verse) {
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (context) => VerseOptionsSheet(
+                                    surah: surah,
+                                    verse: verse,
+                                  ),
+                                ).whenComplete(_scheduleHighlightClear);
+                              },
                               onLongPressStart: (surah, verse, details) {
                                 _cancelHighlightClear();
                                 widget.controller
@@ -336,8 +311,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                                     ? '${currentPage + 1}'
                                     : '',
                                 enabled: currentPage < 604,
-                                onTap: () =>
-                                    _navigateWithFade(currentPage + 1),
+                                onTap: () => _navigateWithFade(currentPage + 1),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -390,8 +364,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                                                     color: Colors.black
                                                         .withOpacity(0.10),
                                                     blurRadius: 6,
-                                                    offset:
-                                                        const Offset(0, 2),
+                                                    offset: const Offset(0, 2),
                                                   ),
                                                 ],
                                               ),
@@ -436,8 +409,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                                                     color: Colors.black
                                                         .withOpacity(0.22),
                                                     blurRadius: 12,
-                                                    offset:
-                                                        const Offset(-3, 0),
+                                                    offset: const Offset(-3, 0),
                                                   ),
                                                 ],
                                               ),
@@ -566,24 +538,12 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     );
   }
 
-  void _showSnack(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  String _surahNameForPage(int page) {
-    final cached = _surahNameCache[page];
-    if (cached != null) return cached;
+  int _parseColor(String value) {
     try {
-      final pd = getPageData(page);
-      if (pd.isEmpty) return '';
-      final surahNum = int.parse(pd[0]['surah'].toString());
-      final name = getSurahName(surahNum);
-      _surahNameCache[page] = name;
-      return name;
+      final normalized = value.replaceAll('#', '').padLeft(6, '0');
+      return int.parse('FF$normalized', radix: 16);
     } catch (e) {
-      return '';
+      return 0xFFFFC107;
     }
   }
 
@@ -605,206 +565,12 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     }
   }
 
-  Future<void> _openPageSettingsSheet() async {
-    final mushafSettings = MushafSettingsService();
-    final themeService = ThemeService();
-    final prefs = await SharedPreferences.getInstance();
-    bool searchGesture = prefs.getBool('search_gesture_enabled') ?? false;
-
-    await showModalBottomSheet(
+  void _openPageSettingsSheet() {
+    showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return DraggableScrollableSheet(
-          minChildSize: 0.5,
-          initialChildSize: 0.5,
-          maxChildSize: 0.8,
-          builder: (context, controller) {
-            return StatefulBuilder(
-              builder: (context, setStateSheet) {
-                ScrollMode mode = mushafSettings.scrollMode;
-                ThemeMode themeMode = themeService.themeMode;
-                SurahHeaderStyle surahStyle = themeService.surahHeaderStyle;
-
-                return Container(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(24)),
-                  ),
-                  child: SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text('Page Settings',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.w700)),
-                              const Spacer(),
-                              IconButton(
-                                icon: Icon(Icons.close_rounded,
-                                    color: BrandColors.accent),
-                                onPressed: () => Navigator.pop(context),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Expanded(
-                            child: ListView(
-                              controller: controller,
-                              children: [
-                                const SizedBox(height: 8),
-                                Text('Scroll Direction',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleSmall
-                                        ?.copyWith(
-                                            fontWeight: FontWeight.w700)),
-                                const SizedBox(height: 10),
-                                Row(
-                                  children: [
-                                    _SettingOptionTile(
-                                      label: 'Horizontal',
-                                      icon: Icons.view_day,
-                                      selected: mode == ScrollMode.horizontal,
-                                      onTap: () {
-                                        mushafSettings.setScrollMode(
-                                            ScrollMode.horizontal);
-                                        setStateSheet(
-                                            () => mode = ScrollMode.horizontal);
-                                      },
-                                    ),
-                                    const SizedBox(width: 12),
-                                    _SettingOptionTile(
-                                      label: 'Vertical',
-                                      icon: Icons.view_stream,
-                                      selected: mode == ScrollMode.vertical,
-                                      onTap: () {
-                                        mushafSettings
-                                            .setScrollMode(ScrollMode.vertical);
-                                        setStateSheet(
-                                            () => mode = ScrollMode.vertical);
-                                      },
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 18),
-                                Text('Theme Mode',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleSmall
-                                        ?.copyWith(
-                                            fontWeight: FontWeight.w700)),
-                                const SizedBox(height: 10),
-                                Wrap(
-                                  spacing: 12,
-                                  runSpacing: 12,
-                                  children: ThemeMode.values
-                                      .where((t) => t != ThemeMode.system)
-                                      .map((t) {
-                                    final selected = t == themeMode;
-                                    String label =
-                                        t == ThemeMode.light ? 'Light' : 'Dark';
-                                    IconData icon = t == ThemeMode.light
-                                        ? Icons.wb_sunny
-                                        : Icons.nightlight_round;
-                                    return _ThemeModeTile(
-                                      label: label,
-                                      icon: icon,
-                                      selected: selected,
-                                      onTap: () {
-                                        themeService.setThemeMode(t);
-                                        setStateSheet(() => themeMode = t);
-                                      },
-                                    );
-                                  }).toList(),
-                                ),
-                                if (themeMode == ThemeMode.dark) ...[
-                                  const SizedBox(height: 18),
-                                  SwitchListTile(
-                                    title: const Text('Pure Black Background',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.w600)),
-                                    subtitle:
-                                        const Text('Use pure black for Mushaf'),
-                                    value: themeService.pureBlackBackground,
-                                    onChanged: (value) {
-                                      themeService
-                                          .setPureBlackBackground(value);
-                                      setStateSheet(() {});
-                                    },
-                                    activeColor: BrandColors.accent,
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-                                ],
-                                if (themeMode != ThemeMode.dark) ...[
-                                  const SizedBox(height: 18),
-                                  Text('Surah Header Style',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleSmall
-                                          ?.copyWith(
-                                              fontWeight: FontWeight.w700)),
-                                  const SizedBox(height: 10),
-                                  Wrap(
-                                    spacing: 12,
-                                    runSpacing: 12,
-                                    children:
-                                        SurahHeaderStyle.values.map((s) {
-                                      final selected = s == surahStyle;
-                                      return _ThemeModeTile(
-                                        label: s == SurahHeaderStyle.golden
-                                            ? 'Golden'
-                                            : 'Green',
-                                        icon: Icons.image,
-                                        selected: selected,
-                                        onTap: () {
-                                          themeService.setSurahHeaderStyle(s);
-                                          setStateSheet(() => surahStyle = s);
-                                        },
-                                      );
-                                    }).toList(),
-                                  ),
-                                ],
-                                const SizedBox(height: 18),
-                                Row(
-                                  children: [
-                                    const Expanded(
-                                        child: Text('Two-finger Search',
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.w700))),
-                                    Switch.adaptive(
-                                      value: searchGesture,
-                                      onChanged: (val) async {
-                                        setStateSheet(
-                                            () => searchGesture = val);
-                                        await prefs.setBool(
-                                            'search_gesture_enabled', val);
-                                      },
-                                      activeColor: BrandColors.accent,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 24),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            );
-          },
-        );
-      },
+      builder: (ctx) => const PageSettingsSheet(),
     );
   }
 
@@ -848,466 +614,6 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
       _showOverlay();
     }
   }
-
-  int _parseColor(String value) {
-    try {
-      final normalized = value.replaceAll('#', '').padLeft(6, '0');
-      return int.parse('FF$normalized', radix: 16);
-    } catch (e) {
-      return 0xFFFFC107;
-    }
-  }
-
-  void _showVerseOptions(BuildContext context,
-      BookmarkNotesNotifier bookmarkState, int surah, int verse) {
-    final rootContext = context;
-    final surahTitle = '${getSurahName(surah)}: $verse';
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) {
-        final theme = Theme.of(context);
-        final width = MediaQuery.of(context).size.width;
-        final shareCardWidth = (width - 16 * 2 - 12 * 3) / 4;
-
-        final orderedSections = _buildOrderedSections(sheetContext,
-            bookmarkState, surah, verse, shareCardWidth, rootContext);
-
-        return SafeArea(
-          child: FractionallySizedBox(
-            heightFactor: 0.9,
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-              child: Container(
-                decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(24)),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            TextButton(
-                              onPressed: () async {
-                                final result =
-                                    await _openMenuEditor(sheetContext);
-                                if (result != null && mounted) {
-                                  setState(() {
-                                    _sectionOrder = result.order;
-                                    _hiddenSections = result.hidden;
-                                  });
-                                  await _saveMenuConfig(
-                                      result.order, result.hidden);
-                                }
-                              },
-                              child: const Text('Edit',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      color: BrandColors.accent)),
-                            ),
-                            Expanded(
-                                child: Center(
-                                    child: Text(surahTitle,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.w800,
-                                            fontSize: 18)))),
-                            IconButton(
-                              onPressed: () => Navigator.pop(sheetContext),
-                              icon: const Icon(Icons.close),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        ...orderedSections,
-                        const SizedBox(height: 12),
-                        const Text('Actions',
-                            style: TextStyle(fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 8),
-                        _buildQuickActions(
-                            context, bookmarkState, rootContext, surah, verse),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    ).whenComplete(_scheduleHighlightClear);
-  }
-
-  List<Widget> _buildOrderedSections(
-      BuildContext context,
-      BookmarkNotesNotifier bookmarkState,
-      int surah,
-      int verse,
-      double shareCardWidth,
-      BuildContext rootContext) {
-    final widgets = <Widget>[];
-    for (final section in _sectionOrder) {
-      if (_hiddenSections.contains(section)) continue;
-      switch (section) {
-        case 'bookmarks':
-          widgets.add(const Text('Bookmarks',
-              style: TextStyle(fontWeight: FontWeight.w700)));
-          widgets.add(const SizedBox(height: 8));
-          widgets.add(Row(children: [
-            Expanded(
-                child: _buildActionCard(context,
-                    width: double.infinity,
-                    icon: Icons.bookmark_border,
-                    iconColor: Colors.redAccent,
-                    label: 'Red', onTap: () {
-              Navigator.pop(context);
-              bookmarkState.saveBookmark(
-                  surahId: surah,
-                  ayahId: verse,
-                  colorHex: '#EF5350',
-                  category: 'Red');
-            })),
-            const SizedBox(width: 12),
-            Expanded(
-                child: _buildActionCard(context,
-                    width: double.infinity,
-                    icon: Icons.list_alt,
-                    label: 'All',
-                    trailing: Icons.chevron_right, onTap: () {
-              Navigator.pop(context);
-              Navigator.push(rootContext,
-                  MaterialPageRoute(builder: (context) => BookmarkScreen()));
-            })),
-          ]));
-          widgets.add(const SizedBox(height: 14));
-          break;
-        case 'recitation':
-          widgets.add(const Text('Recitation',
-              style: TextStyle(fontWeight: FontWeight.w700)));
-          widgets.add(const SizedBox(height: 8));
-          widgets.add(Row(children: [
-            Expanded(
-                child: _buildActionCard(context,
-                    width: double.infinity,
-                    icon: Icons.play_arrow,
-                    label: 'Play', onTap: () {
-              Navigator.pop(context);
-              AudioPlayerService.instance
-                  .playSurahSequenceWithDownload(rootContext, surah, verse);
-            })),
-            const SizedBox(width: 12),
-            Expanded(
-                child: _buildActionCard(context,
-                    width: double.infinity,
-                    icon: Icons.playlist_play,
-                    label: 'Play to...', onTap: () {
-              Navigator.pop(context);
-              _showPlayToDialog(rootContext, surah, verse);
-            })),
-          ]));
-          widgets.add(const SizedBox(height: 14));
-          break;
-        case 'downloads':
-          widgets.add(_buildActionCard(context,
-              width: double.infinity,
-              icon: Icons.download_rounded,
-              label: 'Downloads',
-              trailing: Icons.chevron_right, onTap: () {
-            Navigator.pop(context);
-            Navigator.push(rootContext,
-                MaterialPageRoute(builder: (context) => DownloadsScreen()));
-          }));
-          widgets.add(const SizedBox(height: 14));
-          break;
-        case 'sharing':
-          widgets.add(Row(children: [
-            _buildActionCard(context,
-                width: shareCardWidth,
-                icon: Icons.copy,
-                label: 'Copy',
-                onTap: () => _copyVerseText(surah, verse)),
-            const SizedBox(width: 8),
-            _buildActionCard(context,
-                width: shareCardWidth,
-                icon: Icons.image_outlined,
-                label: 'Card',
-                onTap: () => _shareVerseCard(surah, verse)),
-            const SizedBox(width: 8),
-            _buildActionCard(context,
-                width: shareCardWidth,
-                icon: Icons.share,
-                label: 'Share',
-                onTap: () => _openShareSheet(rootContext, surah, verse)),
-          ]));
-          widgets.add(const SizedBox(height: 14));
-          break;
-        case 'highlight':
-          widgets.add(_buildHighlightRow(context, bookmarkState, surah, verse));
-          widgets.add(const SizedBox(height: 14));
-          break;
-      }
-    }
-    return widgets;
-  }
-
-  Widget _buildActionCard(BuildContext context,
-      {required double width,
-      required IconData icon,
-      required String label,
-      required VoidCallback onTap,
-      IconData? trailing,
-      bool enabled = true,
-      Color? iconColor}) {
-    final theme = Theme.of(context);
-    return SizedBox(
-      width: width,
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          height: 58,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.onSurface.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Row(
-            children: [
-              Icon(icon, color: iconColor ?? BrandColors.accent),
-              const SizedBox(width: 10),
-              Expanded(
-                  child: Text(label,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                      overflow: TextOverflow.ellipsis)),
-              if (trailing != null) Icon(trailing, size: 18),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHighlightRow(
-      BuildContext context, BookmarkNotesNotifier state, int surah, int verse) {
-    final existingColor =
-        state.bookmarkForVerse(surah, verse)?.colorHex.toLowerCase();
-    return Row(
-      children: _bookmarkColors.map((hex) {
-        final color = Color(_parseColor(hex));
-        final isSelected = existingColor == hex.toLowerCase();
-        return Padding(
-          padding: const EdgeInsets.only(right: 10),
-          child: InkWell(
-            onTap: () {
-              Navigator.pop(context);
-              if (isSelected) {
-                state.deleteBookmark(surah, verse);
-              } else {
-                state.saveBookmark(
-                    surahId: surah,
-                    ayahId: verse,
-                    colorHex: hex,
-                    category: _getCategoryName(hex));
-              }
-            },
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: color.withOpacity(0.2),
-                  border:
-                      Border.all(color: color, width: isSelected ? 3 : 1)),
-              child: isSelected ? const Icon(Icons.check, size: 20) : null,
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  String _getCategoryName(String hex) {
-    if (hex == '#EF5350') return 'Red';
-    if (hex == '#FFB300') return 'Yellow';
-    if (hex == '#66BB6A') return 'Green';
-    if (hex == '#42A5F5') return 'Blue';
-    return 'Bookmark';
-  }
-
-  Widget _buildQuickActions(BuildContext context, BookmarkNotesNotifier state,
-      BuildContext rootContext, int surah, int verse) {
-    return Column(children: [
-      _buildActionCard(context,
-          width: double.infinity,
-          icon: Icons.push_pin_outlined,
-          label: 'Pin here (Khatmah)', onTap: () {
-        Navigator.pop(context);
-        state.setKhatmahPin(
-            surahId: surah,
-            ayahId: verse,
-            colorHex: '#FFB300',
-            category: 'Khatmah');
-      }),
-      const SizedBox(height: 10),
-      _buildActionCard(context,
-          width: double.infinity,
-          icon: Icons.note_add_outlined,
-          label: 'Write note', onTap: () {
-        Navigator.pop(context);
-        _openNoteSheet(rootContext, state, surah, verse);
-      }),
-    ]);
-  }
-
-  Future<void> _loadSectionOrder() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _sectionOrder = prefs.getStringList(_sectionOrderKey) ??
-          List.from(_defaultSectionOrder);
-      _hiddenSections = prefs.getStringList(_hiddenSectionKey) ?? [];
-    });
-  }
-
-  Future<void> _saveMenuConfig(List<String> order, List<String> hidden) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_sectionOrderKey, order);
-    await prefs.setStringList(_hiddenSectionKey, hidden);
-  }
-
-  Future<_MenuEditResult?> _openMenuEditor(BuildContext context) async {
-    final order = List<String>.from(_sectionOrder);
-    final hidden = List<String>.from(_hiddenSections);
-    return showModalBottomSheet<_MenuEditResult>(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) {
-        return StatefulBuilder(builder: (context, setSheetState) {
-          return Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Edit Menu Order',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                ...order.map((item) => ListTile(
-                    title: Text(item),
-                    trailing: IconButton(
-                        icon: const Icon(Icons.hide_source),
-                        onPressed: () {
-                          setSheetState(() {
-                            order.remove(item);
-                            hidden.add(item);
-                          });
-                        }))),
-                ElevatedButton(
-                    onPressed: () => Navigator.pop(
-                        ctx, _MenuEditResult(order: order, hidden: hidden)),
-                    child: const Text('Done'))
-              ],
-            ),
-          );
-        });
-      },
-    );
-  }
-
-  Future<void> _openNoteSheet(BuildContext context, BookmarkNotesNotifier state,
-      int surah, int verse) async {
-    final existing = state.noteForVerse(surah, verse);
-    final controller = TextEditingController(text: existing?.content ?? '');
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom,
-            left: 16,
-            right: 16,
-            top: 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-                controller: controller,
-                maxLines: 3,
-                decoration: const InputDecoration(hintText: 'Note content')),
-            ElevatedButton(
-                onPressed: () {
-                  state.upsertNote(
-                      surahId: surah, ayahId: verse, content: controller.text);
-                  Navigator.pop(ctx);
-                },
-                child: const Text('Save'))
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _openShareSheet(
-      BuildContext context, int surah, int verse) async {
-    final surahName = getSurahName(surah);
-    await showModalBottomSheet(
-      context: context,
-      builder: (ctx) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Share $surahName: $verse'),
-            ListTile(
-                leading: const Icon(Icons.text_fields),
-                title: const Text('Share as Text'),
-                onTap: () {
-                  ShareService.instance
-                      .shareVerseText(surahNumber: surah, ayahNumber: verse);
-                  Navigator.pop(ctx);
-                }),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _shareVerseCard(int surah, int verse) async {
-    await showSharePreviewDialog(
-        context: context, surahNumber: surah, ayahNumber: verse);
-  }
-
-  Future<void> _showPlayToDialog(
-      BuildContext context, int startSurah, int startVerse) async {
-    await showModalBottomSheet(
-        context: context,
-        builder: (ctx) =>
-            PlayRangeDialog(startSurah: startSurah, startVerse: startVerse));
-  }
-
-  void _copyVerseText(int surah, int verse) {
-    Clipboard.setData(
-        ClipboardData(text: getVerseQCF(surah, verse, verseEndSymbol: true)));
-    _showSnack('Copied to clipboard');
-  }
-
-  ({ShareCardBackground background, bool isDark, String frameAsset})
-      _resolveShareCardTheme() {
-    final brightness = Theme.of(context).brightness;
-    final isDarkMode = brightness == Brightness.dark;
-    final background = isDarkMode
-        ? ShareCardBackground.gradient(const LinearGradient(
-            colors: [Color(0xFF0F2027), Color(0xFF2C5364)]))
-        : ShareCardBackground.solid(const Color(0xFFFFF4DA));
-    return (
-      background: background,
-      isDark: isDarkMode,
-      frameAsset: ThemeService().getResponsiveMainframePath(brightness)
-    );
-  }
 }
 
 class _NavPill extends StatelessWidget {
@@ -1346,82 +652,6 @@ class _NotesIcon extends StatelessWidget {
         onPressed: onTap,
         icon: const Icon(Icons.menu_book_rounded,
             color: BrandColors.accent, size: 26));
-  }
-}
-
-class _SettingOptionTile extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-  const _SettingOptionTile(
-      {required this.label,
-      required this.icon,
-      required this.selected,
-      required this.onTap});
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Material(
-        color: selected
-            ? BrandColors.accent.withOpacity(0.12)
-            : Colors.transparent,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-            side: BorderSide(
-                color: selected
-                    ? BrandColors.accent
-                    : Colors.grey.withOpacity(0.3))),
-        child: InkWell(
-            onTap: onTap,
-            child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                child:
-                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(icon, color: BrandColors.accent),
-                  const SizedBox(width: 10),
-                  Text(label,
-                      style: const TextStyle(fontWeight: FontWeight.w600))
-                ]))),
-      ),
-    );
-  }
-}
-
-class _ThemeModeTile extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-  const _ThemeModeTile(
-      {required this.label,
-      required this.icon,
-      required this.selected,
-      required this.onTap});
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        width: 100,
-        height: 84,
-        decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-                color: selected
-                    ? BrandColors.accent
-                    : Colors.grey.withOpacity(0.3),
-                width: selected ? 2 : 1)),
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(icon, color: selected ? BrandColors.accent : Colors.grey),
-          const SizedBox(height: 8),
-          Text(label,
-              style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: selected ? BrandColors.accent : null))
-        ]),
-      ),
-    );
   }
 }
 
