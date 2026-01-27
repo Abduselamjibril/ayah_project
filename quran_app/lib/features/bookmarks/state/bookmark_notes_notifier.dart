@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-
 import '../data/models/bookmark.dart';
 import '../data/models/note.dart';
 import '../data/repositories/bookmark_notes_repository.dart';
@@ -13,6 +12,15 @@ class BookmarkNotesNotifier extends ChangeNotifier {
 
   final Map<String, Bookmark> _bookmarksByKey = {};
   final Map<String, NoteModel> _notesByKey = {};
+  
+  // Custom names for the four categories shown in the UI
+  final Map<String, String> _categoryNames = {
+    '#EF5350': 'Red',
+    '#FFB300': 'Yellow',
+    '#66BB6A': 'Green',
+    '#42A5F5': 'Blue',
+  };
+
   Bookmark? _khatmahPin;
   bool _initialized = false;
   bool _loading = false;
@@ -20,8 +28,11 @@ class BookmarkNotesNotifier extends ChangeNotifier {
   bool get isInitialized => _initialized;
   bool get isLoading => _loading;
   Bookmark? get khatmahPin => _khatmahPin;
+  Map<String, String> get categoryNames => _categoryNames;
+
   List<Bookmark> get bookmarks {
     final list = _bookmarksByKey.values.toList();
+    // Sort by newest first so we can easily find the 'latest' for the category subtitle
     list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return list;
   }
@@ -42,6 +53,14 @@ class BookmarkNotesNotifier extends ChangeNotifier {
     _initialized = true;
     _loading = false;
     notifyListeners();
+  }
+
+  // Method called when 'Done' is pressed in the UI
+  void updateCategoryName(String colorHex, String newName) {
+    if (_categoryNames.containsKey(colorHex)) {
+      _categoryNames[colorHex] = newName;
+      notifyListeners();
+    }
   }
 
   bool isBookmarked(int surahId, int ayahId) {
