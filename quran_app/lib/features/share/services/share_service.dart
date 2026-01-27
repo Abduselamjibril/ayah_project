@@ -8,6 +8,18 @@ import 'package:screenshot/screenshot.dart';
 import 'package:quran_app/core/quran/qcf_quran.dart';
 import 'package:quran_app/features/share/presentation/widgets/share_card.dart';
 
+class ShareCardThemeData {
+  final ShareCardBackground background;
+  final bool isDark;
+  final String? frameAsset;
+
+  ShareCardThemeData({
+    required this.background,
+    required this.isDark,
+    this.frameAsset,
+  });
+}
+
 class ShareService {
   ShareService._();
 
@@ -17,6 +29,24 @@ class ShareService {
   static const String defaultAppIconAsset = 'assets/images/Icon.jpg';
   // TODO: Replace with the production app link once deployed.
   static const String defaultAppLink = 'https://app-link.example.com';
+
+  static ShareCardThemeData resolveShareCardTheme(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    if (isDark) {
+      return ShareCardThemeData(
+        background: ShareCardBackground.solid(const Color(0xFF1A1C1E)),
+        isDark: true,
+      );
+    } else {
+      return ShareCardThemeData(
+        background: ShareCardBackground.solid(const Color(0xFFF8F2E5)),
+        isDark: false,
+        // frameAsset: 'assets/images/frame_light.png',
+      );
+    }
+  }
 
   Future<void> shareVerseText({
     required int surahNumber,

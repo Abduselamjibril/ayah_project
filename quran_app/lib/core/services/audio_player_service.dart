@@ -478,15 +478,11 @@ class AudioPlayerService {
     downloadingSurah.value = surah;
     downloadProgress.value = 0;
     try {
-      final notifId = surah; // Use surah ID as notification ID
       return await local_audio.AudioService.instance
           .downloadSurahAudio(recitation, surah, onProgress: (p) {
         downloadProgress.value = p;
-        AppNotificationService.instance
-            .showProgress(notifId, 'Downloading Surah $surah', p);
       });
     } finally {
-      AppNotificationService.instance.cancel(surah);
       isDownloading.value = false;
       downloadingSurah.value = null;
     }
