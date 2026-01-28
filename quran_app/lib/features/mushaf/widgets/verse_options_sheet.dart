@@ -12,6 +12,7 @@ import 'package:quran_app/features/downloads/downloads_screen.dart';
 import 'package:quran_app/features/share/presentation/dialogs/share_preview_dialog.dart';
 import 'package:quran_app/features/share/services/share_service.dart';
 import 'package:quran_app/features/mushaf/screens/verse_details_screen.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
 import 'play_range_dialog.dart';
 
 // Helper classes for menu editing
@@ -134,10 +135,13 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                                   result.order, result.hidden);
                             }
                           },
-                          child: const Text('Edit',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  color: BrandColors.accent)),
+                          child: Text(
+                            AppLocalizations.of(context)?.translate('edit') ??
+                                'Edit',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: BrandColors.accent),
+                          ),
                         ),
                         Expanded(
                           child: Center(
@@ -155,8 +159,11 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                     const SizedBox(height: 12),
                     ...orderedSections,
                     const SizedBox(height: 12),
-                    const Text('Actions',
-                        style: TextStyle(fontWeight: FontWeight.w700)),
+                    Text(
+                      AppLocalizations.of(context)?.translate('actions') ??
+                          'Actions',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
                     const SizedBox(height: 8),
                     _buildQuickActions(context, bookmarkState, context,
                         widget.surah, widget.verse),
@@ -523,9 +530,13 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                         icon: const Icon(Icons.close),
                         onPressed: () => Navigator.pop(ctx)),
                     const Spacer(),
-                    const Text('Edit Verse Menu',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w800, fontSize: 18)),
+                    Text(
+                      AppLocalizations.of(context)
+                              ?.translate('edit_verse_menu') ??
+                          'Edit Verse Menu',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w800, fontSize: 18),
+                    ),
                     const Spacer(),
                     TextButton(
                         onPressed: () => Navigator.pop(
@@ -533,7 +544,10 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                             _MenuEditResult(
                                 order: List.from(order),
                                 hidden: List.from(hidden))),
-                        child: const Text('Done')),
+                        child: Text(
+                          AppLocalizations.of(context)?.translate('done') ??
+                              'Done',
+                        )),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -543,9 +557,13 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Display Order',
-                              style: theme.textTheme.labelMedium
-                                  ?.copyWith(fontWeight: FontWeight.w700)),
+                          Text(
+                            AppLocalizations.of(context)
+                                    ?.translate('display_order') ??
+                                'Display Order',
+                            style: theme.textTheme.labelMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
                           const SizedBox(height: 10),
                           Expanded(
                             child: ReorderableListView.builder(
@@ -598,9 +616,13 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                           ),
                           if (hidden.isNotEmpty) ...[
                             const SizedBox(height: 12),
-                            Text('Hidden',
-                                style: theme.textTheme.labelMedium
-                                    ?.copyWith(fontWeight: FontWeight.w700)),
+                            Text(
+                              AppLocalizations.of(context)
+                                      ?.translate('hidden') ??
+                                  'Hidden',
+                              style: theme.textTheme.labelMedium
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
                             const SizedBox(height: 8),
                             Wrap(spacing: 8, runSpacing: 8, children: [
                               for (final item in hidden)
@@ -657,7 +679,12 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                 }
                 if (context.mounted) Navigator.pop(context, true);
               } catch (_) {
-                if (context.mounted) _showSnack('Failed to save note');
+                if (context.mounted)
+                  _showSnack(
+                    AppLocalizations.of(context)
+                            ?.translate('failed_save_note') ??
+                        'Failed to save note',
+                  );
               } finally {
                 setModalState(() => saving = false);
               }
@@ -673,15 +700,21 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Note for $surah:$verse',
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(
+                    (AppLocalizations.of(context)?.translate('note_for') ??
+                            'Note for {ref}')
+                        .replaceAll('{ref}', '$surah:$verse'),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 12),
                   TextField(
                       controller: controller,
                       maxLines: 6,
-                      decoration: const InputDecoration(
-                          hintText: 'Write your reflection here',
-                          border: OutlineInputBorder())),
+                      decoration: InputDecoration(
+                          hintText: AppLocalizations.of(context)
+                                  ?.translate('reflection_hint') ??
+                              'Write your reflection here',
+                          border: const OutlineInputBorder())),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -697,7 +730,11 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                                     Navigator.pop(context, true);
                                 },
                           icon: const Icon(Icons.delete_outline),
-                          label: const Text('Delete'),
+                          label: Text(
+                            AppLocalizations.of(context)
+                                    ?.translate('delete_action') ??
+                                'Delete',
+                          ),
                         ),
                       const SizedBox(width: 8),
                       ElevatedButton.icon(
@@ -709,7 +746,15 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                                 child:
                                     CircularProgressIndicator(strokeWidth: 2))
                             : const Icon(Icons.save),
-                        label: Text(saving ? 'Saving...' : 'Save'),
+                        label: Text(
+                          saving
+                              ? (AppLocalizations.of(context)
+                                      ?.translate('saving') ??
+                                  'Saving...')
+                              : (AppLocalizations.of(context)
+                                      ?.translate('save') ??
+                                  'Save'),
+                        ),
                       ),
                     ],
                   ),
@@ -810,25 +855,44 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                                     .withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(4)))),
                     const SizedBox(height: 14),
-                    Text('Share $surahName',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w800, fontSize: 20)),
+                    Text(
+                      (AppLocalizations.of(context)?.translate('share_surah') ??
+                              'Share {surah}')
+                          .replaceAll('{surah}', surahName),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w800, fontSize: 20),
+                    ),
                     const SizedBox(height: 16),
-                    const Text('Share as',
-                        style: TextStyle(fontWeight: FontWeight.w700)),
+                    Text(
+                      AppLocalizations.of(context)?.translate('share_as') ??
+                          'Share as',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
                     Wrap(spacing: 8, children: [
                       ChoiceChip(
-                          label: const Text('Image'),
+                          label: Text(
+                            AppLocalizations.of(context)
+                                    ?.translate('share_image') ??
+                                'Image',
+                          ),
                           selected: format == _ShareFormat.image,
                           onSelected: (_) =>
                               setSheetState(() => format = _ShareFormat.image)),
                       ChoiceChip(
-                          label: const Text('Text'),
+                          label: Text(
+                            AppLocalizations.of(context)
+                                    ?.translate('share_text') ??
+                                'Text',
+                          ),
                           selected: format == _ShareFormat.text,
                           onSelected: (_) =>
                               setSheetState(() => format = _ShareFormat.text)),
                       ChoiceChip(
-                          label: const Text('Text (No Diacritics)'),
+                          label: Text(
+                            AppLocalizations.of(context)
+                                    ?.translate('share_text_no_diacritics') ??
+                                'Text (No Diacritics)',
+                          ),
                           selected:
                               format == _ShareFormat.textWithoutDiacritics,
                           onSelected: (_) => setSheetState(() =>
@@ -839,7 +903,8 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                       Expanded(
                           child: _buildStepper(
                               context,
-                              'From',
+                              AppLocalizations.of(context)?.translate('from') ??
+                                  'From',
                               fromVerse,
                               (v) => setSheetState(
                                   () => fromVerse = v.clamp(1, toVerse)))),
@@ -847,44 +912,60 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                       Expanded(
                           child: _buildStepper(
                               context,
-                              'To',
+                              AppLocalizations.of(context)?.translate('to') ??
+                                  'To',
                               toVerse,
                               (v) => setSheetState(() =>
                                   toVerse = v.clamp(fromVerse, maxVerse)))),
                     ]),
                     const SizedBox(height: 18),
                     SwitchListTile.adaptive(
-                        title: const Text('Surah Name'),
+                        title: Text(
+                          AppLocalizations.of(context)
+                                  ?.translate('surah_name') ??
+                              'Surah Name',
+                        ),
                         value: includeSurahName,
                         onChanged: (v) =>
                             setSheetState(() => includeSurahName = v),
                         contentPadding: EdgeInsets.zero),
                     SwitchListTile.adaptive(
-                        title: const Text('Reference'),
+                        title: Text(
+                          AppLocalizations.of(context)
+                                  ?.translate('reference') ??
+                              'Reference',
+                        ),
                         value: includeVerseReference,
                         onChanged: (v) =>
                             setSheetState(() => includeVerseReference = v),
                         contentPadding: EdgeInsets.zero),
                     SwitchListTile.adaptive(
-                        title: const Text('Badge'),
+                        title: Text(
+                          AppLocalizations.of(context)?.translate('badge') ??
+                              'Badge',
+                        ),
                         value: includeBadge,
                         onChanged: (v) => setSheetState(() => includeBadge = v),
                         contentPadding: EdgeInsets.zero),
                     const SizedBox(height: 12),
                     SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                            onPressed: isSharing ? null : handleShare,
-                            style: ElevatedButton.styleFrom(
-                                backgroundColor: accent,
-                                foregroundColor: Colors.white),
-                            child: isSharing
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2, color: Colors.white))
-                                : const Text('Share'))),
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: isSharing ? null : handleShare,
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: accent,
+                            foregroundColor: Colors.white),
+                        child: isSharing
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white))
+                            : Text(AppLocalizations.of(context)
+                                    ?.translate('share') ??
+                                'Share'),
+                      ),
+                    ),
                   ],
                 ),
               ),

@@ -225,8 +225,12 @@ class _DownloadsScreenState extends State<DownloadsScreen>
             _downloadProgress[edition.id.toString()] = progress;
           });
           // Show progress in notification regardless of mode
-          AppNotificationService.instance
-              .showProgress(notifId, 'Downloading ${edition.name}', progress);
+          AppNotificationService.instance.showProgress(
+              notifId,
+              (AppLocalizations.of(context)?.translate('downloading_item') ??
+                      'Downloading {name}')
+                  .replaceAll('{name}', edition.name),
+              progress);
         },
       );
 
@@ -234,19 +238,39 @@ class _DownloadsScreenState extends State<DownloadsScreen>
         await _loadDownloadedEditions();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${edition.name} downloaded successfully')),
+            SnackBar(
+              content: Text(
+                (AppLocalizations.of(context)?.translate('download_success') ??
+                        '{name} downloaded successfully')
+                    .replaceAll('{name}', edition.name),
+              ),
+            ),
           );
         }
-        await AppNotificationService.instance
-            .complete(notifId, 'Downloading ${edition.name}', success: true);
+        await AppNotificationService.instance.complete(
+            notifId,
+            (AppLocalizations.of(context)?.translate('downloading_item') ??
+                    'Downloading {name}')
+                .replaceAll('{name}', edition.name),
+            success: true);
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Download failed. Please try again.')),
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(context)
+                        ?.translate('download_failed_try_again') ??
+                    'Download failed. Please try again.',
+              ),
+            ),
           );
         }
-        await AppNotificationService.instance
-            .complete(notifId, 'Downloading ${edition.name}', success: false);
+        await AppNotificationService.instance.complete(
+            notifId,
+            (AppLocalizations.of(context)?.translate('downloading_item') ??
+                    'Downloading {name}')
+                .replaceAll('{name}', edition.name),
+            success: false);
       }
     } finally {
       setState(() {
@@ -280,8 +304,12 @@ class _DownloadsScreenState extends State<DownloadsScreen>
           setState(() {
             _downloadProgress[edition.id.toString()] = progress;
           });
-          AppNotificationService.instance
-              .showProgress(notifId, 'Downloading ${edition.name}', progress);
+          AppNotificationService.instance.showProgress(
+              notifId,
+              (AppLocalizations.of(context)?.translate('downloading_item') ??
+                      'Downloading {name}')
+                  .replaceAll('{name}', edition.name),
+              progress);
         },
       );
 
@@ -289,19 +317,39 @@ class _DownloadsScreenState extends State<DownloadsScreen>
         await _loadDownloadedEditions();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${edition.name} downloaded successfully')),
+            SnackBar(
+              content: Text(
+                (AppLocalizations.of(context)?.translate('download_success') ??
+                        '{name} downloaded successfully')
+                    .replaceAll('{name}', edition.name),
+              ),
+            ),
           );
         }
-        await AppNotificationService.instance
-            .complete(notifId, 'Downloading ${edition.name}', success: true);
+        await AppNotificationService.instance.complete(
+            notifId,
+            (AppLocalizations.of(context)?.translate('downloading_item') ??
+                    'Downloading {name}')
+                .replaceAll('{name}', edition.name),
+            success: true);
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Download failed. Please try again.')),
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(context)
+                        ?.translate('download_failed_try_again') ??
+                    'Download failed. Please try again.',
+              ),
+            ),
           );
         }
-        await AppNotificationService.instance
-            .complete(notifId, 'Downloading ${edition.name}', success: false);
+        await AppNotificationService.instance.complete(
+            notifId,
+            (AppLocalizations.of(context)?.translate('downloading_item') ??
+                    'Downloading {name}')
+                .replaceAll('{name}', edition.name),
+            success: false);
       }
     } finally {
       setState(() {
@@ -347,7 +395,13 @@ class _DownloadsScreenState extends State<DownloadsScreen>
         await _loadDownloadedEditions();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$name deleted')),
+            SnackBar(
+              content: Text(
+                (AppLocalizations.of(context)?.translate('delete_success') ??
+                        '{name} deleted')
+                    .replaceAll('{name}', name),
+              ),
+            ),
           );
         }
       }
@@ -387,7 +441,13 @@ class _DownloadsScreenState extends State<DownloadsScreen>
         await _loadDownloadedEditions();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$name deleted')),
+            SnackBar(
+              content: Text(
+                (AppLocalizations.of(context)?.translate('delete_success') ??
+                        '{name} deleted')
+                    .replaceAll('{name}', name),
+              ),
+            ),
           );
         }
       }
@@ -593,7 +653,11 @@ class _DownloadsScreenState extends State<DownloadsScreen>
                                     onPressed: () =>
                                         _downloadTranslation(edition),
                                     icon: const Icon(Icons.download),
-                                    label: const Text('Download'),
+                                    label: Text(
+                                      AppLocalizations.of(context)
+                                              ?.translate('download_action') ??
+                                          'Download',
+                                    ),
                                   ),
                               ],
                             ),
@@ -735,7 +799,11 @@ class _DownloadsScreenState extends State<DownloadsScreen>
                                   FilledButton.icon(
                                     onPressed: () => _downloadTafsir(edition),
                                     icon: const Icon(Icons.download),
-                                    label: const Text('Download'),
+                                    label: Text(
+                                      AppLocalizations.of(context)
+                                              ?.translate('download_action') ??
+                                          'Download',
+                                    ),
                                   ),
                               ],
                             ),

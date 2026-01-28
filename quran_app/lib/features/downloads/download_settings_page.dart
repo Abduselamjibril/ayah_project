@@ -75,12 +75,11 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-
     final theme = Theme.of(context);
     final accent = BrandColors.accent;
-    final titleText = AppLocalizations.of(context)
-            ?.translate('download_settings_title') ??
-        'Download Settings';
+    final titleText =
+        AppLocalizations.of(context)?.translate('download_settings_title') ??
+            'Download Settings';
     if (_isLoading) {
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
@@ -91,25 +90,27 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
           leadingWidth: 100,
           leading: TextButton.icon(
             onPressed: () => Navigator.of(context).pop(),
-            icon: Icon(Icons.arrow_back_ios_new_rounded, color: accent, size: 18),
+            icon:
+                Icon(Icons.arrow_back_ios_new_rounded, color: accent, size: 18),
             label: Text(
               'Settings',
-              style: TextStyle(color: accent, fontSize: 16, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  color: accent, fontSize: 16, fontWeight: FontWeight.w600),
             ),
-            style: TextButton.styleFrom(padding: const EdgeInsets.only(left: 8)),
+            style:
+                TextButton.styleFrom(padding: const EdgeInsets.only(left: 8)),
           ),
           title: Text(
             titleText,
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            style: theme.textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.w700),
           ),
-
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -121,15 +122,16 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
           icon: Icon(Icons.arrow_back_ios_new_rounded, color: accent, size: 18),
           label: Text(
             'Settings',
-            style: TextStyle(color: accent, fontSize: 16, fontWeight: FontWeight.w600),
+            style: TextStyle(
+                color: accent, fontSize: 16, fontWeight: FontWeight.w600),
           ),
           style: TextButton.styleFrom(padding: const EdgeInsets.only(left: 8)),
         ),
         title: Text(
           titleText,
-          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          style: theme.textTheme.titleMedium
+              ?.copyWith(fontWeight: FontWeight.w700),
         ),
-
       ),
       body: ListView(
         children: [
@@ -137,11 +139,12 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
             padding: const EdgeInsets.all(16.0),
             child: _buildConnectionStatusCard(),
           ),
-          const Padding(
-            padding: EdgeInsets.all(16.0),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Text(
-              'Network Preferences',
-              style: TextStyle(
+              AppLocalizations.of(context)?.translate('network_preferences') ??
+                  'Network Preferences',
+              style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: Colors.grey,
@@ -149,20 +152,26 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
             ),
           ),
           SwitchListTile(
-            title: const Text('WiFi Only'),
-            subtitle: const Text(
-              'Download translations and tafsir only when connected to WiFi',
+            title: Text(
+              AppLocalizations.of(context)?.translate('wifi_only') ??
+                  'WiFi Only',
+            ),
+            subtitle: Text(
+              AppLocalizations.of(context)?.translate('wifi_only_subtitle') ??
+                  'Download translations and tafsir only when connected to WiFi',
             ),
             value: _wifiOnly,
             onChanged: _saveWifiOnly,
             secondary: const Icon(Icons.wifi),
           ),
           const Divider(),
-          const Padding(
-            padding: EdgeInsets.all(16.0),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Text(
-              'Background Downloads',
-              style: TextStyle(
+              AppLocalizations.of(context)
+                      ?.translate('background_downloads_header') ??
+                  'Background Downloads',
+              style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: Colors.grey,
@@ -191,9 +200,7 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
                 Text(
                   AppLocalizations.of(context)?.translate('about_downloads') ??
                       'About Downloads',
-
                   style: TextStyle(
-
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: Colors.grey,

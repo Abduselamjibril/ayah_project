@@ -5,6 +5,7 @@ import 'package:quran_app/core/services/language_service.dart';
 import 'package:quran_app/core/services/mushaf_settings_service.dart';
 import 'package:quran_app/core/services/theme_service.dart';
 import 'package:quran_app/core/quran/widgets/quran_pageview.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
 
 class PageSettingsSheet extends StatefulWidget {
   const PageSettingsSheet({super.key});
@@ -154,7 +155,9 @@ class _PageSettingsSheetState extends State<PageSettingsSheet> {
                             if (themeMode == ThemeMode.dark) ...[
                               const SizedBox(height: 18),
                               Text(
-                                'Dark Mode Options',
+                                AppLocalizations.of(context)
+                                        ?.translate('dark_mode_options') ??
+                                    'Dark Mode Options',
                                 style: Theme.of(context)
                                     .textTheme
                                     .titleSmall
@@ -162,12 +165,18 @@ class _PageSettingsSheetState extends State<PageSettingsSheet> {
                               ),
                               const SizedBox(height: 10),
                               SwitchListTile(
-                                title: const Text(
-                                  'Pure Black Background',
-                                  style: TextStyle(fontWeight: FontWeight.w600),
+                                title: Text(
+                                  AppLocalizations.of(context)?.translate(
+                                          'pure_black_background') ??
+                                      'Pure Black Background',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600),
                                 ),
-                                subtitle:
-                                    const Text('Use pure black for Mushaf'),
+                                subtitle: Text(
+                                  AppLocalizations.of(context)?.translate(
+                                          'pure_black_mushaf_short') ??
+                                      'Use pure black for Mushaf',
+                                ),
                                 value: _themeService.pureBlackBackground,
                                 onChanged: (value) {
                                   _themeService.setPureBlackBackground(value);
@@ -180,7 +189,9 @@ class _PageSettingsSheetState extends State<PageSettingsSheet> {
                             if (themeMode != ThemeMode.dark) ...[
                               const SizedBox(height: 18),
                               Text(
-                                'Surah Header Style',
+                                AppLocalizations.of(context)
+                                        ?.translate('surah_header_style') ??
+                                    'Surah Header Style',
                                 style: Theme.of(context)
                                     .textTheme
                                     .titleSmall
@@ -250,11 +261,14 @@ class _PageSettingsSheetState extends State<PageSettingsSheet> {
                                   bool enabled = snapshot.data ?? false;
                                   return Row(
                                     children: [
-                                      const Expanded(
-                                          child: Text('Two-finger Search',
-                                              style: TextStyle(
-                                                  fontWeight:
-                                                      FontWeight.w700))),
+                                      Expanded(
+                                          child: Text(
+                                        AppLocalizations.of(context)?.translate(
+                                                'two_finger_search') ??
+                                            'Two-finger Search',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w700),
+                                      )),
                                       Switch.adaptive(
                                         value: enabled,
                                         onChanged: (val) async {

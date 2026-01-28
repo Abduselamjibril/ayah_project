@@ -6,6 +6,7 @@ import 'package:quran_app/core/services/audio_service.dart';
 import 'package:quran_app/data/models/audio_model.dart';
 import 'package:quran_app/features/downloads/audio_surah_list_page.dart';
 import 'package:quran_app/app/app.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
 
 Future<AudioRecitation?> ensureMushafReciterSelected(
   BuildContext context,
@@ -87,11 +88,16 @@ Future<AudioRecitation?> showReciterPickerSheet(
                             style: TextButton.styleFrom(
                               foregroundColor: BrandColors.accent,
                             ),
-                            child: const Text('Edit'),
+                            child: Text(
+                              AppLocalizations.of(context)?.translate('edit') ??
+                                  'Edit',
+                            ),
                           ),
                           const Spacer(),
-                          const Text(
-                            'Select Recitation',
+                          Text(
+                            AppLocalizations.of(context)
+                                    ?.translate('select_recitation') ??
+                                'Select Recitation',
                             style: TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 18,

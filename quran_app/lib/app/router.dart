@@ -1,5 +1,6 @@
 // app/router.dart
 import 'package:flutter/material.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
 import '../features/mushaf/screens/mushaf_screen.dart';
 import '../features/settings/settings_screen.dart';
 
@@ -18,7 +19,13 @@ class AppRouter {
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(
-            body: Center(child: Text('No route defined for ${settings.name}')),
+            body: Center(
+              child: Text(
+                (AppLocalizations.of(_)?.translate('no_route_defined') ??
+                        'No route defined for {route}')
+                    .replaceAll('{route}', '${settings.name}'),
+              ),
+            ),
           ),
         );
     }

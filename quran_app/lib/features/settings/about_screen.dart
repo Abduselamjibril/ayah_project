@@ -119,14 +119,20 @@ class AboutScreen extends StatelessWidget {
             children: [
               TextButton(
                 onPressed: () {},
-                child: const Text('Privacy Policy'),
+                child: Text(
+                  AppLocalizations.of(context)?.translate('privacy_policy') ??
+                      'Privacy Policy',
+                ),
                 style: TextButton.styleFrom(foregroundColor: accent),
               ),
               SizedBox(
                   width: ResponsiveLayout.scaled(context, 12, min: 8, max: 16)),
               TextButton(
                 onPressed: () {},
-                child: const Text('Terms of Use'),
+                child: Text(
+                  AppLocalizations.of(context)?.translate('terms_of_use') ??
+                      'Terms of Use',
+                ),
                 style: TextButton.styleFrom(foregroundColor: accent),
               ),
             ],
@@ -141,7 +147,7 @@ class AboutScreen extends StatelessWidget {
             padding: EdgeInsets.all(
                 ResponsiveLayout.scaled(context, 16, min: 12, max: 20)),
             child: Text(
-              "The app's name is derived from the saying: \u00ABConvey from me even an Ayah\u00BB.",
+              AppLocalizations.of(context)!.translate('app_name_description'),
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface,
                 height: 1.5,
