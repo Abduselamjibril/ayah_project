@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   // Theme Name: "Golden Parchment" - Enhanced contrast
-  static const Color lightBackground = Color(0xFFF8F2E5);
-  static const Color lightSurface = Color(0xFFEFE4D0);
-  static const Color lightSurfaceVariant = Color(0xFFE0D0B0);
+  static const Color lightBackground = Color(0xFFF5F0EA);
+  static const Color lightSurface = Color(0xFFFFFBF9);
+  static const Color lightSurfaceVariant = Color(0xFFFFFBF9);
   static const Color lightAccent = Color(0xFF9B7A3A);
   static const Color lightAccentContainer = Color(0xFFC9A86A);
   static const Color lightText = Color(0xFF2A2108);
@@ -34,19 +34,12 @@ class AppColors {
   */
 
   // Theme Name: "Ornate Twilight" - User customized dark mode
-  static const Color greenDarkBackground = Color(0xFF1A1C1E); // Deep Charcoal
-  static const Color greenDarkSurface =
-      Color(0xFF2D3436); // Forest Border (for cards/surfaces)
-  static const Color greenDarkSurfaceVariant =
-      Color(0xFF2D3436); // Forest Border
-  static const Color greenDarkAccent =
-      Color(0xFF00A36C); // Emerald Green (Primary/Action)
-  static const Color greenDarkAccentContainer =
-      Color(0xFF86EFAC); // Mint Glow (Secondary/Success)
-  static const Color greenDarkText =
-      Color(0xFFFFFFFF); // Pure White (Primary Text)
-  static const Color greenDarkTextSecondary =
-      Color(0xFF94A3B8); // Silver Mist (Secondary Text)
-  static const Color greenDarkOnAccentContainer =
-      Color(0xFFFFFFFF); // Pure White
+  static const Color greenDarkBackground = Color(0xFF1C1C1E);
+  static const Color greenDarkSurface = Color(0xFF2C2C2E);
+  static const Color greenDarkSurfaceVariant = Color(0xFF2C2C2E);
+  static const Color greenDarkAccent = Color(0xFF00A36C);
+  static const Color greenDarkAccentContainer = Color(0xFF86EFAC);
+  static const Color greenDarkText = Color(0xFFFFFFFF);
+  static const Color greenDarkTextSecondary = Color(0xFF94A3B8);
+  static const Color greenDarkOnAccentContainer = Color(0xFFFFFFFF);
 }
