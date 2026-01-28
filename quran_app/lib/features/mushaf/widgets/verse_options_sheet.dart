@@ -13,6 +13,7 @@ import 'package:quran_app/features/share/presentation/dialogs/share_preview_dial
 import 'package:quran_app/features/share/services/share_service.dart';
 import 'package:quran_app/features/mushaf/screens/verse_details_screen.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
+import 'package:quran_app/core/utils/localization_helper.dart';
 import 'play_range_dialog.dart';
 
 // Helper classes for menu editing
@@ -91,7 +92,8 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
     final width = MediaQuery.of(context).size.width;
     final shareCardWidth = (width - 16 * 2 - 12 * 3) / 4;
     final bookmarkState = context.watch<BookmarkNotesNotifier>();
-    final surahTitle = '${getSurahName(widget.surah)}: ${widget.verse}';
+    final surahTitle =
+        '${getBilingualSurahName(context, widget.surah)}: ${widget.verse}';
 
     // Build sections based on order
     final orderedSections = _buildOrderedSections(
@@ -200,7 +202,10 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
       switch (section) {
         case 'bookmarks':
           widgets
-            ..add(_buildSectionLabel('Bookmarks', context))
+            ..add(_buildSectionLabel(
+                AppLocalizations.of(context)?.translate('bookmarks_title') ??
+                    'Bookmarks',
+                context))
             ..add(const SizedBox(height: 8))
             ..add(Row(children: [
               Expanded(
@@ -208,7 +213,9 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                       width: double.infinity,
                       icon: Icons.bookmark_border,
                       iconColor: Colors.redAccent,
-                      label: 'Red', onTap: () {
+                      label: AppLocalizations.of(context)
+                              ?.translate('color_red') ??
+                          'Red', onTap: () {
                 Navigator.pop(context);
                 unawaited(() async {
                   await bookmarkState.saveBookmark(
@@ -217,7 +224,9 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                       colorHex: '#EF5350',
                       category: 'Red');
                   if (!mounted) return;
-                  _showSnack('Verse bookmarked');
+                  _showSnack(AppLocalizations.of(context)
+                          ?.translate('verse_bookmarked') ??
+                      'Verse bookmarked');
                 }());
               })),
               const SizedBox(width: 12),
@@ -225,7 +234,8 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                   child: _buildActionCard(context,
                       width: double.infinity,
                       icon: Icons.list_alt,
-                      label: 'All',
+                      label: AppLocalizations.of(context)?.translate('all') ??
+                          'All',
                       trailing: Icons.chevron_right, onTap: () async {
                 Navigator.pop(context);
                 if (!bookmarkState.isInitialized)
@@ -240,14 +250,18 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
           break;
         case 'recitation':
           widgets
-            ..add(_buildSectionLabel('Recitation', context))
+            ..add(_buildSectionLabel(
+                AppLocalizations.of(context)?.translate('recitation') ??
+                    'Recitation',
+                context))
             ..add(const SizedBox(height: 8))
             ..add(_buildActionWrap(context, [
               Expanded(
                   child: _buildActionCard(context,
                       width: double.infinity,
                       icon: Icons.play_arrow,
-                      label: 'Play', onTap: () {
+                      label: AppLocalizations.of(context)?.translate('play') ??
+                          'Play', onTap: () {
                 Navigator.pop(context);
                 AudioPlayerService.instance
                     .playSurahSequenceWithDownload(rootContext, surah, verse);
@@ -257,7 +271,9 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                   child: _buildActionCard(context,
                       width: double.infinity,
                       icon: Icons.playlist_play,
-                      label: 'Play to...', onTap: () {
+                      label:
+                          AppLocalizations.of(context)?.translate('play_to') ??
+                              'Play to...', onTap: () {
                 Navigator.pop(context);
                 _showPlayToDialog(rootContext, surah, verse);
               })),
@@ -266,12 +282,17 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
           break;
         case 'downloads':
           widgets
-            ..add(_buildSectionLabel('Downloads', context))
+            ..add(_buildSectionLabel(
+                AppLocalizations.of(context)?.translate('downloads_title') ??
+                    'Downloads',
+                context))
             ..add(const SizedBox(height: 8))
             ..add(_buildActionCard(context,
                 width: double.infinity,
                 icon: Icons.download_rounded,
-                label: 'Downloads',
+                label: AppLocalizations.of(context)
+                        ?.translate('downloads_title') ??
+                    'Downloads',
                 trailing: Icons.chevron_right, onTap: () {
               Navigator.pop(context);
               Navigator.push(rootContext,
@@ -281,27 +302,33 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
           break;
         case 'sharing':
           widgets
-            ..add(_buildSectionLabel('Sharing', context))
+            ..add(_buildSectionLabel(
+                AppLocalizations.of(context)?.translate('sharing') ?? 'Sharing',
+                context))
             ..add(const SizedBox(height: 8))
             ..add(_buildActionWrap(context, [
               _buildActionCard(context,
                   width: shareCardWidth,
                   icon: Icons.copy,
-                  label: 'Copy', onTap: () {
+                  label: AppLocalizations.of(context)?.translate('copy') ??
+                      'Copy', onTap: () {
                 Navigator.pop(context);
                 _copyVerseText(surah, verse);
               }),
               _buildActionCard(context,
                   width: shareCardWidth,
                   icon: Icons.image_outlined,
-                  label: 'Card', onTap: () {
+                  label:
+                      AppLocalizations.of(context)?.translate('share_card') ??
+                          'Card', onTap: () {
                 Navigator.pop(context);
                 _shareVerseCardPreview(surah, verse);
               }),
               _buildActionCard(context,
                   width: shareCardWidth,
                   icon: Icons.share,
-                  label: 'Share', onTap: () {
+                  label: AppLocalizations.of(context)?.translate('share') ??
+                      'Share', onTap: () {
                 Navigator.pop(context);
                 _openShareSheet(rootContext, surah, verse);
               }),
@@ -310,7 +337,10 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
           break;
         case 'highlight':
           widgets
-            ..add(_buildSectionLabel('Highlight', context))
+            ..add(_buildSectionLabel(
+                AppLocalizations.of(context)?.translate('highlight') ??
+                    'Highlight',
+                context))
             ..add(const SizedBox(height: 10))
             ..add(_buildHighlightRow(context, bookmarkState, surah, verse));
           addSpacer();
@@ -426,7 +456,8 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
       _buildActionCard(context,
           width: double.infinity,
           icon: Icons.push_pin_outlined,
-          label: 'Pin here (Khatmah)', onTap: () {
+          label: AppLocalizations.of(context)?.translate('pin_khatmah') ??
+              'Pin here (Khatmah)', onTap: () {
         Navigator.pop(context);
         _pinKhatmah(state, surah, verse);
       }),
@@ -434,7 +465,8 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
       _buildActionCard(context,
           width: double.infinity,
           icon: Icons.flag_outlined,
-          label: 'Set as last read', onTap: () {
+          label: AppLocalizations.of(context)?.translate('set_last_read') ??
+              'Set as last read', onTap: () {
         Navigator.pop(context);
         unawaited(_toggleLastReadAt(state, surah, verse));
       }),
@@ -442,7 +474,8 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
       _buildActionCard(context,
           width: double.infinity,
           icon: Icons.note_add_outlined,
-          label: 'Write note',
+          label: AppLocalizations.of(context)?.translate('write_note') ??
+              'Write note',
           trailing: Icons.chevron_right, onTap: () {
         Navigator.pop(context);
         unawaited(_openNoteSheet(rootContext, state, surah, verse));
@@ -451,7 +484,8 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
       _buildActionCard(context,
           width: double.infinity,
           icon: Icons.menu_book_outlined,
-          label: 'View Tafsir',
+          label: AppLocalizations.of(context)?.translate('view_tafsir') ??
+              'View Tafsir',
           trailing: Icons.chevron_right, onTap: () {
         Navigator.pop(context);
         _viewTafsir(rootContext, surah, verse);
@@ -467,7 +501,8 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
         colorHex: '#FFB300',
         category: 'Khatmah');
     if (!mounted) return;
-    _showSnack('Pinned for Khatmah');
+    _showSnack(AppLocalizations.of(context)?.translate('pinned_for_khatmah') ??
+        'Pinned for Khatmah');
   }
 
   Future<void> _toggleLastReadAt(
@@ -487,8 +522,12 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
       await state.clearKhatmahPin();
       if (!mounted) return;
       _showSnack(page != null
-          ? 'Removed last read for page \$page'
-          : 'Removed last read');
+          ? (AppLocalizations.of(context)
+                      ?.translate('removed_last_read_page') ??
+                  'Removed last read for page {page}')
+              .replaceAll('{page}', '$page')
+          : (AppLocalizations.of(context)?.translate('removed_last_read') ??
+              'Removed last read'));
       return;
     }
 
@@ -500,9 +539,17 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
     );
 
     if (!mounted) return;
-    final name = getSurahName(surah);
-    final pageLabel = page != null ? 'Page $page • ' : '';
-    _showSnack('$pageLabel$name:$verse set as last read');
+    final name = getBilingualSurahName(context, surah);
+    final pageLabel = page != null
+        ? (AppLocalizations.of(context)?.translate('page_label') ??
+                'Page {number}')
+            .replaceAll('{number}', '$page')
+        : '';
+    final pagePrefix = pageLabel.isNotEmpty ? '$pageLabel • ' : '';
+    _showSnack((AppLocalizations.of(context)?.translate('set_as_last_read') ??
+            '{page}{ref} set as last read')
+        .replaceAll('{page}', pagePrefix)
+        .replaceAll('{ref}', '$name:$verse'));
   }
 
   Future<_MenuEditResult?> _openMenuEditor(BuildContext context) async {
@@ -767,14 +814,18 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
     );
     if (saved == true && mounted) {
       _showSnack((lastSavedText == null || lastSavedText!.isEmpty)
-          ? 'Note removed for $surah:$verse'
-          : 'Note saved for $surah:$verse');
+          ? (AppLocalizations.of(context)?.translate('note_removed_for') ??
+                  'Note removed for {ref}')
+              .replaceAll('{ref}', '$surah:$verse')
+          : (AppLocalizations.of(context)?.translate('note_saved_for') ??
+                  'Note saved for {ref}')
+              .replaceAll('{ref}', '$surah:$verse'));
     }
   }
 
   Future<void> _openShareSheet(
       BuildContext context, int surah, int verse) async {
-    final surahName = getSurahName(surah);
+    final surahName = getBilingualSurahName(context, surah);
     final maxVerse = getVerseCount(surah);
     var format = _ShareFormat.image;
     var fromVerse = verse;
@@ -1027,7 +1078,9 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
   void _copyVerseText(int surah, int verse) {
     Clipboard.setData(
         ClipboardData(text: getVerseQCF(surah, verse, verseEndSymbol: true)));
-    _showSnack('Copied Surah $surah:$verse');
+    _showSnack((AppLocalizations.of(context)?.translate('copied_surah_verse') ??
+            'Copied Surah {ref}')
+        .replaceAll('{ref}', '$surah:$verse'));
   }
 
   void _showSnack(String message) {
@@ -1038,25 +1091,38 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
   }
 
   String _getCategoryName(String hex) {
-    if (hex == '#EF5350') return 'Red';
-    if (hex == '#FFB300') return 'Yellow';
-    if (hex == '#66BB6A') return 'Green';
-    if (hex == '#42A5F5') return 'Blue';
-    return 'Bookmark';
+    if (hex == '#EF5350') {
+      return AppLocalizations.of(context)?.translate('color_red') ?? 'Red';
+    }
+    if (hex == '#FFB300') {
+      return AppLocalizations.of(context)?.translate('color_yellow') ??
+          'Yellow';
+    }
+    if (hex == '#66BB6A') {
+      return AppLocalizations.of(context)?.translate('color_green') ?? 'Green';
+    }
+    if (hex == '#42A5F5') {
+      return AppLocalizations.of(context)?.translate('color_blue') ?? 'Blue';
+    }
+    return AppLocalizations.of(context)?.translate('bookmark') ?? 'Bookmark';
   }
 
   String _labelForSection(String key) {
     switch (key) {
       case 'bookmarks':
-        return 'Bookmarks';
+        return AppLocalizations.of(context)?.translate('bookmarks_title') ??
+            'Bookmarks';
       case 'recitation':
-        return 'Recitation';
+        return AppLocalizations.of(context)?.translate('recitation') ??
+            'Recitation';
       case 'downloads':
-        return 'Downloads';
+        return AppLocalizations.of(context)?.translate('downloads_title') ??
+            'Downloads';
       case 'sharing':
-        return 'Sharing';
+        return AppLocalizations.of(context)?.translate('sharing') ?? 'Sharing';
       case 'highlight':
-        return 'Highlight';
+        return AppLocalizations.of(context)?.translate('highlight') ??
+            'Highlight';
       default:
         return key;
     }

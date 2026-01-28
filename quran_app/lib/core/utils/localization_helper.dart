@@ -33,3 +33,25 @@ String getLocalizedSurahName(BuildContext context, int surahNumber) {
   // Fallback to English name (transliteration or translation per dataset)
   return surahInfo['english'] ?? surahInfo['name'];
 }
+
+/// Returns a bilingual Surah name (Arabic + English) ordered by locale.
+///
+/// - For Arabic/Urdu locale: "Arabic • English"
+/// - For others: "English • Arabic"
+String getBilingualSurahName(BuildContext context, int surahNumber) {
+  if (surahNumber < 1 || surahNumber > 114) return 'Unknown';
+
+  final surahInfo = surah[surahNumber - 1];
+  final arabic =
+      (surahInfo['arabic'] ?? surahInfo['name'] ?? 'Unknown').toString();
+  final english =
+      (surahInfo['english'] ?? surahInfo['name'] ?? 'Unknown').toString();
+
+  if (arabic == english) return english;
+
+  final locale = AppLocalizations.of(context)?.locale.languageCode;
+  if (locale == 'ar' || locale == 'ur') {
+    return '$arabic • $english';
+  }
+  return '$english • $arabic';
+}

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:quran_app/core/quran/qcf_quran.dart';
 import 'package:quran_app/core/utils/localization_helper.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
 
 /// A draggable bottom sheet that displays surah information.
 ///
@@ -54,7 +55,7 @@ class SurahInfoSheet extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Text(
-                  getLocalizedSurahName(context, surahNumber),
+                  getBilingualSurahName(context, surahNumber),
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -68,17 +69,23 @@ class SurahInfoSheet extends StatelessWidget {
                 child: Row(
                   children: [
                     _InfoCard(
-                      title: 'Number',
+                      title: AppLocalizations.of(context)
+                              ?.translate('surah_info_number') ??
+                          'Number',
                       value: surahNumber.toString(),
                     ),
                     const SizedBox(width: 12),
                     _InfoCard(
-                      title: 'Revelation',
-                      value: getPlaceOfRevelation(surahNumber),
+                      title: AppLocalizations.of(context)
+                              ?.translate('surah_info_revelation') ??
+                          'Revelation',
+                      value: _localizedRevelationPlace(context, surahNumber),
                     ),
                     const SizedBox(width: 12),
                     _InfoCard(
-                      title: 'Verse Count',
+                      title: AppLocalizations.of(context)
+                              ?.translate('surah_info_verse_count') ??
+                          'Verse Count',
                       value: getVerseCount(surahNumber).toString(),
                     ),
                   ],
@@ -194,7 +201,8 @@ class _VerseListTile extends StatelessWidget {
               color: Theme.of(context).colorScheme.primary,
             ),
             onPressed: onNavigate,
-            tooltip: 'Go to verse',
+            tooltip: AppLocalizations.of(context)?.translate('go_to_verse') ??
+                'Go to verse',
           ),
           // Verse text with fade effect
           Expanded(
@@ -247,6 +255,18 @@ class _VerseListTile extends StatelessWidget {
       ),
     );
   }
+}
+
+String _localizedRevelationPlace(BuildContext context, int surahNumber) {
+  final raw = getPlaceOfRevelation(surahNumber).toLowerCase();
+  if (raw.contains('makk') || raw.contains('mecc')) {
+    return AppLocalizations.of(context)?.translate('place_meccan') ?? 'Meccan';
+  }
+  if (raw.contains('madan') || raw.contains('medin')) {
+    return AppLocalizations.of(context)?.translate('place_medinan') ??
+        'Medinan';
+  }
+  return getPlaceOfRevelation(surahNumber);
 }
 
 /// Shows the SurahInfoSheet as a modal bottom sheet.

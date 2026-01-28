@@ -13,6 +13,7 @@ import '../../khatmah/widgets/khatmah_tab.dart';
 import '../../../core/quran/qcf_quran.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
 import 'package:quran_app/app/app.dart';
+import 'package:quran_app/core/utils/localization_helper.dart';
 
 enum NavigationMode { surah, juz }
 
@@ -75,7 +76,13 @@ class PermanentAppBar extends StatelessWidget {
                         style: TextButton.styleFrom(
                             alignment: Alignment.centerLeft),
                         child: Text(
-                          isEditingBookmarks ? 'Done' : 'Edit',
+                          isEditingBookmarks
+                              ? (AppLocalizations.of(context)
+                                      ?.translate('done') ??
+                                  'Done')
+                              : (AppLocalizations.of(context)
+                                      ?.translate('edit') ??
+                                  'Edit'),
                           style: const TextStyle(
                               color: Color(0xFF689F38),
                               fontWeight: FontWeight.bold),
@@ -290,14 +297,21 @@ class _SurahDrawerState extends State<SurahDrawer>
   }
 
   String _getLatestBookmarkSubtitle(Bookmark? b) {
-    if (b == null) return "No bookmarks found";
+    if (b == null) {
+      return AppLocalizations.of(context)?.translate('no_bookmarks_found') ??
+          'No bookmarks found';
+    }
     final hour = b.createdAt.hour > 12
         ? b.createdAt.hour - 12
         : (b.createdAt.hour == 0 ? 12 : b.createdAt.hour);
     final minute = b.createdAt.minute.toString().padLeft(2, '0');
     final isNight = b.createdAt.hour >= 18 || b.createdAt.hour < 5;
-    final timeStr = "$hour:$minute ${isNight ? 'at night' : 'at morning'}";
-    final surahName = surah[b.surahId - 1]['name'];
+    final timeLabel = isNight
+        ? (AppLocalizations.of(context)?.translate('time_night') ?? 'at night')
+        : (AppLocalizations.of(context)?.translate('time_morning') ??
+            'at morning');
+    final timeStr = "$hour:$minute $timeLabel";
+    final surahName = getBilingualSurahName(context, b.surahId);
     return "$timeStr $surahName: ${b.ayahId}";
   }
 
@@ -474,7 +488,9 @@ class _SurahDrawerState extends State<SurahDrawer>
             key: _juzHeaderKeys[entry.juzNumber],
             padding: EdgeInsets.fromLTRB(24, index == 0 ? 20 : 16, 16, 4),
             child: Text(
-              'PART ${entry.juzNumber}',
+              (AppLocalizations.of(context)?.translate('part_label') ??
+                      'PART {number}')
+                  .replaceAll('{number}', '${entry.juzNumber}'),
               style: const TextStyle(
                   fontSize: 12,
                   letterSpacing: 0.5,
@@ -527,10 +543,18 @@ class _SurahDrawerState extends State<SurahDrawer>
   }
 
   Widget _buildSurahItem(int surahNumber, Map<String, dynamic> surahInfo) {
-    String surahName = _getLocalizedSurahName(surahInfo);
+    String surahName = getBilingualSurahName(context, surahNumber);
     int startPage = _surahStartPages[surahNumber] ?? (surahNumber * 10);
-    String place = surahInfo['place'] == 'Makkah' ? 'Meccan' : 'Medinan';
-    String subtitle = 'Page $startPage - ${surahInfo['aya']} verses - $place';
+    final place = surahInfo['place'] == 'Makkah'
+        ? (AppLocalizations.of(context)?.translate('place_meccan') ?? 'Meccan')
+        : (AppLocalizations.of(context)?.translate('place_medinan') ??
+            'Medinan');
+    final subtitle =
+        (AppLocalizations.of(context)?.translate('surah_list_subtitle') ??
+                'Page {page} - {count} verses - {place}')
+            .replaceAll('{page}', '$startPage')
+            .replaceAll('{count}', '${surahInfo['aya']}')
+            .replaceAll('{place}', place);
 
     return ListTile(
       // Reduced vertical padding to match screenshot denseness
@@ -578,20 +602,13 @@ class _SurahDrawerState extends State<SurahDrawer>
             .replaceAll('{number}', '$juzNumber'),
         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
       ),
-      subtitle: Text(_getLocalizedSurahName(surah[startingSurah - 1]),
+      subtitle: Text(getBilingualSurahName(context, startingSurah),
           style: const TextStyle(fontSize: 12, color: Colors.grey)),
       onTap: () {
         widget.controller.navigateToSurah(startingSurah);
         Navigator.pop(context);
       },
     );
-  }
-
-  String _getLocalizedSurahName(Map<String, dynamic> surahInfo) {
-    final locale = AppLocalizations.of(context)?.locale.languageCode;
-    return (locale == 'ar' || locale == 'ur')
-        ? (surahInfo['arabic'] ?? surahInfo['name'])
-        : surahInfo['name'];
   }
 
   Widget _buildBottomBar(BuildContext context) {
@@ -757,8 +774,10 @@ class _SurahDrawerState extends State<SurahDrawer>
                 Expanded(
                   child: TextField(
                     controller: _noteSearchController,
-                    decoration: const InputDecoration(
-                        hintText: 'Search notes...',
+                    decoration: InputDecoration(
+                        hintText: AppLocalizations.of(context)
+                                ?.translate('search_notes_hint') ??
+                            'Search notes...',
                         border: InputBorder.none,
                         isDense: true),
                     onChanged: (val) => _onNoteSearchChanged(
@@ -778,7 +797,10 @@ class _SurahDrawerState extends State<SurahDrawer>
                   : _noteResults;
               if (notes.isEmpty)
                 return _buildEmptyState(
-                    icon: Icons.note_alt_outlined, message: 'No notes found');
+                    icon: Icons.note_alt_outlined,
+                    message: AppLocalizations.of(context)
+                            ?.translate('no_notes_found') ??
+                        'No notes found');
               return ListView.separated(
                 padding: const EdgeInsets.only(bottom: 20),
                 itemCount: notes.length,

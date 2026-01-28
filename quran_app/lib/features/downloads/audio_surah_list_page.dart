@@ -181,7 +181,7 @@ class _AudioSurahListPageState extends State<AudioSurahListPage> {
                 final isDownloading = _downloadingSurahs.contains(surahNumber);
                 final progress = _progress[surahNumber];
                 final isDownloaded = _downloadedSurahs.contains(surahNumber);
-                final surahName = getLocalizedSurahName(context, c.id);
+                final surahName = getBilingualSurahName(context, c.id);
                 return ListTile(
                   title: Text(
                       '${surahNumber.toString().padLeft(3, '0')} - $surahName'),

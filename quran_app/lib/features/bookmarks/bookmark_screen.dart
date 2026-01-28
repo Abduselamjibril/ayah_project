@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
+import 'package:quran_app/core/utils/localization_helper.dart';
 
 import 'state/bookmark_notes_notifier.dart';
 import 'data/models/bookmark.dart';
@@ -134,7 +135,7 @@ class _BookmarkList extends StatelessWidget {
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final b = bookmarks[index];
-        final name = getSurahName(b.surahId);
+        final name = getBilingualSurahName(context, b.surahId);
         final colorInt = _parseColor(b.colorHex);
 
         return Dismissible(

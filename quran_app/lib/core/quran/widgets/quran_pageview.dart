@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:quran_app/core/quran/qcf_quran.dart';
 import 'package:quran_app/core/services/theme_service.dart';
+import 'package:quran_app/core/utils/localization_helper.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 /// Scrolling direction for the mushaf widget.
@@ -195,18 +196,17 @@ class _PageviewQuranState extends State<PageviewQuran> {
     try {
       final pageData = getPageData(pageNumber);
       if (pageData.isEmpty) {
-        return const _PageHeader(surahName: '', juzNumber: 0);
+        return const _PageHeader(surahNumber: 0, juzNumber: 0);
       }
       final first = pageData.first;
       final surah = int.tryParse(first['surah'].toString()) ?? 1;
       final start = int.tryParse(first['start'].toString()) ?? 1;
       final juz = getJuzNumber(surah, start);
-      final name = getSurahName(surah);
-      final header = _PageHeader(surahName: name, juzNumber: juz);
+      final header = _PageHeader(surahNumber: surah, juzNumber: juz);
       _headerCache[pageNumber] = header;
       return header;
     } catch (_) {
-      return const _PageHeader(surahName: '', juzNumber: 0);
+      return const _PageHeader(surahNumber: 0, juzNumber: 0);
     }
   }
 
@@ -242,7 +242,9 @@ class _PageviewQuranState extends State<PageviewQuran> {
                 pageNumber: pageNumber,
                 pageNumberTextStyle: widget.pageNumberTextStyle,
                 textColorFallback: widget.textColor,
-                leftLabel: header.surahName,
+                leftLabel: header.surahNumber > 0
+                    ? getBilingualSurahName(context, header.surahNumber)
+                    : '',
                 rightLabel:
                     header.juzNumber > 0 ? "Part ${header.juzNumber}" : '',
                 child: QuranPageContent(
@@ -290,7 +292,9 @@ class _PageviewQuranState extends State<PageviewQuran> {
                 pageNumber: pageNumber,
                 pageNumberTextStyle: widget.pageNumberTextStyle,
                 textColorFallback: widget.textColor,
-                leftLabel: header.surahName,
+                leftLabel: header.surahNumber > 0
+                    ? getBilingualSurahName(context, header.surahNumber)
+                    : '',
                 rightLabel:
                     header.juzNumber > 0 ? "Part ${header.juzNumber}" : '',
                 child: QuranPageContent(
@@ -318,10 +322,10 @@ class _PageviewQuranState extends State<PageviewQuran> {
 }
 
 class _PageHeader {
-  final String surahName;
+  final int surahNumber;
   final int juzNumber;
 
-  const _PageHeader({required this.surahName, required this.juzNumber});
+  const _PageHeader({required this.surahNumber, required this.juzNumber});
 }
 
 class _PageWithNumber extends StatelessWidget {

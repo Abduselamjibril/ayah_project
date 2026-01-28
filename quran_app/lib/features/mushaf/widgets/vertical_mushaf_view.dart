@@ -8,6 +8,7 @@ import 'package:quran_app/core/quran/qcf_quran.dart';
 import 'package:quran_app/core/services/audio_player_service.dart';
 import 'package:quran_app/features/audio_player/audio_player_screen.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
+import 'package:quran_app/core/utils/localization_helper.dart';
 
 import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart';
 import 'package:quran_app/features/mushaf/controller/mushaf_controller.dart';
@@ -907,7 +908,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
       if (pd.isEmpty) return '';
       final first = pd[0];
       final surahNum = int.parse(first['surah'].toString());
-      final name = getSurahName(surahNum);
+      final name = getBilingualSurahName(context, surahNum);
       _surahNameCache[page] = name;
       return name;
     } catch (e) {
