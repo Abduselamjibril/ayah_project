@@ -243,8 +243,8 @@ class _PageviewQuranState extends State<PageviewQuran> {
                 pageNumberTextStyle: widget.pageNumberTextStyle,
                 textColorFallback: widget.textColor,
                 leftLabel: header.surahNumber > 0
-                  ? getBilingualSurahName(context, header.surahNumber)
-                  : '',
+                    ? getBilingualSurahName(context, header.surahNumber)
+                    : '',
                 rightLabel:
                     header.juzNumber > 0 ? "Part ${header.juzNumber}" : '',
                 child: QuranPageContent(
@@ -293,8 +293,8 @@ class _PageviewQuranState extends State<PageviewQuran> {
                 pageNumberTextStyle: widget.pageNumberTextStyle,
                 textColorFallback: widget.textColor,
                 leftLabel: header.surahNumber > 0
-                  ? getBilingualSurahName(context, header.surahNumber)
-                  : '',
+                    ? getBilingualSurahName(context, header.surahNumber)
+                    : '',
                 rightLabel:
                     header.juzNumber > 0 ? "Part ${header.juzNumber}" : '',
                 child: QuranPageContent(

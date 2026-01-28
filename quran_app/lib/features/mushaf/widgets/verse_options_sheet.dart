@@ -93,7 +93,7 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
     final shareCardWidth = (width - 16 * 2 - 12 * 3) / 4;
     final bookmarkState = context.watch<BookmarkNotesNotifier>();
     final surahTitle =
-      '${getBilingualSurahName(context, widget.surah)}: ${widget.verse}';
+        '${getBilingualSurahName(context, widget.surah)}: ${widget.verse}';
 
     // Build sections based on order
     final orderedSections = _buildOrderedSections(

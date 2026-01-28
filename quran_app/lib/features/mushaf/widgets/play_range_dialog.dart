@@ -90,7 +90,7 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
                       (AppLocalizations.of(context)?.translate('play_from') ??
                               'Play from {surah} : {verse}')
                           .replaceAll('{surah}',
-                            getBilingualSurahName(context, widget.startSurah))
+                              getBilingualSurahName(context, widget.startSurah))
                           .replaceAll('{verse}', '${widget.startVerse}'),
                       style: theme.textTheme.titleMedium
                           ?.copyWith(fontWeight: FontWeight.bold),

@@ -602,7 +602,7 @@ class _SurahDrawerState extends State<SurahDrawer>
             .replaceAll('{number}', '$juzNumber'),
         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
       ),
-        subtitle: Text(getBilingualSurahName(context, startingSurah),
+      subtitle: Text(getBilingualSurahName(context, startingSurah),
           style: const TextStyle(fontSize: 12, color: Colors.grey)),
       onTap: () {
         widget.controller.navigateToSurah(startingSurah);
