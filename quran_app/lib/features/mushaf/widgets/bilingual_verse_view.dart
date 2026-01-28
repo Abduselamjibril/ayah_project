@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/quran/data/suwar.dart';
 import '../../../core/quran/helpers/juz_helper.dart';
 import '../../../core/services/translation_service.dart';
+import '../../../core/utils/localization_helper.dart';
 
 class BilingualVerseView extends StatelessWidget {
   final int surahNumber;
@@ -79,7 +80,7 @@ class BilingualVerseView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${surahInfo['name']} (${surahInfo['arabic']})',
+            getBilingualSurahName(context, surahNumber),
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -88,7 +89,7 @@ class BilingualVerseView extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '${surahInfo['english']} • Surah $surahNumber • ${surahInfo['aya']} verses',
+            'Surah $surahNumber • ${surahInfo['aya']} verses',
             style: TextStyle(
               fontSize: 12,
               color: Theme.of(context)

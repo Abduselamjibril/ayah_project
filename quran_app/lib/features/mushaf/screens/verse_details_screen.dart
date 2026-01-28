@@ -6,6 +6,7 @@ import 'package:quran_app/core/quran/data/quran_text.dart';
 import 'package:quran_app/features/downloads/downloads_screen.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
 import 'package:quran_app/features/share/presentation/dialogs/share_preview_dialog.dart';
+import 'package:quran_app/core/utils/localization_helper.dart';
 
 class VerseDetailsScreen extends StatefulWidget {
   final int surahNumber;
@@ -162,15 +163,7 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
   }
 
   String _getSurahName() {
-    try {
-      final surahData = surah.firstWhere(
-        (s) => s['id'] == widget.surahNumber,
-        orElse: () => {'name': 'Unknown'},
-      );
-      return surahData['name'] as String? ?? 'Unknown';
-    } catch (e) {
-      return 'Unknown';
-    }
+    return getBilingualSurahName(context, widget.surahNumber);
   }
 
   Widget _buildArabicVerseCard() {

@@ -53,7 +53,9 @@ class _PageSettingsSheetState extends State<PageSettingsSheet> {
                       Row(
                         children: [
                           Text(
-                            'Page Settings',
+                            AppLocalizations.of(context)
+                                    ?.translate('page_settings_title') ??
+                                'Page Settings',
                             style: Theme.of(context)
                                 .textTheme
                                 .titleMedium
@@ -74,7 +76,9 @@ class _PageSettingsSheetState extends State<PageSettingsSheet> {
                           children: [
                             const SizedBox(height: 8),
                             Text(
-                              'Scroll Direction',
+                              AppLocalizations.of(context)
+                                      ?.translate('scroll_direction') ??
+                                  'Scroll Direction',
                               style: Theme.of(context)
                                   .textTheme
                                   .titleSmall
@@ -84,7 +88,9 @@ class _PageSettingsSheetState extends State<PageSettingsSheet> {
                             Row(
                               children: [
                                 _SettingOptionTile(
-                                  label: 'Horizontal',
+                                  label: AppLocalizations.of(context)
+                                          ?.translate('horizontal') ??
+                                      'Horizontal',
                                   icon: Icons.view_day,
                                   selected: mode == ScrollMode.horizontal,
                                   onTap: () {
@@ -97,7 +103,9 @@ class _PageSettingsSheetState extends State<PageSettingsSheet> {
                                 ),
                                 const SizedBox(width: 12),
                                 _SettingOptionTile(
-                                  label: 'Vertical',
+                                  label: AppLocalizations.of(context)
+                                          ?.translate('vertical') ??
+                                      'Vertical',
                                   icon: Icons.view_stream,
                                   selected: mode == ScrollMode.vertical,
                                   onTap: () {
@@ -111,7 +119,9 @@ class _PageSettingsSheetState extends State<PageSettingsSheet> {
                             ),
                             const SizedBox(height: 18),
                             Text(
-                              'Theme Mode',
+                              AppLocalizations.of(context)
+                                      ?.translate('theme_mode') ??
+                                  'Theme Mode',
                               style: Theme.of(context)
                                   .textTheme
                                   .titleSmall
@@ -129,11 +139,15 @@ class _PageSettingsSheetState extends State<PageSettingsSheet> {
                                 IconData icon;
                                 switch (t) {
                                   case ThemeMode.light:
-                                    label = 'Light';
+                                    label = AppLocalizations.of(context)
+                                            ?.translate('light') ??
+                                        'Light';
                                     icon = Icons.wb_sunny;
                                     break;
                                   case ThemeMode.dark:
-                                    label = 'Dark';
+                                    label = AppLocalizations.of(context)
+                                            ?.translate('dark') ??
+                                        'Dark';
                                     icon = Icons.nightlight_round;
                                     break;
                                   default:
@@ -204,8 +218,12 @@ class _PageSettingsSheetState extends State<PageSettingsSheet> {
                                 children: SurahHeaderStyle.values.map((s) {
                                   final selected = s == surahStyle;
                                   String label = s == SurahHeaderStyle.golden
-                                      ? 'Golden'
-                                      : 'Green';
+                                      ? (AppLocalizations.of(context)
+                                              ?.translate('style_golden') ??
+                                          'Golden')
+                                      : (AppLocalizations.of(context)
+                                              ?.translate('style_green') ??
+                                          'Green');
                                   return _ThemeModeTile(
                                     label: label,
                                     icon: Icons.image,
@@ -220,7 +238,9 @@ class _PageSettingsSheetState extends State<PageSettingsSheet> {
                             ],
                             const SizedBox(height: 18),
                             Text(
-                              'Language',
+                              AppLocalizations.of(context)
+                                      ?.translate('language_title') ??
+                                  'Language',
                               style: Theme.of(context)
                                   .textTheme
                                   .titleSmall

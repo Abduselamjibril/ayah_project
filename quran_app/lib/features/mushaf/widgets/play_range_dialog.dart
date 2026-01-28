@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/quran/qcf_quran.dart';
 import '../../../../core/services/audio_player_service.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
+import 'package:quran_app/core/utils/localization_helper.dart';
 
 class PlayRangeDialog extends StatefulWidget {
   final int startSurah;
@@ -88,8 +89,8 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
                     Text(
                       (AppLocalizations.of(context)?.translate('play_from') ??
                               'Play from {surah} : {verse}')
-                          .replaceAll(
-                              '{surah}', getSurahName(widget.startSurah))
+                          .replaceAll('{surah}',
+                            getBilingualSurahName(context, widget.startSurah))
                           .replaceAll('{verse}', '${widget.startVerse}'),
                       style: theme.textTheme.titleMedium
                           ?.copyWith(fontWeight: FontWeight.bold),
@@ -164,7 +165,7 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
           icon: Icons.format_align_right,
           labelLeft: AppLocalizations.of(context)?.translate('end_of_surah') ??
               'End of Surah',
-          labelRight: getSurahName(widget.startSurah),
+          labelRight: getBilingualSurahName(context, widget.startSurah),
           onTap: () => _playTo(widget.startSurah, _endOfSurah),
         ),
         const SizedBox(height: 8),
@@ -236,7 +237,7 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${getSurahName(widget.startSurah)} : $verseNum',
+                  '${getBilingualSurahName(context, widget.startSurah)} : $verseNum',
                   style: isStartVerse
                       ? const TextStyle(fontWeight: FontWeight.bold)
                       : null,
@@ -307,7 +308,7 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
           if (pageData.isNotEmpty) {
             final last = pageData.last;
             pageInfo =
-                '${getSurahName(int.parse(last['surah'].toString()))} : ${last['end']}';
+                '${getBilingualSurahName(context, int.parse(last['surah'].toString()))} : ${last['end']}';
           }
         } catch (_) {}
 
@@ -362,7 +363,7 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
           },
           leading:
               Text('$surahNum', style: const TextStyle(color: Colors.grey)),
-          title: Text(getSurahName(surahNum)),
+          title: Text(getBilingualSurahName(context, surahNum)),
           trailing: Text(
             (AppLocalizations.of(context)?.translate('ends_page') ??
                     'Ends Page {number}')
