@@ -167,12 +167,16 @@ class _TafsirScreenState extends State<TafsirScreen>
         _contentSource = 'translation-db-${_selectedTranslation!.id}';
       } else {
         _activeType = 'none';
-        _content =
+        _content = AppLocalizations.of(context)
+                ?.translate('no_tafsir_translation_selected') ??
             'No translation or tafsir selected. Please select one from the options below.';
         _contentSource = 'none-selected';
       }
     } catch (e) {
-      _content = 'Error loading content: $e';
+      _content =
+          (AppLocalizations.of(context)?.translate('error_loading_content') ??
+                  'Error loading content: {error}')
+              .replaceAll('{error}', '$e');
       _contentSource = 'error';
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -448,11 +452,17 @@ class _TafsirScreenState extends State<TafsirScreen>
 
     // Resolve edition fields without relying on an implicit Object type
     final String editionName = _activeType == 'tafsir'
-        ? (_selectedTafsir?.name ?? 'Unknown')
-        : (_selectedTranslation?.name ?? 'Unknown');
+        ? (_selectedTafsir?.name ??
+            (AppLocalizations.of(context)?.translate('unknown') ?? 'Unknown'))
+        : (_selectedTranslation?.name ??
+            (AppLocalizations.of(context)?.translate('unknown') ?? 'Unknown'));
     final String editionLanguage = _activeType == 'tafsir'
-        ? (_selectedTafsir?.languageName ?? 'Unknown Language')
-        : (_selectedTranslation?.languageName ?? 'Unknown Language');
+        ? (_selectedTafsir?.languageName ??
+            (AppLocalizations.of(context)?.translate('unknown_language') ??
+                'Unknown Language'))
+        : (_selectedTranslation?.languageName ??
+            (AppLocalizations.of(context)?.translate('unknown_language') ??
+                'Unknown Language'));
     final String editionId = (_activeType == 'tafsir'
                 ? _selectedTafsir?.id
                 : _selectedTranslation?.id)
@@ -729,7 +739,8 @@ class _TafsirScreenState extends State<TafsirScreen>
           IconButton(
             onPressed: _loadEditions,
             icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
+            tooltip:
+                AppLocalizations.of(context)?.translate('refresh') ?? 'Refresh',
           ),
         ],
       ),
@@ -867,6 +878,9 @@ class _DownloadButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final isCurrentDownloading =
         isDownloading && downloadingType == type && downloadingId == edition.id;
+    final typeLabel = AppLocalizations.of(context)?.translate(
+            type == 'tafsir' ? 'type_tafsir' : 'type_translation') ??
+        (type == 'tafsir' ? 'Tafsir' : 'Translation');
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -895,7 +909,9 @@ class _DownloadButton extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Download Required',
+                  AppLocalizations.of(context)
+                          ?.translate('download_required') ??
+                      'Download Required',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: type == 'tafsir' ? Colors.blue : Colors.green,
@@ -903,7 +919,10 @@ class _DownloadButton extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'This $type needs to be downloaded for offline use',
+                  (AppLocalizations.of(context)
+                              ?.translate('download_required_msg') ??
+                          'This {type} needs to be downloaded for offline use')
+                      .replaceAll('{type}', typeLabel),
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: Theme.of(context)
                             .colorScheme
@@ -940,7 +959,10 @@ class _DownloadButton extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 elevation: 0,
               ),
-              child: const Text('Download Now'),
+              child: Text(
+                AppLocalizations.of(context)?.translate('download_now') ??
+                    'Download Now',
+              ),
             ),
         ],
       ),

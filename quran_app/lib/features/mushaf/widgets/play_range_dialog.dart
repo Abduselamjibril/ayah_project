@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/quran/qcf_quran.dart';
 import '../../../../core/services/audio_player_service.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
 
 class PlayRangeDialog extends StatefulWidget {
   final int startSurah;
@@ -85,7 +86,11 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'Play from ${getSurahName(widget.startSurah)} : ${widget.startVerse}',
+                      (AppLocalizations.of(context)?.translate('play_from') ??
+                              'Play from {surah} : {verse}')
+                          .replaceAll(
+                              '{surah}', getSurahName(widget.startSurah))
+                          .replaceAll('{verse}', '${widget.startVerse}'),
                       style: theme.textTheme.titleMedium
                           ?.copyWith(fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
@@ -101,10 +106,19 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
               // Tabs
               TabBar(
                 controller: _tabController,
-                tabs: const [
-                  Tab(text: 'Verse'),
-                  Tab(text: 'Page'),
-                  Tab(text: 'Surah'),
+                tabs: [
+                  Tab(
+                      text: AppLocalizations.of(context)
+                              ?.translate('tab_verse') ??
+                          'Verse'),
+                  Tab(
+                      text:
+                          AppLocalizations.of(context)?.translate('tab_page') ??
+                              'Page'),
+                  Tab(
+                      text: AppLocalizations.of(context)
+                              ?.translate('tab_surah') ??
+                          'Surah'),
                 ],
               ),
 
@@ -131,8 +145,11 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
       children: [
         _buildQuickActionItem(
           icon: Icons.article_outlined,
-          labelLeft: 'End of Page',
-          labelRight: 'Page $_currentPage',
+          labelLeft: AppLocalizations.of(context)?.translate('end_of_page') ??
+              'End of Page',
+          labelRight: (AppLocalizations.of(context)?.translate('page_label') ??
+                  'Page {number}')
+              .replaceAll('{number}', '$_currentPage'),
           onTap: () {
             final pageData = getPageData(_currentPage);
             if (pageData.isNotEmpty) {
@@ -145,14 +162,17 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
         const SizedBox(height: 8),
         _buildQuickActionItem(
           icon: Icons.format_align_right,
-          labelLeft: 'End of Surah',
+          labelLeft: AppLocalizations.of(context)?.translate('end_of_surah') ??
+              'End of Surah',
           labelRight: getSurahName(widget.startSurah),
           onTap: () => _playTo(widget.startSurah, _endOfSurah),
         ),
         const SizedBox(height: 8),
         _buildQuickActionItem(
           icon: Icons.all_inclusive,
-          labelLeft: 'Continuous Playback',
+          labelLeft:
+              AppLocalizations.of(context)?.translate('continuous_playback') ??
+                  'Continuous Playback',
           labelRight: '∞',
           onTap: () => _playTo(114, 6),
         ),
@@ -268,7 +288,9 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
   Widget _buildPageList(ScrollController scrollController) {
     final startPage = _currentPage + 1;
     if (startPage > 604) {
-      return const Center(child: Text("No subsequent pages"));
+      return Center(
+          child: Text(
+              AppLocalizations.of(context)!.translate('no_subsequent_pages')));
     }
     final count = 604 - startPage + 1;
 
@@ -299,7 +321,11 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
             }
           },
           leading: const Icon(Icons.auto_stories_outlined),
-          title: Text('Page $pageNum'),
+          title: Text(
+            (AppLocalizations.of(context)?.translate('page_label') ??
+                    'Page {number}')
+                .replaceAll('{number}', '$pageNum'),
+          ),
           trailing: Text(pageInfo),
         );
       },
@@ -309,7 +335,10 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
   Widget _buildSurahList(ScrollController scrollController) {
     final startSurah = widget.startSurah + 1;
     if (startSurah > 114) {
-      return const Center(child: Text("No subsequent surahs"));
+      return Center(
+          child: Text(
+              AppLocalizations.of(context)?.translate('no_subsequent_surahs') ??
+                  'No subsequent surahs'));
     }
     final count = 114 - startSurah + 1;
 
@@ -334,7 +363,11 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
           leading:
               Text('$surahNum', style: const TextStyle(color: Colors.grey)),
           title: Text(getSurahName(surahNum)),
-          trailing: Text('Ends Page $endPage'),
+          trailing: Text(
+            (AppLocalizations.of(context)?.translate('ends_page') ??
+                    'Ends Page {number}')
+                .replaceAll('{number}', '$endPage'),
+          ),
         );
       },
     );

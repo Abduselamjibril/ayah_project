@@ -141,9 +141,10 @@ class _SearchScreenState extends State<SearchScreen>
                     foregroundColor: BrandColors.accent,
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                   ),
-                  child: const Text(
-                    'Cancel',
-                    style: TextStyle(fontWeight: FontWeight.w600),
+                  child: Text(
+                    AppLocalizations.of(context)?.translate('cancel') ??
+                        'Cancel',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -160,8 +161,12 @@ class _SearchScreenState extends State<SearchScreen>
     final items = showHistory ? _history : _suggestions;
 
     if (items.isEmpty) {
-      // Optional: show "Type to search..." placeholder if needed
-      return const SizedBox.shrink();
+      return Center(
+        child: Text(
+          AppLocalizations.of(context)?.translate('search_placeholder') ??
+              'Type to search...',
+        ),
+      );
     }
 
     return Container(

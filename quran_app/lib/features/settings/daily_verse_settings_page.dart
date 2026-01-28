@@ -35,19 +35,30 @@ class _DailyVerseSettingsPageState extends State<DailyVerseSettingsPage> {
     final shouldOpen = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Permission Required'),
-        content: const Text(
-          'To send notifications at exact times, this app needs permission to schedule exact alarms. '
-          'You will be redirected to system settings to grant this permission.',
+        title: Text(
+          AppLocalizations.of(context)
+                  ?.translate('permission_required_title') ??
+              'Permission Required',
+        ),
+        content: Text(
+          AppLocalizations.of(context)
+                  ?.translate('exact_alarm_permission_msg') ??
+              'To send notifications at exact times, this app needs permission to schedule exact alarms. '
+                  'You will be redirected to system settings to grant this permission.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(
+              AppLocalizations.of(context)?.translate('cancel') ?? 'Cancel',
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Open Settings'),
+            child: Text(
+              AppLocalizations.of(context)?.translate('open_settings') ??
+                  'Open Settings',
+            ),
           ),
         ],
       ),
@@ -82,18 +93,29 @@ class _DailyVerseSettingsPageState extends State<DailyVerseSettingsPage> {
     final shouldOpen = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Notifications Disabled'),
-        content: const Text(
-          'Notifications are disabled for this app. Please enable them in settings to receive receiving verses.',
+        title: Text(
+          AppLocalizations.of(context)
+                  ?.translate('notifications_disabled_title') ??
+              'Notifications Disabled',
+        ),
+        content: Text(
+          AppLocalizations.of(context)
+                  ?.translate('notifications_disabled_msg') ??
+              'Notifications are disabled for this app. Please enable them in settings to receive receiving verses.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(
+              AppLocalizations.of(context)?.translate('cancel') ?? 'Cancel',
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Open Settings'),
+            child: Text(
+              AppLocalizations.of(context)?.translate('open_settings') ??
+                  'Open Settings',
+            ),
           ),
         ],
       ),
@@ -192,7 +214,8 @@ class _DailyVerseSettingsPageState extends State<DailyVerseSettingsPage> {
                   left: ResponsiveLayout.scaled(context, 8, min: 6, max: 12))),
         ),
         title: Text(
-          'Daily Inspiration',
+          AppLocalizations.of(context)?.translate('daily_inspiration_title') ??
+              'Daily Inspiration',
           style: theme.textTheme.titleMedium
               ?.copyWith(fontWeight: FontWeight.w700, fontSize: titleFontSize),
         ),
@@ -201,14 +224,23 @@ class _DailyVerseSettingsPageState extends State<DailyVerseSettingsPage> {
         padding: EdgeInsets.all(listPadding),
         children: [
           SwitchListTile(
-            title: const Text('Enable Daily Verse'),
-            subtitle:
-                const Text('Receive a random verse notification every day'),
+            title: Text(
+              AppLocalizations.of(context)?.translate('enable_daily_verse') ??
+                  'Enable Daily Verse',
+            ),
+            subtitle: Text(
+              AppLocalizations.of(context)
+                      ?.translate('daily_verse_notification_subtitle') ??
+                  'Receive a random verse notification every day',
+            ),
             value: _enabled,
             onChanged: _toggleEnabled,
           ),
           ListTile(
-            title: const Text('Notification Time'),
+            title: Text(
+              AppLocalizations.of(context)?.translate('notification_time') ??
+                  'Notification Time',
+            ),
             subtitle: Text(_time.format(context)),
             trailing: const Icon(Icons.access_time_rounded),
             enabled: _enabled,

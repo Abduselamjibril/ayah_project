@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
 
 import 'state/bookmark_notes_notifier.dart';
 import 'data/models/bookmark.dart';
@@ -46,7 +47,10 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bookmarks'),
+        title: Text(
+          AppLocalizations.of(context)?.translate('bookmarks_title') ??
+              'Bookmarks',
+        ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: SingleChildScrollView(

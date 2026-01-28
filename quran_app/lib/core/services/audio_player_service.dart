@@ -10,6 +10,7 @@ import 'package:quran_app/data/models/audio_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'audio_service.dart' as local_audio;
 import 'quran_audio_handler.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
 import 'package:quran_app/core/quran/qcf_quran.dart';
 import 'notification_service.dart';
 
@@ -241,8 +242,11 @@ class AudioPlayerService {
     if (context != null && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              Text('Preparing audio... downloading $surasToPreDownload suras'),
+          content: Text(
+            (AppLocalizations.of(context)?.translate('preparing_audio') ??
+                    'Preparing audio... downloading {count} suras')
+                .replaceAll('{count}', '$surasToPreDownload'),
+          ),
           duration: Duration(seconds: 2),
         ),
       );
@@ -256,7 +260,12 @@ class AudioPlayerService {
           if (context != null && context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Failed to download Surah $surahToDownload'),
+                content: Text(
+                  (AppLocalizations.of(context)
+                              ?.translate('failed_download_surah') ??
+                          'Failed to download Surah {number}')
+                      .replaceAll('{number}', '$surahToDownload'),
+                ),
                 duration: Duration(seconds: 3),
               ),
             );
@@ -399,10 +408,13 @@ class AudioPlayerService {
           height: maxHeight,
           child: Column(
             children: [
-              const Padding(
-                  padding: EdgeInsets.all(12),
-                  child: Text('Choose Reciter',
-                      style: TextStyle(fontWeight: FontWeight.bold))),
+              Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    AppLocalizations.of(context)?.translate('choose_reciter') ??
+                        'Choose Reciter',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  )),
               Expanded(
                   child: ListView.builder(
                 itemCount: recitations.length,

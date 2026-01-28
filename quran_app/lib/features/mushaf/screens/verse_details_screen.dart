@@ -4,6 +4,7 @@ import 'package:quran_app/core/services/tafsir_service.dart';
 import 'package:quran_app/core/quran/data/suwar.dart';
 import 'package:quran_app/core/quran/data/quran_text.dart';
 import 'package:quran_app/features/downloads/downloads_screen.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
 import 'package:quran_app/features/share/presentation/dialogs/share_preview_dialog.dart';
 
 class VerseDetailsScreen extends StatefulWidget {
@@ -246,7 +247,6 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
                         ),
                         IconButton(
                           onPressed: () {
-
                             // Share functionality
 
                             // showSharePreviewDialog(
@@ -254,7 +254,6 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
                             //   surahNumber: widget.surahNumber,
                             //   ayahNumber: widget.ayahNumber,
                             // );
-
                           },
                           icon: Icon(
                             Icons.share,
@@ -830,7 +829,9 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
           ),
           const SizedBox(height: 20),
           Text(
-            'No ${type}s available',
+            (AppLocalizations.of(context)?.translate('no_types_available') ??
+                    'No {type}s available')
+                .replaceAll('{type}', type),
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color:
                       Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
@@ -838,7 +839,10 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            'Download ${type}s to view content for this verse',
+            (AppLocalizations.of(context)
+                        ?.translate('download_types_to_view') ??
+                    'Download {type}s to view content for this verse')
+                .replaceAll('{type}', type),
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
@@ -855,7 +859,11 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
               ).then((_) => _loadData());
             },
             icon: const Icon(Icons.download),
-            label: Text('Download ${type}s'),
+            label: Text(
+              (AppLocalizations.of(context)?.translate('download_types') ??
+                      'Download {type}s')
+                  .replaceAll('{type}', type),
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).primaryColor,
               foregroundColor: Colors.white,
@@ -1126,7 +1134,10 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
           });
         },
         icon: const Icon(Icons.menu_book_rounded),
-        label: const Text('Read in Mushaf'),
+        label: Text(
+          AppLocalizations.of(context)?.translate('read_in_mushaf') ??
+              'Read in Mushaf',
+        ),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),

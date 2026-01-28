@@ -148,7 +148,7 @@ class _KhatmahTabState extends State<KhatmahTab> {
         children: [
           const SizedBox(height: 12),
           Text(
-            "Choose a period to complete the Quran, and continue your Khatmah during Ramadan and throughout the year.",
+            AppLocalizations.of(context)!.translate('khatmah_description'),
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 18,
@@ -171,7 +171,10 @@ class _KhatmahTabState extends State<KhatmahTab> {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            child: const Text('Start New Khatmah'),
+            child: Text(
+              AppLocalizations.of(context)?.translate('start_new_khatmah') ??
+                  'Start New Khatmah',
+            ),
           ),
         ],
       ),

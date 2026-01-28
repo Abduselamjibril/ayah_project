@@ -572,8 +572,12 @@ class _SurahDrawerState extends State<SurahDrawer>
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
       leading: _buildSurahCircleAvatar(juzNumber, context),
-      title: Text('PART $juzNumber',
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+      title: Text(
+        (AppLocalizations.of(context)?.translate('part_label') ??
+                'PART {number}')
+            .replaceAll('{number}', '$juzNumber'),
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+      ),
       subtitle: Text(_getLocalizedSurahName(surah[startingSurah - 1]),
           style: const TextStyle(fontSize: 12, color: Colors.grey)),
       onTap: () {

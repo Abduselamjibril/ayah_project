@@ -77,7 +77,8 @@ class MyApp extends StatelessWidget {
       animation: Listenable.merge([themeService, languageService]),
       builder: (context, child) {
         return MaterialApp(
-          title: 'Quran App',
+          title: AppLocalizations.of(context)?.translate('app_name') ??
+              'Quran App',
           locale: languageService.currentLocale,
           supportedLocales: LanguageService.supportedLocales,
           localizationsDelegates: const [

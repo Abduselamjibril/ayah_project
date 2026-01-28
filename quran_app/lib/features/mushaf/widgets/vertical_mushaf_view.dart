@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:quran_app/core/quran/qcf_quran.dart';
 import 'package:quran_app/core/services/audio_player_service.dart';
 import 'package:quran_app/features/audio_player/audio_player_screen.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
 
 import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart';
 import 'package:quran_app/features/mushaf/controller/mushaf_controller.dart';
@@ -1027,7 +1028,12 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                       },
                     ),
                     const SizedBox(height: 8),
-                    Text('${tempSpeed.toStringAsFixed(0)} pixels/second'),
+                    Text(
+                      (AppLocalizations.of(context)
+                                  ?.translate('pixels_per_second') ??
+                              '{value} pixels/second')
+                          .replaceAll('{value}', tempSpeed.toStringAsFixed(0)),
+                    ),
                     const SizedBox(height: 12),
                   ],
                 ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:quran_app/core/services/theme_service.dart';
 import 'package:quran_app/features/share/presentation/widgets/share_card.dart';
 import 'package:quran_app/features/share/services/share_service.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
 
 Future<void> showSharePreviewDialog({
   required BuildContext context,
@@ -114,7 +115,8 @@ class _ShareOptionsDialogState extends State<ShareOptionsDialog> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Share Verse',
+              AppLocalizations.of(context)?.translate('share_verse_title') ??
+                  'Share Verse',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -124,13 +126,19 @@ class _ShareOptionsDialogState extends State<ShareOptionsDialog> {
 
             // Options
             SwitchListTile(
-              title: const Text('Show Surah Name'),
+              title: Text(
+                AppLocalizations.of(context)?.translate('show_surah_name') ??
+                    'Show Surah Name',
+              ),
               value: _showSurahName,
               onChanged: (val) => setState(() => _showSurahName = val),
               dense: true,
             ),
             SwitchListTile(
-              title: const Text('Show Page Number'),
+              title: Text(
+                AppLocalizations.of(context)?.translate('show_page_number') ??
+                    'Show Page Number',
+              ),
               value: _showPageNumber,
               onChanged: (val) => setState(() => _showPageNumber = val),
               dense: true,
@@ -142,7 +150,9 @@ class _ShareOptionsDialogState extends State<ShareOptionsDialog> {
                 Expanded(
                   child: _ShareOptionButton(
                     icon: Icons.text_fields,
-                    label: 'Share Text',
+                    label:
+                        AppLocalizations.of(context)?.translate('share_text') ??
+                            'Share Text',
                     onTap: _shareAsText,
                     isOutlined: true,
                   ),
@@ -151,7 +161,9 @@ class _ShareOptionsDialogState extends State<ShareOptionsDialog> {
                 Expanded(
                   child: _ShareOptionButton(
                     icon: Icons.image,
-                    label: 'Share Image',
+                    label: AppLocalizations.of(context)
+                            ?.translate('share_image') ??
+                        'Share Image',
                     isLoading: _isSharing,
                     onTap: _isSharing ? null : _shareAsImage,
                     isOutlined: false,

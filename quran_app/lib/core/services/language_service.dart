@@ -19,9 +19,6 @@ class LanguageService extends ChangeNotifier {
   static const List<Locale> supportedLocales = [
     Locale('en'), // English
     Locale('ar'), // Arabic
-    Locale('ur'), // Urdu
-    Locale('fr'), // French
-    Locale('es'), // Spanish
   ];
 
   Future<void> initialize() async {

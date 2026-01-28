@@ -58,7 +58,8 @@ class ThemeSettingsPage extends StatelessWidget {
                   left: ResponsiveLayout.scaled(context, 8, min: 6, max: 12))),
         ),
         title: Text(
-          'App Appearance',
+          AppLocalizations.of(context)?.translate('app_appearance') ??
+              'App Appearance',
           style: theme.textTheme.titleMedium
               ?.copyWith(fontWeight: FontWeight.w700, fontSize: titleFontSize),
         ),
@@ -73,7 +74,8 @@ class ThemeSettingsPage extends StatelessWidget {
               Padding(
                 padding: EdgeInsets.only(bottom: titleSpacing),
                 child: Text(
-                  'Theme Mode',
+                  AppLocalizations.of(context)?.translate('theme_mode') ??
+                      'Theme Mode',
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: ResponsiveLayout.scaled(context, 18,
@@ -86,7 +88,8 @@ class ThemeSettingsPage extends StatelessWidget {
                     child: _buildThemeModeCard(
                       context,
                       mode: ThemeMode.light,
-                      label: 'Light',
+                      label: AppLocalizations.of(context)?.translate('light') ??
+                          'Light',
                       icon: Icons.wb_sunny,
                       isSelected: themeService.themeMode == ThemeMode.light,
                       onTap: () => themeService.setThemeMode(ThemeMode.light),
@@ -97,7 +100,8 @@ class ThemeSettingsPage extends StatelessWidget {
                     child: _buildThemeModeCard(
                       context,
                       mode: ThemeMode.dark,
-                      label: 'Dark',
+                      label: AppLocalizations.of(context)?.translate('dark') ??
+                          'Dark',
                       icon: Icons.nightlight_round,
                       isSelected: themeService.themeMode == ThemeMode.dark,
                       onTap: () => themeService.setThemeMode(ThemeMode.dark),
@@ -112,7 +116,9 @@ class ThemeSettingsPage extends StatelessWidget {
                 Padding(
                   padding: EdgeInsets.only(bottom: titleSpacing),
                   child: Text(
-                    'Dark Mode Options',
+                    AppLocalizations.of(context)
+                            ?.translate('dark_mode_options') ??
+                        'Dark Mode Options',
                     style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: ResponsiveLayout.scaled(context, 18,
@@ -125,12 +131,17 @@ class ThemeSettingsPage extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: SwitchListTile(
-                    title: const Text(
-                      'Pure Black Background',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                    title: Text(
+                      AppLocalizations.of(context)
+                              ?.translate('pure_black_background') ??
+                          'Pure Black Background',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
-                    subtitle:
-                        const Text('Use pure black for Mushaf background'),
+                    subtitle: Text(
+                      AppLocalizations.of(context)
+                              ?.translate('pure_black_mushaf_subtitle') ??
+                          'Use pure black for Mushaf background',
+                    ),
                     value: themeService.pureBlackBackground,
                     onChanged: (value) =>
                         themeService.setPureBlackBackground(value),
@@ -145,7 +156,9 @@ class ThemeSettingsPage extends StatelessWidget {
                 Padding(
                   padding: EdgeInsets.only(bottom: titleSpacing),
                   child: Text(
-                    'Surah Header Style',
+                    AppLocalizations.of(context)
+                            ?.translate('surah_header_style') ??
+                        'Surah Header Style',
                     style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: ResponsiveLayout.scaled(context, 18,
@@ -156,7 +169,9 @@ class ThemeSettingsPage extends StatelessWidget {
                 _buildSurahStyleCard(
                   context,
                   style: SurahHeaderStyle.golden,
-                  label: 'Golden',
+                  label:
+                      AppLocalizations.of(context)?.translate('style_golden') ??
+                          'Golden',
                   assetPath: 'assets/images/mainframe.png',
                   isSelected:
                       themeService.surahHeaderStyle == SurahHeaderStyle.golden,
@@ -167,7 +182,9 @@ class ThemeSettingsPage extends StatelessWidget {
                 _buildSurahStyleCard(
                   context,
                   style: SurahHeaderStyle.green,
-                  label: 'Green',
+                  label:
+                      AppLocalizations.of(context)?.translate('style_green') ??
+                          'Green',
                   assetPath: 'assets/images/green_mainframe.png',
                   isSelected:
                       themeService.surahHeaderStyle == SurahHeaderStyle.green,
@@ -184,7 +201,8 @@ class ThemeSettingsPage extends StatelessWidget {
                     0,
                     ResponsiveLayout.scaled(context, 8, min: 6, max: 12)),
                 child: Text(
-                  'Mushaf Layout',
+                  AppLocalizations.of(context)?.translate('mushaf_layout') ??
+                      'Mushaf Layout',
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: ResponsiveLayout.scaled(context, 18,
@@ -193,8 +211,12 @@ class ThemeSettingsPage extends StatelessWidget {
               ),
               _buildMushafLayoutOption(
                 context,
-                title: 'Page View (Horizontal)',
-                subtitle: 'Swipe pages one by one',
+                title: AppLocalizations.of(context)
+                        ?.translate('page_view_horizontal') ??
+                    'Page View (Horizontal)',
+                subtitle: AppLocalizations.of(context)
+                        ?.translate('page_view_subtitle') ??
+                    'Swipe pages one by one',
                 mode: ScrollMode.horizontal,
                 isSelected: mushafSettings.scrollMode == ScrollMode.horizontal,
                 icon: Icons.view_day,
@@ -203,8 +225,12 @@ class ThemeSettingsPage extends StatelessWidget {
               ),
               _buildMushafLayoutOption(
                 context,
-                title: 'Continuous Scroll (Vertical)',
-                subtitle: 'Scroll vertically through the mushaf',
+                title: AppLocalizations.of(context)
+                        ?.translate('continuous_scroll_vertical') ??
+                    'Continuous Scroll (Vertical)',
+                subtitle: AppLocalizations.of(context)
+                        ?.translate('continuous_scroll_subtitle') ??
+                    'Scroll vertically through the mushaf',
                 mode: ScrollMode.vertical,
                 isSelected: mushafSettings.scrollMode == ScrollMode.vertical,
                 icon: Icons.view_stream,

@@ -62,19 +62,30 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     final shouldOpen = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Permission Required'),
-        content: const Text(
-          'To send reminders at exact times, this app needs permission to schedule exact alarms. '
-          'You will be redirected to system settings to grant this permission.',
+        title: Text(
+          AppLocalizations.of(context)
+                  ?.translate('permission_required_title') ??
+              'Permission Required',
+        ),
+        content: Text(
+          AppLocalizations.of(context)
+                  ?.translate('exact_alarm_permission_msg') ??
+              'To send reminders at exact times, this app needs permission to schedule exact alarms. '
+                  'You will be redirected to system settings to grant this permission.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(
+              AppLocalizations.of(context)?.translate('cancel') ?? 'Cancel',
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Open Settings'),
+            child: Text(
+              AppLocalizations.of(context)?.translate('open_settings') ??
+                  'Open Settings',
+            ),
           ),
         ],
       ),
@@ -107,18 +118,29 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     final shouldOpen = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Notifications Disabled'),
-        content: const Text(
-          'Notifications are disabled for this app. Please enable them in settings to receive reminders.',
+        title: Text(
+          AppLocalizations.of(context)
+                  ?.translate('notifications_disabled_title') ??
+              'Notifications Disabled',
+        ),
+        content: Text(
+          AppLocalizations.of(context)
+                  ?.translate('notifications_disabled_msg') ??
+              'Notifications are disabled for this app. Please enable them in settings to receive reminders.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(
+              AppLocalizations.of(context)?.translate('cancel') ?? 'Cancel',
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Open Settings'),
+            child: Text(
+              AppLocalizations.of(context)?.translate('open_settings') ??
+                  'Open Settings',
+            ),
           ),
         ],
       ),
@@ -233,7 +255,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                   left: ResponsiveLayout.scaled(context, 8, min: 6, max: 12))),
         ),
         title: Text(
-          'Notification Settings',
+          AppLocalizations.of(context)
+                  ?.translate('notification_settings_title') ??
+              'Notification Settings',
           style: theme.textTheme.titleMedium
               ?.copyWith(fontWeight: FontWeight.w700, fontSize: titleFontSize),
         ),
@@ -243,18 +267,33 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
           : ListView(
               padding: EdgeInsets.all(listPadding),
               children: [
-                _buildSectionHeader(theme, 'Khatmah Reminder'),
+                _buildSectionHeader(
+                  theme,
+                  AppLocalizations.of(context)
+                          ?.translate('khatmah_reminder_section') ??
+                      'Khatmah Reminder',
+                ),
                 SwitchListTile(
-                  title: const Text('Daily Khatmah Reminder'),
-                  subtitle: const Text(
-                      'Receive a daily notification to read your Khatmah'),
+                  title: Text(
+                    AppLocalizations.of(context)
+                            ?.translate('daily_khatmah_reminder') ??
+                        'Daily Khatmah Reminder',
+                  ),
+                  subtitle: Text(
+                    AppLocalizations.of(context)
+                            ?.translate('daily_khatmah_reminder_subtitle') ??
+                        'Receive a daily notification to read your Khatmah',
+                  ),
                   value: _khatmahEnabled,
                   onChanged: (value) =>
                       _updateKhatmahSettings(value, _khatmahTime),
                   activeColor: theme.primaryColor,
                 ),
                 ListTile(
-                  title: const Text('Reminder Time'),
+                  title: Text(
+                    AppLocalizations.of(context)?.translate('reminder_time') ??
+                        'Reminder Time',
+                  ),
                   subtitle: Text(_khatmahTime.format(context)),
                   enabled: _khatmahEnabled,
                   trailing: const Icon(Icons.access_time),
@@ -269,16 +308,33 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                   },
                 ),
                 const Divider(),
-                _buildSectionHeader(theme, 'Verse of the Day'),
+                _buildSectionHeader(
+                  theme,
+                  AppLocalizations.of(context)
+                          ?.translate('verse_of_the_day_section') ??
+                      'Verse of the Day',
+                ),
                 SwitchListTile(
-                  title: const Text('Daily Verse Notification'),
-                  subtitle: const Text('Receive a random verse every day'),
+                  title: Text(
+                    AppLocalizations.of(context)
+                            ?.translate('daily_verse_notification') ??
+                        'Daily Verse Notification',
+                  ),
+                  subtitle: Text(
+                    AppLocalizations.of(context)
+                            ?.translate('daily_verse_notification_subtitle') ??
+                        'Receive a random verse every day',
+                  ),
                   value: _votdEnabled,
                   onChanged: (value) => _updateVotdSettings(value, _votdTime),
                   activeColor: theme.primaryColor,
                 ),
                 ListTile(
-                  title: const Text('Notification Time'),
+                  title: Text(
+                    AppLocalizations.of(context)
+                            ?.translate('notification_time') ??
+                        'Notification Time',
+                  ),
                   subtitle: Text(_votdTime.format(context)),
                   enabled: _votdEnabled,
                   trailing: const Icon(Icons.access_time),
