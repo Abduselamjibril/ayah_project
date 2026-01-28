@@ -48716,7 +48716,7 @@ const List quranText = [
   {
     "surah_number": 74,
     "verse_number": 52,
-    "qcfData": "ﱔﱕﱖﱗﱘﱙﱚﱛﱜﱝ",
+    "qcfData": "\nﱔﱕﱖﱗﱘﱙﱚﱛﱜﱝ",
     "content":
         "بَلۡ يُرِيدُ كُلُّ ٱمۡرِيٕٖ مِّنۡهُمۡ أَن يُؤۡتَىٰ صُحُفٗا مُّنَشَّرَةٗ",
     "text_normal": "بل يريد كل امرئ منهم أن يؤتى صحفا منشرة",
@@ -49253,7 +49253,7 @@ const List quranText = [
   {
     "surah_number": 76,
     "verse_number": 23,
-    "qcfData": "ﳔﳕﳖﳗﳘﳙﳚ",
+    "qcfData": "\nﳔﳕﳖﳗﳘﳙﳚ",
     "content": "إِنَّا نَحۡنُ نَزَّلۡنَا عَلَيۡكَ ٱلۡقُرۡءَانَ تَنزِيلٗا",
     "text_normal": "إنا نحن نزلنا عليك القرآن تنزيلا",
     "qcfv4data": "ﳔﳕﳖﳗﳘﳙ"
