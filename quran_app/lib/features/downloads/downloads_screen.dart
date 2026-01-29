@@ -175,8 +175,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     final hasConnection = connectivity.isNotEmpty &&
         connectivity.any((e) => e != ConnectivityResult.none);
     if (!hasConnection) {
-      _showSnack(AppLocalizations.of(context)?.translate('no_internet') ??
-          'No internet connection. Please connect and retry.');
+      await _showNoInternetDialog();
       return false;
     }
 
@@ -198,6 +197,28 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _showNoInternetDialog() async {
+    if (!mounted) return;
+    final title = AppLocalizations.of(context)?.translate('offline') ??
+        'No internet connection';
+    final message = AppLocalizations.of(context)?.translate('no_internet') ??
+        'Please connect to the internet and try again.';
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(AppLocalizations.of(context)?.translate('ok') ?? 'OK'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -224,13 +245,6 @@ class _DownloadsScreenState extends State<DownloadsScreen>
           setState(() {
             _downloadProgress[edition.id.toString()] = progress;
           });
-          // Show progress in notification regardless of mode
-          AppNotificationService.instance.showProgress(
-              notifId,
-              (AppLocalizations.of(context)?.translate('downloading_item') ??
-                      'Downloading {name}')
-                  .replaceAll('{name}', edition.name),
-              progress);
         },
       );
 
@@ -304,12 +318,6 @@ class _DownloadsScreenState extends State<DownloadsScreen>
           setState(() {
             _downloadProgress[edition.id.toString()] = progress;
           });
-          AppNotificationService.instance.showProgress(
-              notifId,
-              (AppLocalizations.of(context)?.translate('downloading_item') ??
-                      'Downloading {name}')
-                  .replaceAll('{name}', edition.name),
-              progress);
         },
       );
 

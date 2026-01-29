@@ -5,7 +5,8 @@ import 'package:quran_app/core/quran/data/suwar.dart';
 /// Returns the localized name of the Surah based on the current locale.
 ///
 /// - For Arabic/Urdu: Returns the Arabic script name (e.g., الفاتحة).
-/// - For others: Returns the localized meaning if available (e.g., "The Opening"),
+/// - For English: Returns the transliterated name (e.g., "Al Fatiha").
+/// - For others: Returns the localized meaning if available,
 ///   or falls back to the transliterated name as a safety net.
 String getLocalizedSurahName(BuildContext context, int surahNumber) {
   if (surahNumber < 1 || surahNumber > 114) return 'Unknown';
@@ -16,6 +17,11 @@ String getLocalizedSurahName(BuildContext context, int surahNumber) {
   // Use Arabic script for Arabic and Urdu
   if (locale == 'ar' || locale == 'ur') {
     return surahInfo['arabic'] ?? surahInfo['name'];
+  }
+
+  // Use transliteration for English
+  if (locale == 'en') {
+    return surahInfo['name'] ?? 'Unknown';
   }
 
   // Try to get localized meaning from JSON
@@ -30,8 +36,8 @@ String getLocalizedSurahName(BuildContext context, int surahNumber) {
     return localizedMeaning;
   }
 
-  // Fallback to English name (transliteration or translation per dataset)
-  return surahInfo['english'] ?? surahInfo['name'];
+  // Fallback to transliterated name
+  return surahInfo['name'] ?? 'Unknown';
 }
 
 /// Returns a bilingual Surah name (Arabic + English) ordered by locale.
@@ -44,8 +50,7 @@ String getBilingualSurahName(BuildContext context, int surahNumber) {
   final surahInfo = surah[surahNumber - 1];
   final arabic =
       (surahInfo['arabic'] ?? surahInfo['name'] ?? 'Unknown').toString();
-  final english =
-      (surahInfo['english'] ?? surahInfo['name'] ?? 'Unknown').toString();
+  final english = (surahInfo['name'] ?? 'Unknown').toString();
 
   if (arabic == english) return english;
 

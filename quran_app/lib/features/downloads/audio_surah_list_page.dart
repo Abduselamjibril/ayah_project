@@ -27,6 +27,7 @@ class _AudioSurahListPageState extends State<AudioSurahListPage> {
   final Set<int> _downloadingSurahs = {};
   final Map<int, double> _progress = {}; // surahNumber -> progress
   Set<int> _downloadedSurahs = {};
+  bool _isBulkDownloading = false;
 
   @override
   void initState() {
@@ -71,8 +72,7 @@ class _AudioSurahListPageState extends State<AudioSurahListPage> {
     final hasConnection = connectivity.isNotEmpty &&
         connectivity.any((e) => e != ConnectivityResult.none);
     if (!hasConnection) {
-      _showSnack(AppLocalizations.of(context)?.translate('no_internet') ??
-          'No internet connection. Please connect and retry.');
+      await _showNoInternetDialog();
       return false;
     }
 
@@ -94,9 +94,35 @@ class _AudioSurahListPageState extends State<AudioSurahListPage> {
     );
   }
 
+  Future<void> _showNoInternetDialog() async {
+    if (!mounted) return;
+    final title = AppLocalizations.of(context)?.translate('offline') ??
+        'No internet connection';
+    final message = AppLocalizations.of(context)?.translate('no_internet') ??
+        'Please connect to the internet and try again.';
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(AppLocalizations.of(context)?.translate('ok') ?? 'OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _download(int surahNumber) async {
     final canDownload = await _canDownload();
     if (!canDownload) return;
+    await _downloadSingle(surahNumber);
+  }
+
+  Future<void> _downloadSingle(int surahNumber) async {
     if (_downloadingSurahs.contains(surahNumber)) return;
     setState(() {
       _downloadingSurahs.add(surahNumber);
@@ -114,13 +140,6 @@ class _AudioSurahListPageState extends State<AudioSurahListPage> {
         surahNumber,
         onProgress: (p) {
           setState(() => _progress[surahNumber] = p);
-          AppNotificationService.instance.showProgress(
-              notifId,
-              (AppLocalizations.of(context)?.translate('downloading_surah') ??
-                      'Downloading Surah {number} ({reciter})')
-                  .replaceAll('{number}', '$surahNumber')
-                  .replaceAll('{reciter}', widget.recitation.reciterName),
-              p);
         },
       );
       if (ok) {
@@ -163,6 +182,28 @@ class _AudioSurahListPageState extends State<AudioSurahListPage> {
     }
   }
 
+  Future<void> _downloadAll() async {
+    if (_isBulkDownloading) return;
+    final canDownload = await _canDownload();
+    if (!canDownload) return;
+
+    final pending = _chapters
+        .map((c) => c.id)
+        .where((id) => !_downloadedSurahs.contains(id))
+        .toList();
+    if (pending.isEmpty) return;
+
+    setState(() => _isBulkDownloading = true);
+    try {
+      for (final surahNumber in pending) {
+        if (!mounted) return;
+        await _downloadSingle(surahNumber);
+      }
+    } finally {
+      if (mounted) setState(() => _isBulkDownloading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -174,9 +215,36 @@ class _AudioSurahListPageState extends State<AudioSurahListPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView.builder(
-              itemCount: _chapters.length,
+              itemCount: _chapters.length + 1,
               itemBuilder: (context, index) {
-                final c = _chapters[index];
+                if (index == 0) {
+                  final pendingCount = _chapters
+                      .where((c) => !_downloadedSurahs.contains(c.id))
+                      .length;
+                  return Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: FilledButton.icon(
+                      onPressed: pendingCount == 0 || _isBulkDownloading
+                          ? null
+                          : _downloadAll,
+                      icon: _isBulkDownloading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.download),
+                      label: Text(
+                        AppLocalizations.of(context)
+                                ?.translate('download_all') ??
+                            'Download all',
+                      ),
+                    ),
+                  );
+                }
+
+                final c = _chapters[index - 1];
                 final surahNumber = c.id;
                 final isDownloading = _downloadingSurahs.contains(surahNumber);
                 final progress = _progress[surahNumber];
