@@ -7,6 +7,7 @@ import 'package:quran_app/core/services/tafsir_service.dart';
 import 'package:quran_app/core/services/translation_service.dart';
 import 'package:quran_app/data/models/tafsir_model.dart';
 import 'package:quran_app/data/models/translation_model.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
 
@@ -184,6 +185,8 @@ class _TafsirScreenState extends State<TafsirScreen>
   }
 
   Future<void> _startDownloadTafsir(TafsirEdition edition) async {
+    final canDownload = await _ensureInternetConnection();
+    if (!canDownload) return;
     if (_isDownloading) return;
     setState(() {
       _isDownloading = true;
@@ -214,6 +217,8 @@ class _TafsirScreenState extends State<TafsirScreen>
   }
 
   Future<void> _startDownloadTranslation(TranslationEdition edition) async {
+    final canDownload = await _ensureInternetConnection();
+    if (!canDownload) return;
     if (_isDownloading) return;
     setState(() {
       _isDownloading = true;
@@ -241,6 +246,34 @@ class _TafsirScreenState extends State<TafsirScreen>
         _downloadProgress = 0.0;
       });
     }
+  }
+
+  Future<bool> _ensureInternetConnection() async {
+    final connectivity = await Connectivity().checkConnectivity();
+    final hasConnection = connectivity.isNotEmpty &&
+        connectivity.any((e) => e != ConnectivityResult.none);
+    if (hasConnection) return true;
+
+    if (!mounted) return false;
+    final title = AppLocalizations.of(context)?.translate('offline') ??
+        'No internet connection';
+    final message = AppLocalizations.of(context)?.translate('no_internet') ??
+        'Please connect to the internet and try again.';
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(AppLocalizations.of(context)?.translate('ok') ?? 'OK'),
+          ),
+        ],
+      ),
+    );
+    return false;
   }
 
   Future<void> _openDownloadedPicker(String type) async {

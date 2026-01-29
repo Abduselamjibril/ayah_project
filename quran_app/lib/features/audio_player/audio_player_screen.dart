@@ -41,7 +41,6 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   bool _isPlaying = false;
   String _audioName = '';
 
-  AudioRecitation? _selectedRecitation;
   bool _isDownloading = false;
   double _downloadProgress = 0.0;
   String _reciterName = '';
@@ -69,16 +68,18 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   void initState() {
     super.initState();
     _audioPlayer = AudioPlayerService.instance;
+    _initAudioService();
     _isPlaying = _audioPlayer.isPlaying.value;
     _audioName = _audioPlayer.currentLabel.value;
     _hasSource = _audioPlayer.hasSourceNotifier.value;
+    _isDownloading = _audioPlayer.isDownloading.value;
+    _downloadProgress = _audioPlayer.downloadProgress.value;
     _playbackSpeed = _audioPlayer.playbackSpeed.value;
     _loopMode = _audioPlayer.loopMode.value;
 
     _reciterName = _audioPlayer.recitationName;
-    _showExpanded = _audioPlayer.isPlaying.value ||
-        _audioPlayer.isDownloading.value ||
-        _audioPlayer.hasSourceNotifier.value;
+    _showExpanded =
+        _audioPlayer.isPlaying.value || _audioPlayer.hasSourceNotifier.value;
 
     void notifyExpand() {
       widget.onExpandChanged?.call(_showExpanded);
@@ -109,9 +110,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
       final downloading = _audioPlayer.isDownloading.value;
       setState(() {
         _isDownloading = downloading;
-        if (downloading) {
-          _showExpanded = true;
-        } else if (!_isPlaying && !_hasSource) {
+        if (!downloading && !_isPlaying && !_hasSource) {
           _showExpanded = false;
         }
         notifyExpand();
@@ -163,6 +162,18 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     _audioPlayer.loopMode.addListener(_loopListener);
   }
 
+  Future<void> _initAudioService() async {
+    try {
+      await _audioPlayer.init();
+      if (!mounted) return;
+      setState(() {
+        _reciterName = _audioPlayer.recitationName;
+      });
+    } catch (_) {
+      // ignore init errors here
+    }
+  }
+
   @override
   void dispose() {
     _audioPlayer.isPlaying.removeListener(_playerStateListener);
@@ -183,8 +194,8 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     final colorScheme = Theme.of(context).colorScheme;
     final accent = BrandColors.accent;
 
-    // Always show expanded view when downloading, playing, or explicitly expanded
-    final showExpanded = _isDownloading || _showExpanded || _isPlaying;
+    // Only show expanded view when playing or explicitly expanded
+    final showExpanded = _showExpanded || _isPlaying;
 
     // Notify parent if expanded/collapsed state changes
     if (_lastReportedExpanded != showExpanded) {
@@ -242,13 +253,26 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  _statusText,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: colorScheme.onSurface.withOpacity(0.75),
-                    fontWeight: FontWeight.w600,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        _statusText,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: colorScheme.onSurface.withOpacity(0.75),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.keyboard_arrow_down,
+                      size: 18,
+                      color: colorScheme.onSurface.withOpacity(0.65),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -351,15 +375,29 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                                   ),
                                 ],
                               )
-                            : Text(
-                                _statusText,
-                                key: const ValueKey('reciter'),
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color:
-                                      colorScheme.onSurface.withOpacity(0.75),
-                                  fontWeight: FontWeight.w600,
-                                ),
+                            : Row(
+                                key: const ValueKey('ready'),
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      _statusText,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: colorScheme.onSurface
+                                            .withOpacity(0.75),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    Icons.keyboard_arrow_down,
+                                    size: 18,
+                                    color:
+                                        colorScheme.onSurface.withOpacity(0.65),
+                                  ),
+                                ],
                               ),
                       ),
                     ],
@@ -367,25 +405,18 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                 ),
               ),
             ),
-            // Close/Stop button
-            Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            IconButton(
+              iconSize: 20,
+              padding: const EdgeInsets.all(8),
+              tooltip: 'Stop',
+              icon: Icon(
+                Icons.close_rounded,
+                color: colorScheme.onSurface.withOpacity(0.7),
               ),
-              child: IconButton(
-                iconSize: 20,
-                padding: const EdgeInsets.all(8),
-                tooltip: 'Stop',
-                icon: Icon(
-                  Icons.close_rounded,
-                  color: colorScheme.onSurface.withOpacity(0.7),
-                ),
-                onPressed: () async {
-                  await _audioPlayer.stop();
-                  setState(() => _showExpanded = false);
-                },
-              ),
+              onPressed: () async {
+                await _audioPlayer.stop();
+                setState(() => _showExpanded = false);
+              },
             ),
           ],
         ),
@@ -554,8 +585,8 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
 
   Future<void> _startPlaybackFromCurrentPage() async {
     // Ensure reciter selection
-    AudioRecitation? recitation = _selectedRecitation;
-    if (recitation == null && _audioPlayer.userSelectedReciter) {
+    AudioRecitation? recitation;
+    if (_audioPlayer.userSelectedReciter) {
       recitation = _audioPlayer.getSelectedRecitation();
     }
     if (recitation == null) {
@@ -648,22 +679,12 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   }
 
   Future<void> _openAudioPicker() async {
-    _selectedRecitation = null;
-    final recitation = await _ensureReciterSelected(force: true);
-    if (recitation != null) {
-      // If already playing or paused on another reciter, restart immediately
-      if (_audioPlayer.isPlaying.value || _audioPlayer.hasSource) {
-        await _audioPlayer.stop();
-      }
-      await _startPlaybackFromCurrentPage();
-    }
+    await _ensureReciterSelected(force: true);
   }
 
   Future<void> _navigateToDownloadSurah(int recitationId) async {
     final recitation = AudioRecitation(
-        id: recitationId,
-        reciterName:
-            _selectedRecitation?.reciterName ?? _audioPlayer.recitationName);
+        id: recitationId, reciterName: _audioPlayer.recitationName);
     if (!mounted) return;
     await Navigator.push(
       context,
@@ -673,16 +694,20 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   }
 
   Future<AudioRecitation?> _ensureReciterSelected({bool force = false}) async {
-    if (!force && _selectedRecitation != null) return _selectedRecitation;
     await AudioService.instance.initialize();
     final recitations = await AudioService.instance.getAvailableRecitations();
     if (!mounted) return null;
     final chosen = await showReciterPickerSheet(context, recitations);
     if (chosen != null) {
-      _selectedRecitation = chosen;
+      final wasPlaying = _audioPlayer.isPlaying.value || _audioPlayer.hasSource;
       _audioPlayer.setRecitationInfo(id: chosen.id, name: chosen.reciterName);
+      if (wasPlaying) {
+        await _audioPlayer.stop();
+        if (!mounted) return chosen;
+        setState(() => _showExpanded = false);
+      }
     }
-    return _selectedRecitation;
+    return chosen;
   }
 
   void _showSnack(String message) {

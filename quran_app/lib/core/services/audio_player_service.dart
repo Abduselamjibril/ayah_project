@@ -108,8 +108,7 @@ class AudioPlayerService {
   final ValueNotifier<bool> isDownloading = ValueNotifier(false);
   final ValueNotifier<double> downloadProgress = ValueNotifier(0.0);
   final ValueNotifier<int?> downloadingSurah = ValueNotifier<int?>(null);
-  final ValueNotifier<String> reciterNameNotifier =
-      ValueNotifier('Mishary Alafasy');
+  final ValueNotifier<String> reciterNameNotifier = ValueNotifier('');
   final ValueNotifier<double> _playbackSpeedNotifier = ValueNotifier(1.0);
   ValueNotifier<double> get playbackSpeed => _playbackSpeedNotifier;
   final ValueNotifier<LoopMode> loopMode = ValueNotifier(LoopMode.off);
@@ -117,8 +116,8 @@ class AudioPlayerService {
   final ValueNotifier<int?> currentSurah = ValueNotifier(null);
   final ValueNotifier<int?> currentAyah = ValueNotifier(null);
 
-  int _recitationId = 7;
-  String _recitationName = 'Mishary Alafasy';
+  int _recitationId = 0;
+  String _recitationName = '';
   bool _userSelectedReciter = false;
 
   int get recitationId => _recitationId;
@@ -238,19 +237,6 @@ class AudioPlayerService {
     // 3. Pre-download at least 3 suras (or all if range is smaller)
     final totalSurasInRange = endSurah - startSurah + 1;
     final surasToPreDownload = totalSurasInRange < 3 ? totalSurasInRange : 3;
-
-    if (context != null && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            (AppLocalizations.of(context)?.translate('preparing_audio') ??
-                    'Preparing audio... downloading {count} suras')
-                .replaceAll('{count}', '$surasToPreDownload'),
-          ),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
 
     for (var i = 0; i < surasToPreDownload; i++) {
       final surahToDownload = startSurah + i;
@@ -386,6 +372,10 @@ class AudioPlayerService {
   Future<AudioRecitation?> _selectOrCachedReciter(BuildContext? context,
       {bool forceReciter = false}) async {
     if (!forceReciter && _userSelectedReciter) {
+      return getSelectedRecitation();
+    }
+
+    if (_recitationId > 0 && _recitationName.isNotEmpty) {
       return getSelectedRecitation();
     }
 

@@ -78,10 +78,7 @@ class BackgroundDownloadService {
     await AppNotificationService.instance.initialize();
     await AppNotificationService.instance.requestPermissionsIfNeeded();
     const title = 'Download';
-    if (status == 2) {
-      await AppNotificationService.instance
-          .showProgress(id.hashCode & 0x7fffffff, title, progress / 100.0);
-    } else if (status == 3) {
+    if (status == 3) {
       await AppNotificationService.instance
           .complete(id.hashCode & 0x7fffffff, title, success: true);
     } else if (status == 4) {
