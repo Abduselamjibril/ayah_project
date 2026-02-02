@@ -400,14 +400,35 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         if (_isDownloading)
           Padding(
             padding: const EdgeInsets.only(top: 10, bottom: 6),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: LinearProgressIndicator(
-                value: _downloadProgress > 0 ? _downloadProgress : null,
-                minHeight: 6,
-                color: accent,
-                backgroundColor: colorScheme.onSurface.withOpacity(0.08),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      _downloadProgress > 0
+                          ? '${(_downloadProgress * 100).clamp(0, 100).toInt()}%'
+                          : 'Downloading...',
+                      style: TextStyle(
+                        color: colorScheme.onSurface.withOpacity(0.7),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const Spacer(),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: LinearProgressIndicator(
+                    value: _downloadProgress.clamp(0.0, 1.0),
+                    minHeight: 6,
+                    color: accent,
+                    backgroundColor: colorScheme.onSurface.withOpacity(0.08),
+                  ),
+                ),
+              ],
             ),
           )
         else

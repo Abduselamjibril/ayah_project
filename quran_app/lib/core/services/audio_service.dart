@@ -164,17 +164,34 @@ class AudioService {
       // Download the single audio file with progress tracking
       final audioFile =
           File('${targetDir.path}${Platform.pathSeparator}audio.mp3');
-      final response = await http.get(
-        Uri.parse(chapterAudio.audioUrl),
-      );
+      final client = http.Client();
+      try {
+        final request = http.Request('GET', Uri.parse(chapterAudio.audioUrl));
+        final response = await client.send(request);
 
-      if (response.statusCode != 200) {
-        return false;
+        if (response.statusCode != 200) {
+          return false;
+        }
+
+        final totalBytes = response.contentLength ?? -1;
+        int received = 0;
+        final sink = audioFile.openWrite();
+        try {
+          await for (final chunk in response.stream) {
+            received += chunk.length;
+            sink.add(chunk);
+            if (totalBytes > 0) {
+              final progress = (received / totalBytes).clamp(0.0, 1.0);
+              onProgress?.call(progress);
+            }
+          }
+        } finally {
+          await sink.flush();
+          await sink.close();
+        }
+      } finally {
+        client.close();
       }
-
-      // Write audio file
-      await audioFile.writeAsBytes(response.bodyBytes);
-      onProgress?.call(0.9); // Audio downloaded
 
       // Save segments metadata as JSON
       final segmentsFile =

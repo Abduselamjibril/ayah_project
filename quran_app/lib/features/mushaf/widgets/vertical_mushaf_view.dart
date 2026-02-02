@@ -557,6 +557,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     final baseBottom = _audioPlayerExpanded ? 250 : 170;
     final bottom =
         media.padding.bottom + (isIOS ? baseBottom - 24 : baseBottom);
+    final compactSlider = _audioPlayerExpanded;
 
     return ValueListenableBuilder<double>(
       valueListenable: _livePageNotifier,
@@ -601,19 +602,21 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                       child: LayoutBuilder(
                         builder: (context, constraints) {
                           final height = constraints.maxHeight;
-                          const pillHeight = 40.0; // Increased pill height
+                          final pillHeight = compactSlider
+                              ? 34.0
+                              : 40.0; // Increased pill height
                           final trackHeight =
                               (height - pillHeight).clamp(1.0, double.infinity);
 
                           // Responsive font size based on screen width
                           final screenWidth = MediaQuery.of(context).size.width;
-                          double fontSize = 16; // Increased font size
+                          double fontSize = compactSlider ? 14 : 16;
                           if (screenWidth < 300) {
                             fontSize = 12;
                           } else if (screenWidth < 400) {
-                            fontSize = 13;
+                            fontSize = compactSlider ? 12 : 13;
                           } else if (screenWidth > 600) {
-                            fontSize = 18;
+                            fontSize = compactSlider ? 16 : 18;
                           }
 
                           void handleDrag(double dy) {
@@ -662,7 +665,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                                 handleDrag(details.localPosition.dy),
                             onTapUp: (_) => handleEnd(),
                             child: Container(
-                              width: 48, // Increased bar width
+                              width: compactSlider ? 40 : 48,
                               decoration: BoxDecoration(
                                 color: notPassedColor,
                                 borderRadius:
@@ -702,7 +705,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                                     height: pillHeight,
                                     child: Center(
                                       child: Container(
-                                        width: 44, // Increased pill width
+                                        width: compactSlider ? 36 : 44,
                                         height: pillHeight,
                                         decoration: BoxDecoration(
                                           color: Theme.of(context)
@@ -769,6 +772,8 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
 
               final t = (currentDouble - 1) / 603;
               final pillTop = (trackHeight * t).clamp(0, trackHeight);
+              final normalPillHeight = compactSlider ? 22.0 : pillHeight;
+              final normalBarWidth = compactSlider ? 26.0 : 32.0;
 
               // Colors for progress and background (theme-based, mushaf page aware)
               final Color passedColor =
@@ -784,7 +789,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                 onTapDown: (details) => handleDrag(details.localPosition.dy),
                 onTapUp: (_) => handleEnd(),
                 child: Container(
-                  width: 32,
+                  width: normalBarWidth,
                   decoration: BoxDecoration(
                     color: notPassedColor,
                     borderRadius: BorderRadius.circular(10),
@@ -803,7 +808,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                         left: 0,
                         right: 0,
                         top: 0,
-                        height: pillTop + pillHeight / 2,
+                        height: pillTop + normalPillHeight / 2,
                         child: Container(
                           decoration: BoxDecoration(
                             color: passedColor,
@@ -820,7 +825,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                         right: 0,
                         top: pillTop.toDouble(),
                         child: Container(
-                          height: pillHeight,
+                          height: normalPillHeight,
                           decoration: BoxDecoration(
                             color: BrandColors.accent,
                             borderRadius: BorderRadius.circular(10),
