@@ -62,80 +62,80 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
           ),
           child: Column(
             children: [
-                // 1. Custom Header matching Screenshot
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-                  child: Row(
+              // 1. Custom Header matching Screenshot
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                child: Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.arrow_back_ios,
+                          size: 18, color: BrandColors.accent),
+                      label: Text(
+                        '${getBilingualSurahName(context, widget.startSurah)}: ${widget.startVerse}',
+                        style: const TextStyle(
+                          color: BrandColors.accent,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ),
+                    const Expanded(
+                      child: Center(
+                        child: Text(
+                          "Play To",
+                          style: TextStyle(
+                              fontWeight: FontWeight.w800, fontSize: 18),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isLight
+                              ? theme.colorScheme.surfaceContainerHighest
+                              : theme.colorScheme.onSurface.withOpacity(0.1),
+                        ),
+                        child: Icon(
+                          Icons.close,
+                          size: 20,
+                          color: isLight
+                              ? theme.colorScheme.onSurface.withOpacity(0.7)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      TextButton.icon(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.arrow_back_ios,
-                            size: 18, color: BrandColors.accent),
-                        label: Text(
-                          '${getBilingualSurahName(context, widget.startSurah)}: ${widget.startVerse}',
-                          style: const TextStyle(
-                            color: BrandColors.accent,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 18,
-                          ),
-                        ),
-                      ),
-                      const Expanded(
-                        child: Center(
-                          child: Text(
-                            "Play To",
-                            style: TextStyle(
-                                fontWeight: FontWeight.w800, fontSize: 18),
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: isLight
-                                ? theme.colorScheme.surfaceContainerHighest
-                                : theme.colorScheme.onSurface.withOpacity(0.1),
-                          ),
-                          child: Icon(
-                            Icons.close,
-                            size: 20,
-                            color: isLight
-                                ? theme.colorScheme.onSurface.withOpacity(0.7)
-                                : null,
-                          ),
-                        ),
-                      ),
+                      const SizedBox(height: 20),
+
+                      // 2. Quick Actions Card
+                      _buildQuickActionsBox(theme),
+
+                      const SizedBox(height: 24),
+
+                      // 3. Segmented Toggle Tab Bar
+                      _buildSegmentedControl(theme),
+
+                      const SizedBox(height: 16),
+
+                      // 4. Dynamic Content List
+                      _buildActiveListContent(theme),
                     ],
                   ),
                 ),
-
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 20),
-
-                        // 2. Quick Actions Card
-                        _buildQuickActionsBox(theme),
-
-                        const SizedBox(height: 24),
-
-                        // 3. Segmented Toggle Tab Bar
-                        _buildSegmentedControl(theme),
-
-                        const SizedBox(height: 16),
-
-                        // 4. Dynamic Content List
-                        _buildActiveListContent(theme),
-                      ],
-                    ),
-                  ),
-                ),
+              ),
             ],
           ),
         ),

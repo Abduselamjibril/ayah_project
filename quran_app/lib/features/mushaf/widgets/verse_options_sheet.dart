@@ -120,52 +120,51 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                    Row(
-                      children: [
-                        TextButton(
-                          onPressed: () async {
-                            final result = await _openMenuEditor(context);
-                            if (result != null && mounted) {
-                              setState(() {
-                                _sectionOrder = result.order;
-                                _hiddenSections = result.hidden;
-                              });
-                              await _saveMenuConfig(
-                                  result.order, result.hidden);
-                            }
-                          },
-                          child: Text(
-                            AppLocalizations.of(context)?.translate('edit') ??
-                                'Edit',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: BrandColors.accent),
-                          ),
+                  Row(
+                    children: [
+                      TextButton(
+                        onPressed: () async {
+                          final result = await _openMenuEditor(context);
+                          if (result != null && mounted) {
+                            setState(() {
+                              _sectionOrder = result.order;
+                              _hiddenSections = result.hidden;
+                            });
+                            await _saveMenuConfig(result.order, result.hidden);
+                          }
+                        },
+                        child: Text(
+                          AppLocalizations.of(context)?.translate('edit') ??
+                              'Edit',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: BrandColors.accent),
                         ),
-                        Expanded(
-                          child: Center(
-                            child: Text(surahTitle,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w800, fontSize: 18)),
-                          ),
+                      ),
+                      Expanded(
+                        child: Center(
+                          child: Text(surahTitle,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w800, fontSize: 18)),
                         ),
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.close),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    ...orderedSections,
-                    const SizedBox(height: 12),
-                    Text(
-                      AppLocalizations.of(context)?.translate('actions') ??
-                          'Actions',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildQuickActions(context, bookmarkState, context,
-                        widget.surah, widget.verse),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ...orderedSections,
+                  const SizedBox(height: 12),
+                  Text(
+                    AppLocalizations.of(context)?.translate('actions') ??
+                        'Actions',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildQuickActions(context, bookmarkState, context,
+                      widget.surah, widget.verse),
                 ],
               ),
             ),
