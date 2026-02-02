@@ -411,112 +411,115 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                                     onTap: _openPageSettingsSheet,
                                   ),
                                   const Spacer(),
-                                  Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: const [
-                                          Text(
-                                            'Auto-Scroll',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          if (_isAutoScrolling) ...[
-                                            IconButton(
-                                              icon: const Icon(
-                                                  Icons.remove_circle_outline),
-                                              color: BrandColors.accent
-                                                  .withOpacity(0.8),
-                                              onPressed: () =>
-                                                  _changeAutoScrollSpeed(-5),
-                                            ),
-                                            const SizedBox(width: 4),
-                                          ],
-                                          Material(
-                                            color: Colors.transparent,
-                                            child: InkWell(
-                                              borderRadius:
-                                                  BorderRadius.circular(22),
-                                              onTap: () {
-                                                setState(() {
-                                                  _overlayVisible = true;
-                                                });
-                                                if (!_autoScrollControlsVisible) {
-                                                  _autoScrollControlsVisible =
-                                                      true;
-                                                  _startAutoScroll();
-                                                } else if (_isAutoScrolling) {
-                                                  _stopAutoScroll();
-                                                } else {
-                                                  _startAutoScroll();
-                                                }
-                                                _scheduleAutoHide();
-                                              },
-                                              onLongPress:
-                                                  _showAutoScrollSpeedSheet,
-                                              child: Container(
-                                                width: 92,
-                                                height: 44,
-                                                decoration: BoxDecoration(
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .surfaceVariant
-                                                      .withOpacity(0.35),
-                                                  borderRadius:
-                                                      BorderRadius.circular(22),
-                                                ),
-                                                alignment: Alignment.center,
-                                                child:
-                                                    !_autoScrollControlsVisible
-                                                        ? Icon(
-                                                            Icons
-                                                                .arrow_downward,
-                                                            size: 26,
-                                                            color: BrandColors
-                                                                .accent
-                                                                .withOpacity(
-                                                                    0.9),
-                                                          )
-                                                        : Icon(
-                                                            _isAutoScrolling
-                                                                ? Icons
-                                                                    .pause_circle_filled
-                                                                : Icons
-                                                                    .play_circle_fill,
-                                                            size: 32,
-                                                            color: BrandColors
-                                                                .accent
-                                                                .withOpacity(
-                                                                    _isAutoScrolling
-                                                                        ? 1.0
-                                                                        : 0.9),
-                                                          ),
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 6),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: const [
+                                            Text(
+                                              'Auto-Scroll',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 14,
                                               ),
                                             ),
-                                          ),
-                                          if (_isAutoScrolling) ...[
-                                            const SizedBox(width: 4),
-                                            IconButton(
-                                              icon: const Icon(
-                                                  Icons.add_circle_outline),
-                                              color: BrandColors.accent
-                                                  .withOpacity(0.8),
-                                              onPressed: () =>
-                                                  _changeAutoScrollSpeed(5),
-                                            ),
                                           ],
-                                        ],
-                                      ),
-                                    ],
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            if (_isAutoScrolling) ...[
+                                              IconButton(
+                                                icon: const Icon(
+                                                    Icons.remove_circle_outline),
+                                                color: BrandColors.accent
+                                                    .withOpacity(0.8),
+                                                onPressed: () =>
+                                                    _changeAutoScrollSpeed(-5),
+                                              ),
+                                              const SizedBox(width: 4),
+                                            ],
+                                            Material(
+                                              color: Colors.transparent,
+                                              child: InkWell(
+                                                borderRadius:
+                                                    BorderRadius.circular(22),
+                                                onTap: () {
+                                                  setState(() {
+                                                    _overlayVisible = true;
+                                                  });
+                                                  if (!_autoScrollControlsVisible) {
+                                                    _autoScrollControlsVisible =
+                                                        true;
+                                                    _startAutoScroll();
+                                                  } else if (_isAutoScrolling) {
+                                                    _stopAutoScroll();
+                                                  } else {
+                                                    _startAutoScroll();
+                                                  }
+                                                  _scheduleAutoHide();
+                                                },
+                                                onLongPress:
+                                                    _showAutoScrollSpeedSheet,
+                                                child: Container(
+                                                  width: 92,
+                                                  height: 44,
+                                                  decoration: BoxDecoration(
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .surfaceVariant
+                                                        .withOpacity(0.35),
+                                                    borderRadius:
+                                                        BorderRadius.circular(22),
+                                                  ),
+                                                  alignment: Alignment.center,
+                                                  child:
+                                                      !_autoScrollControlsVisible
+                                                          ? Icon(
+                                                              Icons
+                                                                  .arrow_downward,
+                                                              size: 26,
+                                                              color: BrandColors
+                                                                  .accent
+                                                                  .withOpacity(
+                                                                      0.9),
+                                                            )
+                                                          : Icon(
+                                                              _isAutoScrolling
+                                                                  ? Icons
+                                                                      .pause_circle_filled
+                                                                  : Icons
+                                                                      .play_circle_fill,
+                                                              size: 32,
+                                                              color: BrandColors
+                                                                  .accent
+                                                                  .withOpacity(
+                                                                      _isAutoScrolling
+                                                                          ? 1.0
+                                                                          : 0.9),
+                                                            ),
+                                                ),
+                                              ),
+                                            ),
+                                            if (_isAutoScrolling) ...[
+                                              const SizedBox(width: 4),
+                                              IconButton(
+                                                icon: const Icon(
+                                                    Icons.add_circle_outline),
+                                                color: BrandColors.accent
+                                                    .withOpacity(0.8),
+                                                onPressed: () =>
+                                                    _changeAutoScrollSpeed(5),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                   const Spacer(),
                                   _NavPill(

@@ -98,22 +98,18 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
     return Material(
       color: Colors.transparent,
       child: SafeArea(
-        child: Align(
+        top: false,
+        bottom: false,
+        child: FractionallySizedBox(
+          heightFactor: 0.9,
           alignment: Alignment.bottomCenter,
           child: Container(
-            height: screenHeight * 0.96,
-            margin: const EdgeInsets.all(12),
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(22),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.35),
-                  blurRadius: 24,
-                  offset: const Offset(0, 12),
-                ),
-              ],
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.max,
@@ -157,11 +153,13 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                         FutureBuilder<HijriDateResponse?>(
                           future: _dateFuture,
                           builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
                               return const Center(
                                 child: Padding(
                                   padding: EdgeInsets.symmetric(vertical: 12.0),
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
                                 ),
                               );
                             }
@@ -174,11 +172,12 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                                 {required String month, required String day}) {
                               return Expanded(
                                 child: Container(
-                                  margin: const EdgeInsets.symmetric(horizontal: 6),
+                                  margin:
+                                      const EdgeInsets.symmetric(horizontal: 6),
                                   padding: const EdgeInsets.symmetric(
                                       vertical: 14, horizontal: 12),
                                   decoration: BoxDecoration(
-                                    color: theme.colorScheme.onSurface.withOpacity(0.08),
+                                    color: theme.scaffoldBackgroundColor,
                                     borderRadius: BorderRadius.circular(14),
                                   ),
                                   child: Column(
@@ -186,15 +185,18 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                                     children: [
                                       Text(
                                         month,
-                                        style: theme.textTheme.bodyMedium?.copyWith(
-                                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                          color: theme.colorScheme.onSurface
+                                              .withOpacity(0.7),
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
                                         day,
-                                        style: theme.textTheme.headlineMedium?.copyWith(
+                                        style: theme.textTheme.headlineMedium
+                                            ?.copyWith(
                                           fontWeight: FontWeight.w800,
                                           color: theme.colorScheme.onSurface,
                                         ),
@@ -232,10 +234,11 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                         Container(
                           width: double.infinity,
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.onSurface.withOpacity(0.08),
+                            color: theme.scaffoldBackgroundColor,
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 12),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -247,7 +250,8 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                                       TextSpan(
                                         text: verseText,
                                         style: TextStyle(
-                                          fontFamily: 'QCF_P${getPageNumber(surah, verse).toString().padLeft(3, '0')}',
+                                          fontFamily:
+                                              'QCF_P${getPageNumber(surah, verse).toString().padLeft(3, '0')}',
                                           fontSize: 22,
                                           height: 1.7,
                                           color: theme.colorScheme.onSurface,
@@ -256,7 +260,8 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                                       TextSpan(
                                         text: verseNumberSymbol,
                                         style: TextStyle(
-                                          fontFamily: 'QCF_P${getPageNumber(surah, verse).toString().padLeft(3, '0')}',
+                                          fontFamily:
+                                              'QCF_P${getPageNumber(surah, verse).toString().padLeft(3, '0')}',
                                           fontSize: 22,
                                           height: 1.7,
                                           color: theme.primaryColor,
@@ -270,26 +275,31 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                               const SizedBox(height: 12),
                               Divider(
                                 height: 1,
-                                color: theme.colorScheme.onSurface.withOpacity(0.08),
+                                color: theme.colorScheme.onSurface
+                                    .withOpacity(0.08),
                               ),
                               const SizedBox(height: 8),
                               InkWell(
                                 borderRadius: BorderRadius.circular(10),
                                 onTap: () {
-                                  if (_hasSelectedTranslation && _translationText != null) {
+                                  if (_hasSelectedTranslation &&
+                                      _translationText != null) {
                                     setState(() {
                                       _showTranslation = !_showTranslation;
                                     });
                                   }
                                 },
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 6, horizontal: 4),
                                   child: Row(
                                     children: [
                                       Text(
-                                        AppLocalizations.of(context)?.translate('translation') ??
+                                        AppLocalizations.of(context)
+                                                ?.translate('translation') ??
                                             'Translation',
-                                        style: theme.textTheme.titleMedium?.copyWith(
+                                        style: theme.textTheme.titleMedium
+                                            ?.copyWith(
                                           color: theme.primaryColor,
                                           fontWeight: FontWeight.w700,
                                         ),
@@ -306,17 +316,21 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                                 ),
                               ),
                               if (!_isLoadingTranslation) ...[
-                                if (_hasSelectedTranslation && _translationText != null)
+                                if (_hasSelectedTranslation &&
+                                    _translationText != null)
                                   AnimatedCrossFade(
                                     firstChild: const SizedBox.shrink(),
                                     secondChild: Padding(
-                                      padding: const EdgeInsets.only(top: 8, bottom: 4),
+                                      padding: const EdgeInsets.only(
+                                          top: 8, bottom: 4),
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             _translationText ?? '',
-                                            style: theme.textTheme.bodyLarge?.copyWith(
+                                            style: theme.textTheme.bodyLarge
+                                                ?.copyWith(
                                               height: 1.6,
                                             ),
                                           ),
@@ -324,49 +338,63 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                                             const SizedBox(height: 6),
                                             Text(
                                               _translatorName!,
-                                              style: theme.textTheme.bodySmall?.copyWith(
-                                                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                              style: theme.textTheme.bodySmall
+                                                  ?.copyWith(
+                                                color: theme
+                                                    .colorScheme.onSurface
+                                                    .withOpacity(0.6),
                                               ),
                                             ),
                                           ],
                                         ],
                                       ),
                                     ),
-                                    crossFadeState:
-                                        _showTranslation ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+                                    crossFadeState: _showTranslation
+                                        ? CrossFadeState.showSecond
+                                        : CrossFadeState.showFirst,
                                     duration: const Duration(milliseconds: 200),
                                   )
                                 else
                                   Padding(
-                                    padding: const EdgeInsets.only(top: 8, bottom: 4),
+                                    padding: const EdgeInsets.only(
+                                        top: 8, bottom: 4),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          AppLocalizations.of(context)?.translate('no_translation_selected') ??
+                                          AppLocalizations.of(context)?.translate(
+                                                  'no_translation_selected') ??
                                               'Select a translation to see it here',
-                                          style: theme.textTheme.bodyMedium?.copyWith(
-                                            color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                            color: theme.colorScheme.onSurface
+                                                .withOpacity(0.7),
                                           ),
                                         ),
                                         const SizedBox(height: 6),
                                         TextButton.icon(
                                           style: TextButton.styleFrom(
-                                            padding: const EdgeInsets.symmetric(horizontal: 0),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 0),
                                             foregroundColor: theme.primaryColor,
                                           ),
                                           onPressed: () async {
                                             await Navigator.push(
                                               context,
                                               MaterialPageRoute(
-                                                builder: (_) => const DownloadsScreen(),
+                                                builder: (_) =>
+                                                    const DownloadsScreen(),
                                               ),
                                             );
                                             if (mounted) _loadTranslation();
                                           },
-                                          icon: const Icon(Icons.download_for_offline),
+                                          icon: const Icon(
+                                              Icons.download_for_offline),
                                           label: Text(
-                                            AppLocalizations.of(context)?.translate('select_translation') ??
+                                            AppLocalizations.of(context)
+                                                    ?.translate(
+                                                        'select_translation') ??
                                                 'Select Translation',
                                           ),
                                         ),
@@ -376,7 +404,8 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                               ] else
                                 const Padding(
                                   padding: EdgeInsets.symmetric(vertical: 8.0),
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
                                 ),
                             ],
                           ),
@@ -391,7 +420,8 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                 Row(
                   children: [
                     IconButton(
-                      icon: Icon(Icons.share_rounded, color: BrandColors.accent),
+                      icon:
+                          Icon(Icons.share_rounded, color: BrandColors.accent),
                       tooltip: 'Share',
                       onPressed: () async {
                         await showSharePreviewDialog(
@@ -405,6 +435,8 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.scaffoldBackgroundColor,
+                          foregroundColor: theme.colorScheme.onSurface,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -417,7 +449,9 @@ class _VerseOfTheDayScreenState extends State<VerseOfTheDayScreen> {
                           });
                         },
                         child: Text(
-                          AppLocalizations.of(context)?.translate('read_in_mushaf') ?? 'Read in Mushaf',
+                          AppLocalizations.of(context)
+                                  ?.translate('read_in_mushaf') ??
+                              'Read in Mushaf',
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ),
