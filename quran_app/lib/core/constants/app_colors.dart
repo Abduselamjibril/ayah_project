@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   // Theme Name: "Golden Parchment" - Enhanced contrast
-  static const Color lightBackground = Color(0xFFF5F0EA);
-  static const Color lightSurface = Color(0xFFFFFBF9);
-  static const Color lightSurfaceVariant = Color(0xFFFFFBF9);
+  static const Color lightBackground = Color(0xFFFFFBF8);
+  static const Color lightSurface = Color(0xFFF1E9E2);
+  static const Color lightSurfaceVariant = Color(0xFFE7D9D0);
   static const Color lightAccent = Color(0xFF9B7A3A);
   static const Color lightAccentContainer = Color(0xFFC9A86A);
   static const Color lightText = Color(0xFF2A2108);

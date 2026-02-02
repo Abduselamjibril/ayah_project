@@ -76,13 +76,19 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isLight = theme.brightness == Brightness.light;
+    final screenBackground =
+        isLight ? colorScheme.surface : theme.scaffoldBackgroundColor;
+    final cardBackground =
+        isLight ? theme.scaffoldBackgroundColor : colorScheme.surface;
     final accent = BrandColors.accent;
     final titleText =
         AppLocalizations.of(context)?.translate('download_settings_title') ??
             'Download Settings';
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: theme.scaffoldBackgroundColor,
+        backgroundColor: screenBackground,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -111,7 +117,7 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
     }
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: screenBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -151,20 +157,23 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
               ),
             ),
           ),
-          SwitchListTile(
-            title: Text(
-              AppLocalizations.of(context)?.translate('wifi_only') ??
-                  'WiFi Only',
+          Card(
+            color: cardBackground,
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: SwitchListTile(
+              title: Text(
+                AppLocalizations.of(context)?.translate('wifi_only') ??
+                    'WiFi Only',
+              ),
+              subtitle: Text(
+                AppLocalizations.of(context)?.translate('wifi_only_subtitle') ??
+                    'Download translations and tafsir only when connected to WiFi',
+              ),
+              value: _wifiOnly,
+              onChanged: _saveWifiOnly,
+              secondary: const Icon(Icons.wifi),
             ),
-            subtitle: Text(
-              AppLocalizations.of(context)?.translate('wifi_only_subtitle') ??
-                  'Download translations and tafsir only when connected to WiFi',
-            ),
-            value: _wifiOnly,
-            onChanged: _saveWifiOnly,
-            secondary: const Icon(Icons.wifi),
           ),
-          const Divider(),
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Text(
@@ -178,20 +187,23 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
               ),
             ),
           ),
-          SwitchListTile(
-            title: Text(AppLocalizations.of(context)
-                    ?.translate('allow_background_downloads') ??
-                'Allow Background Downloads'),
-            subtitle: Text(
-              AppLocalizations.of(context)
-                      ?.translate('background_downloads_subtitle') ??
-                  'Keep downloads running when you switch apps. On iOS the app must stay in foreground for reliability.',
+          Card(
+            color: cardBackground,
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: SwitchListTile(
+              title: Text(AppLocalizations.of(context)
+                      ?.translate('allow_background_downloads') ??
+                  'Allow Background Downloads'),
+              subtitle: Text(
+                AppLocalizations.of(context)
+                        ?.translate('background_downloads_subtitle') ??
+                    'Keep downloads running when you switch apps. On iOS the app must stay in foreground for reliability.',
+              ),
+              value: _backgroundDownload,
+              onChanged: _saveBackgroundDownload,
+              secondary: const Icon(Icons.cloud_download),
             ),
-            value: _backgroundDownload,
-            onChanged: _saveBackgroundDownload,
-            secondary: const Icon(Icons.cloud_download),
           ),
-          const Divider(),
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -240,13 +252,15 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
     required String title,
     required String description,
   }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isLight = theme.brightness == Brightness.light;
+    final cardBackground =
+        isLight ? theme.scaffoldBackgroundColor : colorScheme.surface;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context)
-            .colorScheme
-            .surfaceContainerHighest
-            .withOpacity(0.3),
+        color: cardBackground,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -282,6 +296,11 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
   }
 
   Widget _buildConnectionStatusCard() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isLight = theme.brightness == Brightness.light;
+    final cardBackground =
+        isLight ? theme.scaffoldBackgroundColor : colorScheme.surface;
     final active = _choosePrimaryConnection(_connections);
 
     final color = switch (active) {
@@ -311,7 +330,7 @@ class _DownloadSettingsPageState extends State<DownloadSettingsPage> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: cardBackground,
       ),
       child: Row(
         children: [

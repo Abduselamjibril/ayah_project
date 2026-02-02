@@ -20,7 +20,10 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // THEME AWARE: All styles are derived from the app's theme.
     final theme = Theme.of(context);
-    final cardColor = theme.cardColor.withOpacity(0.5);
+    final isLight = theme.brightness == Brightness.light;
+    final cardColor = isLight
+        ? theme.scaffoldBackgroundColor
+        : theme.cardColor.withOpacity(0.5);
     final iconColor = theme.colorScheme.onSurface.withOpacity(0.85);
     final borderRadius = BorderRadius.circular(16);
     final hPadding = ResponsiveLayout.scaled(context, 16, min: 12, max: 22);
@@ -35,7 +38,8 @@ class SettingsScreen extends StatelessWidget {
     final gestureVPad = ResponsiveLayout.scaled(context, 8, min: 6, max: 12);
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor:
+          isLight ? theme.colorScheme.surface : theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -51,7 +55,7 @@ class SettingsScreen extends StatelessWidget {
               Navigator.of(context).pop();
             },
             child: CircleAvatar(
-              backgroundColor: cardColor,
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
               radius: circleRadius,
               child: Icon(
                 Icons.arrow_back_ios_new_rounded,
@@ -402,50 +406,56 @@ class _GestureSettingsTileState extends State<_GestureSettingsTile> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
+    final isLight = theme.brightness == Brightness.light;
+    return Card(
       margin: EdgeInsets.only(top: widget.hPad + 2),
-      padding: EdgeInsets.symmetric(horizontal: widget.hPad, vertical: widget.vPad),
-      decoration: BoxDecoration(
-        color: theme.cardColor.withOpacity(0.5),
+      color: isLight
+          ? theme.scaffoldBackgroundColor
+          : theme.cardColor.withOpacity(0.5),
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
-        children: [
-          Icon(Icons.gesture_rounded,
-              color: widget.iconColor,
-              size: ResponsiveLayout.scaled(context, 26, min: 22, max: 30)),
-          const SizedBox(width: 18),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Two-finger Search',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16.5,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+            horizontal: widget.hPad, vertical: widget.vPad),
+        child: Row(
+          children: [
+            Icon(Icons.gesture_rounded,
+                color: widget.iconColor,
+                size: ResponsiveLayout.scaled(context, 26, min: 22, max: 30)),
+            const SizedBox(width: 18),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Two-finger Search',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16.5,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Drag down to search',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Drag down to search',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Switch.adaptive(
-            value: _enabled,
-            onChanged: (val) async {
-              setState(() => _enabled = val);
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.setBool('search_gesture_enabled', val);
-            },
-            activeColor: theme.colorScheme.primary,
-          ),
-        ],
+            Switch.adaptive(
+              value: _enabled,
+              onChanged: (val) async {
+                setState(() => _enabled = val);
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setBool('search_gesture_enabled', val);
+              },
+              activeColor: theme.colorScheme.primary,
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../data/models/bookmark.dart';
 import '../data/models/note.dart';
 import '../data/repositories/bookmark_notes_repository.dart';
@@ -12,7 +13,7 @@ class BookmarkNotesNotifier extends ChangeNotifier {
 
   final Map<String, Bookmark> _bookmarksByKey = {};
   final Map<String, NoteModel> _notesByKey = {};
-  
+
   // Custom names for the four categories shown in the UI
   final Map<String, String> _categoryNames = {
     '#EF5350': 'Red',
@@ -25,10 +26,17 @@ class BookmarkNotesNotifier extends ChangeNotifier {
   bool _initialized = false;
   bool _loading = false;
 
+  // Global preference for the quick bookmark color
+  String? _quickBookmarkColor;
+  static const String _quickColorKey = 'quick_bookmark_color_pref';
+
   bool get isInitialized => _initialized;
   bool get isLoading => _loading;
   Bookmark? get khatmahPin => _khatmahPin;
   Map<String, String> get categoryNames => _categoryNames;
+
+  // Getter for the quick bookmark color (defaults to Red if not set)
+  String? get quickBookmarkColor => _quickBookmarkColor;
 
   List<Bookmark> get bookmarks {
     final list = _bookmarksByKey.values.toList();
@@ -47,12 +55,32 @@ class BookmarkNotesNotifier extends ChangeNotifier {
     if (_initialized) return;
     _loading = true;
     notifyListeners();
+
+    // Load data from repository
     await _loadBookmarks();
     await _loadNotes();
     await _loadKhatmahPin();
+
+    // Load the quick bookmark color preference from storage
+    await _loadQuickColorPref();
+
     _initialized = true;
     _loading = false;
     notifyListeners();
+  }
+
+  /// Loads the saved quick bookmark color from SharedPreferences
+  Future<void> _loadQuickColorPref() async {
+    final prefs = await SharedPreferences.getInstance();
+    _quickBookmarkColor = prefs.getString(_quickColorKey) ?? '#EF5350';
+  }
+
+  /// Sets the quick bookmark color and persists it to SharedPreferences
+  Future<void> setQuickBookmarkColor(String hex) async {
+    _quickBookmarkColor = hex;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_quickColorKey, hex);
   }
 
   // Method called when 'Done' is pressed in the UI
@@ -194,6 +222,8 @@ class BookmarkNotesNotifier extends ChangeNotifier {
     await _loadBookmarks();
     await _loadNotes();
     await _loadKhatmahPin();
+    // Also refresh preference
+    await _loadQuickColorPref();
     notifyListeners();
   }
 

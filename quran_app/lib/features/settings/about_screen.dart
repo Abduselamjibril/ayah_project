@@ -3,6 +3,7 @@ import 'package:quran_app/app/app.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:quran_app/core/ui/responsive.dart';
+import 'package:quran_app/features/settings/widgets/settings_app_bar.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -11,11 +12,10 @@ class AboutScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final accent = BrandColors.accent;
-    final cardBg = theme.colorScheme.onSurface.withOpacity(0.12);
-    final leadingWidth =
-        ResponsiveLayout.scaled(context, 170, min: 140, max: 210);
-    final backIconSize = ResponsiveLayout.scaled(context, 18, min: 16, max: 22);
-    final backFontSize = ResponsiveLayout.scaled(context, 15, min: 13, max: 17);
+    final isLight = theme.brightness == Brightness.light;
+    final cardBg = isLight
+        ? theme.scaffoldBackgroundColor
+        : theme.colorScheme.onSurface.withOpacity(0.12);
     final titleFontSize =
         ResponsiveLayout.scaled(context, 18, min: 16, max: 20);
     final listHPad = ResponsiveLayout.scaled(context, 20, min: 14, max: 26);
@@ -29,41 +29,9 @@ class AboutScreen extends StatelessWidget {
     final headerGap = ResponsiveLayout.scaled(context, 16, min: 12, max: 22);
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        leadingWidth: leadingWidth,
-        leading: TextButton.icon(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: Icon(Icons.arrow_back_ios_new_rounded,
-              color: accent, size: backIconSize),
-          label: ConstrainedBox(
-            constraints: BoxConstraints(minWidth: 60, maxWidth: 120),
-            child: Text(
-              AppLocalizations.of(context)?.translate('settings_title') ??
-                  'Settings',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              softWrap: false,
-              style: TextStyle(
-                color: accent,
-                fontSize: backFontSize,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          style: TextButton.styleFrom(
-              padding: EdgeInsets.only(
-                  left: ResponsiveLayout.scaled(context, 8, min: 6, max: 12))),
-        ),
-        title: Text(
-          'About',
-          style: theme.textTheme.titleMedium
-              ?.copyWith(fontWeight: FontWeight.w700, fontSize: titleFontSize),
-        ),
-      ),
+      backgroundColor:
+          isLight ? theme.colorScheme.surface : theme.scaffoldBackgroundColor,
+      appBar: const SettingsAppBar(title: 'About'),
       body: ListView(
         padding: EdgeInsets.symmetric(horizontal: listHPad),
         children: [

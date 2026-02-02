@@ -3,6 +3,7 @@ import 'package:quran_app/app/app.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
 import 'package:quran_app/core/services/language_service.dart';
 import 'package:quran_app/core/ui/responsive.dart';
+import 'package:quran_app/features/settings/widgets/settings_app_bar.dart';
 
 class LanguageSettingsPage extends StatefulWidget {
   const LanguageSettingsPage({super.key});
@@ -24,14 +25,10 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final accent = BrandColors.accent;
-    final cardBg = theme.cardColor.withOpacity(0.5);
-
-    final leadingWidth =
-        ResponsiveLayout.scaled(context, 170, min: 140, max: 210);
-    final backIconSize = ResponsiveLayout.scaled(context, 18, min: 16, max: 22);
-    final backFontSize = ResponsiveLayout.scaled(context, 16, min: 14, max: 18);
-    final titleFontSize =
-        ResponsiveLayout.scaled(context, 18, min: 16, max: 20);
+    final isLight = theme.brightness == Brightness.light;
+    final cardBg = isLight
+        ? theme.scaffoldBackgroundColor
+        : theme.cardColor.withOpacity(0.5);
     final hPadding = ResponsiveLayout.scaled(context, 16, min: 12, max: 20);
     final descPadding = ResponsiveLayout.scaled(context, 18, min: 14, max: 22);
     final tileHPad = ResponsiveLayout.scaled(context, 18, min: 14, max: 22);
@@ -40,40 +37,9 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
     final selectedCode = _languageService.currentLocale.languageCode;
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        leadingWidth: leadingWidth,
-        leading: TextButton.icon(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: Icon(Icons.arrow_back_ios_new_rounded,
-              color: accent, size: backIconSize),
-          label: ConstrainedBox(
-            constraints: BoxConstraints(minWidth: 60, maxWidth: 120),
-            child: Text(
-              AppLocalizations.of(context)?.translate('settings_title') ??
-                  'Settings',
-              maxLines: 1,
-              softWrap: false,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                  color: accent,
-                  fontSize: backFontSize,
-                  fontWeight: FontWeight.w600),
-            ),
-          ),
-          style: TextButton.styleFrom(
-              padding: EdgeInsets.only(
-                  left: ResponsiveLayout.scaled(context, 8, min: 6, max: 12))),
-        ),
-        title: Text(
-          'Language',
-          style: theme.textTheme.titleMedium
-              ?.copyWith(fontWeight: FontWeight.w700, fontSize: titleFontSize),
-        ),
-      ),
+      backgroundColor:
+          isLight ? theme.colorScheme.surface : theme.scaffoldBackgroundColor,
+      appBar: const SettingsAppBar(title: 'Language'),
       body: ListView(
         padding: EdgeInsets.symmetric(horizontal: hPadding),
         children: [

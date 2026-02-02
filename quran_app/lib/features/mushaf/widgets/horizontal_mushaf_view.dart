@@ -269,7 +269,12 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
           final currentPage = currentDouble.round();
           final panelMaxWidth =
               ResponsiveLayout.scaled(context, 540, min: 360, max: 640);
-          final bottomPad = MediaQuery.paddingOf(context).bottom;
+          final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
+          final bottomInset = MediaQuery.paddingOf(context).bottom;
+          final extraBottom =
+              ResponsiveLayout.scaled(context, 8, min: 6, max: 14);
+          final bottomPad = (isIOS ? bottomInset * 0.5 : bottomInset) +
+              (isIOS ? extraBottom * 0.6 : extraBottom);
 
           return RepaintBoundary(
             child: Column(
@@ -283,10 +288,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                     child: Card(
                       elevation: 16,
                       margin: EdgeInsets.zero,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .surface
-                          .withOpacity(0.95),
+                      color: Theme.of(context).colorScheme.surface,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                       child: Padding(
@@ -296,9 +298,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                           ResponsiveLayout.scaled(context, 4, min: 2, max: 8),
                           ResponsiveLayout.scaled(context, 12,
                               min: 10, max: 16),
-                          bottomPad +
-                              ResponsiveLayout.scaled(context, 8,
-                                  min: 6, max: 14),
+                          bottomPad,
                         ),
                         child: Directionality(
                           textDirection: TextDirection.ltr,
@@ -383,18 +383,12 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                                                   begin: Alignment.topCenter,
                                                   end: Alignment.bottomCenter,
                                                   colors: [
-                                                    Colors.black.withOpacity(
-                                                        Theme.of(context)
-                                                                    .brightness ==
-                                                                Brightness.dark
-                                                            ? 0.22
-                                                            : 0.13),
-                                                    Colors.black.withOpacity(
-                                                        Theme.of(context)
-                                                                    .brightness ==
-                                                                Brightness.dark
-                                                            ? 0.13
-                                                            : 0.07),
+                                                    Theme.of(context)
+                                                        .colorScheme
+                                                        .surfaceContainerHighest,
+                                                    Theme.of(context)
+                                                        .colorScheme
+                                                        .surfaceContainerHighest,
                                                   ],
                                                 ),
                                                 borderRadius:
@@ -524,14 +518,9 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520),
-          child: Material(
-            elevation: 8,
-            color: Colors.transparent,
+          child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: AudioPlayerCard(controller: widget.controller),
-            ),
+            child: AudioPlayerCard(controller: widget.controller),
           ),
         ),
       ),

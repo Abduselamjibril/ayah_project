@@ -124,11 +124,16 @@ Future<AudioRecitation?> showReciterPickerSheet(
                       ),
                       const SizedBox(height: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
+                        height: 44,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.onSurface.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(12),
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color:
+                                theme.colorScheme.onSurface.withOpacity(0.12),
+                            width: 1,
+                          ),
                         ),
                         child: Row(
                           children: [
@@ -139,10 +144,16 @@ Future<AudioRecitation?> showReciterPickerSheet(
                             Expanded(
                               child: TextField(
                                 controller: searchController,
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   hintText: 'Search',
+                                  hintStyle:
+                                      theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurface
+                                        .withOpacity(0.6),
+                                  ),
                                   border: InputBorder.none,
                                   isDense: true,
+                                  contentPadding: EdgeInsets.zero,
                                 ),
                                 onChanged: (_) => setState(() {}),
                               ),

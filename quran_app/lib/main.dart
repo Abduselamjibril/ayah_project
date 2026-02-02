@@ -1,5 +1,7 @@
 // main.dart
 import 'package:flutter/material.dart';
+import 'package:device_preview/device_preview.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:quran_app/app/router.dart';
 import 'package:quran_app/core/database/init_database.dart';
@@ -45,8 +47,13 @@ Future<void> main() async {
   // Keep the screen awake while the app is open
   await WakelockPlus.enable();
 
-  // Run the app
-  runApp(const AppBootstrap());
+  // Run the app with device preview
+  runApp(
+    DevicePreview(
+      enabled: !kReleaseMode,
+      builder: (_) => const AppBootstrap(),
+    ),
+  );
 }
 
 class AppBootstrap extends StatelessWidget {
@@ -79,7 +86,8 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           title: AppLocalizations.of(context)?.translate('app_name') ??
               'Quran App',
-          locale: languageService.currentLocale,
+          locale:
+              DevicePreview.locale(context) ?? languageService.currentLocale,
           supportedLocales: LanguageService.supportedLocales,
           localizationsDelegates: const [
             AppLocalizations.delegate,
@@ -87,6 +95,7 @@ class MyApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
+          builder: DevicePreview.appBuilder,
           localeResolutionCallback: (locale, supportedLocales) {
             // Logic is already handled in LanguageService initialization,
             // but this callback is useful if valid locale is passed from OS that matches supported.

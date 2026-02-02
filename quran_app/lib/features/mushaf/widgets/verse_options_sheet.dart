@@ -10,20 +10,17 @@ import 'package:quran_app/features/bookmarks/bookmark_screen.dart';
 import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart';
 import 'package:quran_app/features/downloads/downloads_screen.dart';
 import 'package:quran_app/features/share/presentation/dialogs/share_preview_dialog.dart';
-import 'package:quran_app/features/share/services/share_service.dart';
 import 'package:quran_app/features/mushaf/screens/verse_details_screen.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
 import 'package:quran_app/core/utils/localization_helper.dart';
 import 'play_range_dialog.dart';
+import 'share_options_sheet.dart';
 
-// Helper classes for menu editing
 class _MenuEditResult {
   _MenuEditResult({required this.order, required this.hidden});
   final List<String> order;
   final List<String> hidden;
 }
-
-enum _ShareFormat { image, text, textWithoutDiacritics }
 
 class VerseOptionsSheet extends StatefulWidget {
   final int surah;
@@ -88,21 +85,18 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    final width = MediaQuery.of(context).size.width;
-    final shareCardWidth = (width - 16 * 2 - 12 * 3) / 4;
+    // Listen to the bookmark state globally
     final bookmarkState = context.watch<BookmarkNotesNotifier>();
+
     final surahTitle =
         '${getBilingualSurahName(context, widget.surah)}: ${widget.verse}';
 
-    // Build sections based on order
     final orderedSections = _buildOrderedSections(
       context,
       bookmarkState,
       widget.surah,
       widget.verse,
-      shareCardWidth,
-      context, // root context is the sheet context itself effectively for navigation
+      context,
     );
 
     return SafeArea(
@@ -192,14 +186,19 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
       BookmarkNotesNotifier bookmarkState,
       int surah,
       int verse,
-      double shareCardWidth,
       BuildContext rootContext) {
     final widgets = <Widget>[];
-    void addSpacer() => widgets.add(const SizedBox(height: 14));
+    final visibleSections =
+        _sectionOrder.where((s) => !_hiddenSections.contains(s));
 
-    for (final section in _sectionOrder) {
-      if (_hiddenSections.contains(section)) continue;
-      switch (section) {
+    // Get the dynamic color from our global state
+    final activeQuickColor = bookmarkState.quickBookmarkColor ?? '#EF5350';
+    final activeColorName = _getCategoryName(activeQuickColor);
+
+    void addSpacer() => widgets.add(const SizedBox(height: 18));
+
+    for (final sectionKey in visibleSections) {
+      switch (sectionKey) {
         case 'bookmarks':
           widgets
             ..add(_buildSectionLabel(
@@ -207,47 +206,57 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                     'Bookmarks',
                 context))
             ..add(const SizedBox(height: 8))
-            ..add(Row(children: [
-              Expanded(
-                  child: _buildActionCard(context,
-                      width: double.infinity,
-                      icon: Icons.bookmark_border,
-                      iconColor: Colors.redAccent,
-                      label: AppLocalizations.of(context)
-                              ?.translate('color_red') ??
-                          'Red', onTap: () {
-                Navigator.pop(context);
-                unawaited(() async {
-                  await bookmarkState.saveBookmark(
-                      surahId: surah,
-                      ayahId: verse,
-                      colorHex: '#EF5350',
-                      category: 'Red');
-                  if (!mounted) return;
-                  _showSnack(AppLocalizations.of(context)
-                          ?.translate('verse_bookmarked') ??
-                      'Verse bookmarked');
-                }());
-              })),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: _buildActionCard(context,
-                      width: double.infinity,
-                      icon: Icons.list_alt,
-                      label: AppLocalizations.of(context)?.translate('all') ??
-                          'All',
-                      trailing: Icons.chevron_right, onTap: () async {
-                Navigator.pop(context);
-                if (!bookmarkState.isInitialized)
-                  await bookmarkState.initialize();
-                else
-                  await bookmarkState.refresh();
-                await Navigator.push(rootContext,
-                    MaterialPageRoute(builder: (_) => const BookmarkScreen()));
-              })),
-            ]));
+            ..add(Row(
+              children: [
+                Expanded(
+                  child: _buildActionCard(
+                    context,
+                    width: double.infinity,
+                    icon: Icons.bookmark_border,
+                    // Dynamic color from the Bookmark Screen selection
+                    iconColor: Color(_parseColor(activeQuickColor)),
+                    // Dynamic label based on the active color
+                    label: activeColorName,
+                    onTap: () {
+                      Navigator.pop(context);
+                      unawaited(() async {
+                        await bookmarkState.saveBookmark(
+                          surahId: surah,
+                          ayahId: verse,
+                          colorHex: activeQuickColor,
+                          category: activeColorName,
+                        );
+                        if (!mounted) return;
+                        _showSnack(AppLocalizations.of(context)
+                                ?.translate('verse_bookmarked') ??
+                            'Verse bookmarked');
+                      }());
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildActionCard(
+                    context,
+                    width: double.infinity,
+                    icon: Icons.list_alt,
+                    label: 'All',
+                    trailing: Icons.chevron_right,
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await bookmarkState.refresh();
+                      await Navigator.push(
+                          rootContext,
+                          MaterialPageRoute(
+                              builder: (_) => const BookmarkScreen()));
+                    },
+                  ),
+                ),
+              ],
+            ));
           addSpacer();
           break;
+
         case 'recitation':
           widgets
             ..add(_buildSectionLabel(
@@ -255,7 +264,7 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                     'Recitation',
                 context))
             ..add(const SizedBox(height: 8))
-            ..add(_buildActionWrap(context, [
+            ..add(Row(children: [
               Expanded(
                   child: _buildActionCard(context,
                       width: double.infinity,
@@ -280,6 +289,7 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
             ]));
           addSpacer();
           break;
+
         case 'downloads':
           widgets
             ..add(_buildSectionLabel(
@@ -300,41 +310,50 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
             }));
           addSpacer();
           break;
+
         case 'sharing':
           widgets
             ..add(_buildSectionLabel(
                 AppLocalizations.of(context)?.translate('sharing') ?? 'Sharing',
                 context))
             ..add(const SizedBox(height: 8))
-            ..add(_buildActionWrap(context, [
-              _buildActionCard(context,
-                  width: shareCardWidth,
-                  icon: Icons.copy,
-                  label: AppLocalizations.of(context)?.translate('copy') ??
-                      'Copy', onTap: () {
-                Navigator.pop(context);
-                _copyVerseText(surah, verse);
-              }),
-              _buildActionCard(context,
-                  width: shareCardWidth,
-                  icon: Icons.image_outlined,
-                  label:
-                      AppLocalizations.of(context)?.translate('share_card') ??
-                          'Card', onTap: () {
-                Navigator.pop(context);
-                _shareVerseCardPreview(surah, verse);
-              }),
-              _buildActionCard(context,
-                  width: shareCardWidth,
-                  icon: Icons.share,
-                  label: AppLocalizations.of(context)?.translate('share') ??
-                      'Share', onTap: () {
-                Navigator.pop(context);
-                _openShareSheet(rootContext, surah, verse);
-              }),
-            ]));
+            ..add(Row(
+              children: [
+                SizedBox(
+                  width: 64,
+                  child: _buildShareIconCard(context,
+                      icon: Icons.file_copy_outlined, onTap: () {
+                    Navigator.pop(context);
+                    _copyVerseText(surah, verse);
+                  }),
+                ),
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 64,
+                  child: _buildShareIconCard(context, icon: Icons.save_alt,
+                      onTap: () {
+                    Navigator.pop(context);
+                    _shareVerseCardPreview(surah, verse);
+                  }),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildShareMainCard(
+                    context,
+                    icon: Icons.ios_share,
+                    label: AppLocalizations.of(context)?.translate('share') ??
+                        'Share',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _openShareSheet(rootContext, surah, verse);
+                    },
+                  ),
+                ),
+              ],
+            ));
           addSpacer();
           break;
+
         case 'highlight':
           widgets
             ..add(_buildSectionLabel(
@@ -349,10 +368,6 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
     }
     if (widgets.isNotEmpty && widgets.last is SizedBox) widgets.removeLast();
     return widgets;
-  }
-
-  Widget _buildActionWrap(BuildContext context, List<Widget> children) {
-    return Row(children: children);
   }
 
   Widget _buildActionCard(BuildContext context,
@@ -407,6 +422,72 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
     );
   }
 
+  Widget _buildShareIconCard(BuildContext context,
+      {required IconData icon,
+      required VoidCallback onTap,
+      bool enabled = true}) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        height: 56,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.onSurface.withOpacity(enabled ? 0.08 : 0.04),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+              color: theme.colorScheme.onSurface.withOpacity(0.08), width: 1),
+        ),
+        child: Center(
+          child: Icon(icon,
+              size: 26,
+              color: enabled
+                  ? BrandColors.accent
+                  : theme.colorScheme.onSurface.withOpacity(0.4)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShareMainCard(BuildContext context,
+      {required IconData icon,
+      required String label,
+      required VoidCallback onTap,
+      bool enabled = true}) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        height: 56,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.onSurface.withOpacity(enabled ? 0.08 : 0.04),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+              color: theme.colorScheme.onSurface.withOpacity(0.08), width: 1),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 26, color: BrandColors.accent),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(label,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: BrandColors.accent),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis),
+            ),
+            const Icon(Icons.chevron_right,
+                size: 20, color: BrandColors.accent),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildHighlightRow(
       BuildContext context, BookmarkNotesNotifier state, int surah, int verse) {
     final chips = <Widget>[];
@@ -441,8 +522,8 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                     ? color.withOpacity(0.3)
                     : color.withOpacity(0.18),
                 border: Border.all(color: color, width: 2)),
-            child: Icon(isSelected ? Icons.check : Icons.brush,
-                size: 18, color: color),
+            child:
+                isSelected ? Icon(Icons.check, size: 20, color: color) : null,
           ),
         ),
       ));
@@ -511,45 +592,27 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
     try {
       page = getPageNumber(surah, verse);
     } catch (_) {}
-
     final pin = state.khatmahPin;
     bool isSameLastRead = pin != null &&
         pin.surahId == surah &&
         pin.ayahId == verse &&
         (pin.categoryName == 'Last read' || pin.categoryName == null);
-
     if (isSameLastRead) {
       await state.clearKhatmahPin();
       if (!mounted) return;
       _showSnack(page != null
-          ? (AppLocalizations.of(context)
-                      ?.translate('removed_last_read_page') ??
-                  'Removed last read for page {page}')
-              .replaceAll('{page}', '$page')
-          : (AppLocalizations.of(context)?.translate('removed_last_read') ??
-              'Removed last read'));
+          ? 'Removed last read for page $page'
+          : 'Removed last read');
       return;
     }
-
     await state.setKhatmahPin(
-      surahId: surah,
-      ayahId: verse,
-      colorHex: '#4DB6AC',
-      category: 'Last read',
-    );
-
+        surahId: surah,
+        ayahId: verse,
+        colorHex: '#4DB6AC',
+        category: 'Last read');
     if (!mounted) return;
     final name = getBilingualSurahName(context, surah);
-    final pageLabel = page != null
-        ? (AppLocalizations.of(context)?.translate('page_label') ??
-                'Page {number}')
-            .replaceAll('{number}', '$page')
-        : '';
-    final pagePrefix = pageLabel.isNotEmpty ? '$pageLabel • ' : '';
-    _showSnack((AppLocalizations.of(context)?.translate('set_as_last_read') ??
-            '{page}{ref} set as last read')
-        .replaceAll('{page}', pagePrefix)
-        .replaceAll('{ref}', '$name:$verse'));
+    _showSnack('Page ${page ?? ""} • $name:$verse set as last read');
   }
 
   Future<_MenuEditResult?> _openMenuEditor(BuildContext context) async {
@@ -578,12 +641,11 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                         onPressed: () => Navigator.pop(ctx)),
                     const Spacer(),
                     Text(
-                      AppLocalizations.of(context)
-                              ?.translate('edit_verse_menu') ??
-                          'Edit Verse Menu',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w800, fontSize: 18),
-                    ),
+                        AppLocalizations.of(context)
+                                ?.translate('edit_verse_menu') ??
+                            'Edit Verse Menu',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w800, fontSize: 18)),
                     const Spacer(),
                     TextButton(
                         onPressed: () => Navigator.pop(
@@ -592,9 +654,8 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                                 order: List.from(order),
                                 hidden: List.from(hidden))),
                         child: Text(
-                          AppLocalizations.of(context)?.translate('done') ??
-                              'Done',
-                        )),
+                            AppLocalizations.of(context)?.translate('done') ??
+                                'Done')),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -605,12 +666,11 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            AppLocalizations.of(context)
-                                    ?.translate('display_order') ??
-                                'Display Order',
-                            style: theme.textTheme.labelMedium
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                          ),
+                              AppLocalizations.of(context)
+                                      ?.translate('display_order') ??
+                                  'Display Order',
+                              style: theme.textTheme.labelMedium
+                                  ?.copyWith(fontWeight: FontWeight.w700)),
                           const SizedBox(height: 10),
                           Expanded(
                             child: ReorderableListView.builder(
@@ -664,12 +724,11 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                           if (hidden.isNotEmpty) ...[
                             const SizedBox(height: 12),
                             Text(
-                              AppLocalizations.of(context)
-                                      ?.translate('hidden') ??
-                                  'Hidden',
-                              style: theme.textTheme.labelMedium
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                            ),
+                                AppLocalizations.of(context)
+                                        ?.translate('hidden') ??
+                                    'Hidden',
+                                style: theme.textTheme.labelMedium
+                                    ?.copyWith(fontWeight: FontWeight.w700)),
                             const SizedBox(height: 8),
                             Wrap(spacing: 8, runSpacing: 8, children: [
                               for (final item in hidden)
@@ -726,12 +785,7 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                 }
                 if (context.mounted) Navigator.pop(context, true);
               } catch (_) {
-                if (context.mounted)
-                  _showSnack(
-                    AppLocalizations.of(context)
-                            ?.translate('failed_save_note') ??
-                        'Failed to save note',
-                  );
+                if (context.mounted) _showSnack('Failed to save note');
               } finally {
                 setModalState(() => saving = false);
               }
@@ -747,21 +801,15 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    (AppLocalizations.of(context)?.translate('note_for') ??
-                            'Note for {ref}')
-                        .replaceAll('{ref}', '$surah:$verse'),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  Text('Note for $surah:$verse',
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
                   TextField(
                       controller: controller,
                       maxLines: 6,
-                      decoration: InputDecoration(
-                          hintText: AppLocalizations.of(context)
-                                  ?.translate('reflection_hint') ??
-                              'Write your reflection here',
-                          border: const OutlineInputBorder())),
+                      decoration: const InputDecoration(
+                          hintText: 'Write your reflection here',
+                          border: OutlineInputBorder())),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -777,11 +825,7 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                                     Navigator.pop(context, true);
                                 },
                           icon: const Icon(Icons.delete_outline),
-                          label: Text(
-                            AppLocalizations.of(context)
-                                    ?.translate('delete_action') ??
-                                'Delete',
-                          ),
+                          label: const Text('Delete'),
                         ),
                       const SizedBox(width: 8),
                       ElevatedButton.icon(
@@ -793,15 +837,7 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                                 child:
                                     CircularProgressIndicator(strokeWidth: 2))
                             : const Icon(Icons.save),
-                        label: Text(
-                          saving
-                              ? (AppLocalizations.of(context)
-                                      ?.translate('saving') ??
-                                  'Saving...')
-                              : (AppLocalizations.of(context)
-                                      ?.translate('save') ??
-                                  'Save'),
-                        ),
+                        label: Text(saving ? 'Saving...' : 'Save'),
                       ),
                     ],
                   ),
@@ -814,242 +850,19 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
     );
     if (saved == true && mounted) {
       _showSnack((lastSavedText == null || lastSavedText!.isEmpty)
-          ? (AppLocalizations.of(context)?.translate('note_removed_for') ??
-                  'Note removed for {ref}')
-              .replaceAll('{ref}', '$surah:$verse')
-          : (AppLocalizations.of(context)?.translate('note_saved_for') ??
-                  'Note saved for {ref}')
-              .replaceAll('{ref}', '$surah:$verse'));
+          ? 'Note removed for $surah:$verse'
+          : 'Note saved for $surah:$verse');
     }
   }
 
   Future<void> _openShareSheet(
       BuildContext context, int surah, int verse) async {
-    final surahName = getBilingualSurahName(context, surah);
-    final maxVerse = getVerseCount(surah);
-    var format = _ShareFormat.image;
-    var fromVerse = verse;
-    var toVerse = verse;
-    var includeSurahName = true;
-    var includeVerseReference = true;
-    var includeBadge = true;
-    var isSharing = false;
-
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            final theme = Theme.of(context);
-            final accent = BrandColors.accent;
-
-            Future<void> handleShare() async {
-              if (isSharing) return;
-              setSheetState(() => isSharing = true);
-              try {
-                if (format == _ShareFormat.image) {
-                  final shareTheme =
-                      ShareService.resolveShareCardTheme(context);
-                  await ShareService.instance.shareVerseImage(
-                    surahNumber: surah,
-                    ayahNumber: fromVerse,
-                    endAyahNumber: toVerse,
-                    background: shareTheme.background,
-                    isDark: shareTheme.isDark,
-                    frameAsset: shareTheme.frameAsset,
-                    showSurahName: includeSurahName,
-                    showPageNumber: includeVerseReference,
-                    showBadge: includeBadge,
-                    size: 1080,
-                    pixelRatio: 2.5,
-                  );
-                } else {
-                  await ShareService.instance.shareVerseText(
-                    surahNumber: surah,
-                    ayahNumber: fromVerse,
-                    endAyahNumber: toVerse,
-                    stripDiacritics:
-                        format == _ShareFormat.textWithoutDiacritics,
-                    includeSurahName: includeSurahName,
-                    includeReference: includeVerseReference,
-                    includeBadge: includeBadge,
-                  );
-                }
-                if (mounted) Navigator.pop(context);
-              } catch (e) {
-                _showSnack('Could not share: $e');
-              } finally {
-                setSheetState(() => isSharing = false);
-              }
-            }
-
-            return Padding(
-              padding: EdgeInsets.only(
-                  left: 16,
-                  right: 16,
-                  top: 16,
-                  bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 16),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                        child: Container(
-                            width: 44,
-                            height: 4,
-                            decoration: BoxDecoration(
-                                color: theme.colorScheme.onSurface
-                                    .withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(4)))),
-                    const SizedBox(height: 14),
-                    Text(
-                      (AppLocalizations.of(context)?.translate('share_surah') ??
-                              'Share {surah}')
-                          .replaceAll('{surah}', surahName),
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w800, fontSize: 20),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      AppLocalizations.of(context)?.translate('share_as') ??
-                          'Share as',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    Wrap(spacing: 8, children: [
-                      ChoiceChip(
-                          label: Text(
-                            AppLocalizations.of(context)
-                                    ?.translate('share_image') ??
-                                'Image',
-                          ),
-                          selected: format == _ShareFormat.image,
-                          onSelected: (_) =>
-                              setSheetState(() => format = _ShareFormat.image)),
-                      ChoiceChip(
-                          label: Text(
-                            AppLocalizations.of(context)
-                                    ?.translate('share_text') ??
-                                'Text',
-                          ),
-                          selected: format == _ShareFormat.text,
-                          onSelected: (_) =>
-                              setSheetState(() => format = _ShareFormat.text)),
-                      ChoiceChip(
-                          label: Text(
-                            AppLocalizations.of(context)
-                                    ?.translate('share_text_no_diacritics') ??
-                                'Text (No Diacritics)',
-                          ),
-                          selected:
-                              format == _ShareFormat.textWithoutDiacritics,
-                          onSelected: (_) => setSheetState(() =>
-                              format = _ShareFormat.textWithoutDiacritics)),
-                    ]),
-                    const SizedBox(height: 18),
-                    Row(children: [
-                      Expanded(
-                          child: _buildStepper(
-                              context,
-                              AppLocalizations.of(context)?.translate('from') ??
-                                  'From',
-                              fromVerse,
-                              (v) => setSheetState(
-                                  () => fromVerse = v.clamp(1, toVerse)))),
-                      const SizedBox(width: 12),
-                      Expanded(
-                          child: _buildStepper(
-                              context,
-                              AppLocalizations.of(context)?.translate('to') ??
-                                  'To',
-                              toVerse,
-                              (v) => setSheetState(() =>
-                                  toVerse = v.clamp(fromVerse, maxVerse)))),
-                    ]),
-                    const SizedBox(height: 18),
-                    SwitchListTile.adaptive(
-                        title: Text(
-                          AppLocalizations.of(context)
-                                  ?.translate('surah_name') ??
-                              'Surah Name',
-                        ),
-                        value: includeSurahName,
-                        onChanged: (v) =>
-                            setSheetState(() => includeSurahName = v),
-                        contentPadding: EdgeInsets.zero),
-                    SwitchListTile.adaptive(
-                        title: Text(
-                          AppLocalizations.of(context)
-                                  ?.translate('reference') ??
-                              'Reference',
-                        ),
-                        value: includeVerseReference,
-                        onChanged: (v) =>
-                            setSheetState(() => includeVerseReference = v),
-                        contentPadding: EdgeInsets.zero),
-                    SwitchListTile.adaptive(
-                        title: Text(
-                          AppLocalizations.of(context)?.translate('badge') ??
-                              'Badge',
-                        ),
-                        value: includeBadge,
-                        onChanged: (v) => setSheetState(() => includeBadge = v),
-                        contentPadding: EdgeInsets.zero),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: isSharing ? null : handleShare,
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: accent,
-                            foregroundColor: Colors.white),
-                        child: isSharing
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white))
-                            : Text(AppLocalizations.of(context)
-                                    ?.translate('share') ??
-                                'Share'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => ShareOptionsSheet(surah: surah, verse: verse),
     );
-  }
-
-  Widget _buildStepper(BuildContext context, String label, int value,
-      ValueChanged<int> onChanged) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
-      const SizedBox(height: 8),
-      Container(
-        decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.05)),
-        child: Row(children: [
-          IconButton(
-              onPressed: () => onChanged(value - 1),
-              icon: const Icon(Icons.remove)),
-          Expanded(
-              child: Center(
-                  child: Text(value.toString(),
-                      style: const TextStyle(fontWeight: FontWeight.w700)))),
-          IconButton(
-              onPressed: () => onChanged(value + 1),
-              icon: const Icon(Icons.add)),
-        ]),
-      ),
-    ]);
   }
 
   Future<void> _shareVerseCardPreview(int surah, int verse) async {
@@ -1078,33 +891,21 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
   void _copyVerseText(int surah, int verse) {
     Clipboard.setData(
         ClipboardData(text: getVerseQCF(surah, verse, verseEndSymbol: true)));
-    _showSnack((AppLocalizations.of(context)?.translate('copied_surah_verse') ??
-            'Copied Surah {ref}')
-        .replaceAll('{ref}', '$surah:$verse'));
+    _showSnack('Copied Surah $surah:$verse');
   }
 
   void _showSnack(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
-    );
+        SnackBar(content: Text(message), duration: const Duration(seconds: 2)));
   }
 
   String _getCategoryName(String hex) {
-    if (hex == '#EF5350') {
-      return AppLocalizations.of(context)?.translate('color_red') ?? 'Red';
-    }
-    if (hex == '#FFB300') {
-      return AppLocalizations.of(context)?.translate('color_yellow') ??
-          'Yellow';
-    }
-    if (hex == '#66BB6A') {
-      return AppLocalizations.of(context)?.translate('color_green') ?? 'Green';
-    }
-    if (hex == '#42A5F5') {
-      return AppLocalizations.of(context)?.translate('color_blue') ?? 'Blue';
-    }
-    return AppLocalizations.of(context)?.translate('bookmark') ?? 'Bookmark';
+    if (hex.toUpperCase() == '#EF5350') return 'Red';
+    if (hex.toUpperCase() == '#FFB300') return 'Yellow';
+    if (hex.toUpperCase() == '#66BB6A') return 'Green';
+    if (hex.toUpperCase() == '#42A5F5') return 'Blue';
+    return 'Bookmark';
   }
 
   String _labelForSection(String key) {

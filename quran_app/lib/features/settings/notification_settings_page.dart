@@ -5,6 +5,7 @@ import '../khatmah/services/khatmah_service.dart';
 import 'package:quran_app/core/ui/responsive.dart';
 import 'package:quran_app/core/services/notification_service.dart';
 import '../../core/services/verse_of_the_day_service.dart';
+import 'package:quran_app/features/settings/widgets/settings_app_bar.dart';
 
 class NotificationSettingsPage extends StatefulWidget {
   const NotificationSettingsPage({super.key});
@@ -216,51 +217,19 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
     final accent = BrandColors.accent;
-    final leadingWidth =
-        ResponsiveLayout.scaled(context, 170, min: 140, max: 210);
-    final backIconSize = ResponsiveLayout.scaled(context, 18, min: 16, max: 22);
-    final backFontSize = ResponsiveLayout.scaled(context, 15, min: 13, max: 17);
-    final titleFontSize =
-        ResponsiveLayout.scaled(context, 18, min: 16, max: 20);
+    final cardBg = isLight
+        ? theme.scaffoldBackgroundColor
+        : theme.cardColor.withOpacity(0.5);
     final listPadding = ResponsiveLayout.scaled(context, 16, min: 12, max: 20);
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        leadingWidth: leadingWidth,
-        leading: TextButton.icon(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: Icon(Icons.arrow_back_ios_new_rounded,
-              color: accent, size: backIconSize),
-          label: ConstrainedBox(
-            constraints: BoxConstraints(minWidth: 60, maxWidth: 120),
-            child: Text(
-              AppLocalizations.of(context)?.translate('settings_title') ??
-                  'Settings',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              softWrap: false,
-              style: TextStyle(
-                color: accent,
-                fontSize: backFontSize,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          style: TextButton.styleFrom(
-              padding: EdgeInsets.only(
-                  left: ResponsiveLayout.scaled(context, 8, min: 6, max: 12))),
-        ),
-        title: Text(
-          AppLocalizations.of(context)
-                  ?.translate('notification_settings_title') ??
-              'Notification Settings',
-          style: theme.textTheme.titleMedium
-              ?.copyWith(fontWeight: FontWeight.w700, fontSize: titleFontSize),
-        ),
+      backgroundColor:
+          isLight ? theme.colorScheme.surface : theme.scaffoldBackgroundColor,
+      appBar: SettingsAppBar(
+        title: AppLocalizations.of(context)
+                ?.translate('notification_settings_title') ??
+            'Notification Settings',
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -273,80 +242,117 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                           ?.translate('khatmah_reminder_section') ??
                       'Khatmah Reminder',
                 ),
-                SwitchListTile(
-                  title: Text(
-                    AppLocalizations.of(context)
-                            ?.translate('daily_khatmah_reminder') ??
-                        'Daily Khatmah Reminder',
+                Card(
+                  color: cardBg,
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  subtitle: Text(
-                    AppLocalizations.of(context)
-                            ?.translate('daily_khatmah_reminder_subtitle') ??
-                        'Receive a daily notification to read your Khatmah',
+                  child: Column(
+                    children: [
+                      SwitchListTile(
+                        title: Text(
+                          AppLocalizations.of(context)
+                                  ?.translate('daily_khatmah_reminder') ??
+                              'Daily Khatmah Reminder',
+                        ),
+                        subtitle: Text(
+                          AppLocalizations.of(context)?.translate(
+                                  'daily_khatmah_reminder_subtitle') ??
+                              'Receive a daily notification to read your Khatmah',
+                        ),
+                        value: _khatmahEnabled,
+                        onChanged: (value) =>
+                            _updateKhatmahSettings(value, _khatmahTime),
+                        activeColor: theme.primaryColor,
+                      ),
+                      Divider(
+                        height: 0,
+                        thickness: 0.7,
+                        indent: 16,
+                        endIndent: 16,
+                        color: theme.dividerColor.withOpacity(0.25),
+                      ),
+                      ListTile(
+                        title: Text(
+                          AppLocalizations.of(context)
+                                  ?.translate('reminder_time') ??
+                              'Reminder Time',
+                        ),
+                        subtitle: Text(_khatmahTime.format(context)),
+                        enabled: _khatmahEnabled,
+                        trailing: const Icon(Icons.access_time),
+                        onTap: () async {
+                          final TimeOfDay? picked = await showTimePicker(
+                            context: context,
+                            initialTime: _khatmahTime,
+                          );
+                          if (picked != null && picked != _khatmahTime) {
+                            _updateKhatmahSettings(_khatmahEnabled, picked);
+                          }
+                        },
+                      ),
+                    ],
                   ),
-                  value: _khatmahEnabled,
-                  onChanged: (value) =>
-                      _updateKhatmahSettings(value, _khatmahTime),
-                  activeColor: theme.primaryColor,
                 ),
-                ListTile(
-                  title: Text(
-                    AppLocalizations.of(context)?.translate('reminder_time') ??
-                        'Reminder Time',
-                  ),
-                  subtitle: Text(_khatmahTime.format(context)),
-                  enabled: _khatmahEnabled,
-                  trailing: const Icon(Icons.access_time),
-                  onTap: () async {
-                    final TimeOfDay? picked = await showTimePicker(
-                      context: context,
-                      initialTime: _khatmahTime,
-                    );
-                    if (picked != null && picked != _khatmahTime) {
-                      _updateKhatmahSettings(_khatmahEnabled, picked);
-                    }
-                  },
-                ),
-                const Divider(),
                 _buildSectionHeader(
                   theme,
                   AppLocalizations.of(context)
                           ?.translate('verse_of_the_day_section') ??
                       'Verse of the Day',
                 ),
-                SwitchListTile(
-                  title: Text(
-                    AppLocalizations.of(context)
-                            ?.translate('daily_verse_notification') ??
-                        'Daily Verse Notification',
+                Card(
+                  color: cardBg,
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  subtitle: Text(
-                    AppLocalizations.of(context)
-                            ?.translate('daily_verse_notification_subtitle') ??
-                        'Receive a random verse every day',
+                  child: Column(
+                    children: [
+                      SwitchListTile(
+                        title: Text(
+                          AppLocalizations.of(context)
+                                  ?.translate('daily_verse_notification') ??
+                              'Daily Verse Notification',
+                        ),
+                        subtitle: Text(
+                          AppLocalizations.of(context)?.translate(
+                                  'daily_verse_notification_subtitle') ??
+                              'Receive a random verse every day',
+                        ),
+                        value: _votdEnabled,
+                        onChanged: (value) =>
+                            _updateVotdSettings(value, _votdTime),
+                        activeColor: theme.primaryColor,
+                      ),
+                      Divider(
+                        height: 0,
+                        thickness: 0.7,
+                        indent: 16,
+                        endIndent: 16,
+                        color: theme.dividerColor.withOpacity(0.25),
+                      ),
+                      ListTile(
+                        title: Text(
+                          AppLocalizations.of(context)
+                                  ?.translate('notification_time') ??
+                              'Notification Time',
+                        ),
+                        subtitle: Text(_votdTime.format(context)),
+                        enabled: _votdEnabled,
+                        trailing: const Icon(Icons.access_time),
+                        onTap: () async {
+                          final TimeOfDay? picked = await showTimePicker(
+                            context: context,
+                            initialTime: _votdTime,
+                          );
+                          if (picked != null && picked != _votdTime) {
+                            _updateVotdSettings(_votdEnabled, picked);
+                          }
+                        },
+                      ),
+                    ],
                   ),
-                  value: _votdEnabled,
-                  onChanged: (value) => _updateVotdSettings(value, _votdTime),
-                  activeColor: theme.primaryColor,
-                ),
-                ListTile(
-                  title: Text(
-                    AppLocalizations.of(context)
-                            ?.translate('notification_time') ??
-                        'Notification Time',
-                  ),
-                  subtitle: Text(_votdTime.format(context)),
-                  enabled: _votdEnabled,
-                  trailing: const Icon(Icons.access_time),
-                  onTap: () async {
-                    final TimeOfDay? picked = await showTimePicker(
-                      context: context,
-                      initialTime: _votdTime,
-                    );
-                    if (picked != null && picked != _votdTime) {
-                      _updateVotdSettings(_votdEnabled, picked);
-                    }
-                  },
                 ),
               ],
             ),

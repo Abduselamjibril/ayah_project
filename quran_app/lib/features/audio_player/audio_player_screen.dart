@@ -191,7 +191,8 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final accent = BrandColors.accent;
 
     // Only show expanded view when playing or explicitly expanded
@@ -205,86 +206,70 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
       _lastReportedExpanded = showExpanded;
     }
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: colorScheme.surface.withOpacity(0.92),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: accent.withOpacity(0.08)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.12),
-                blurRadius: 16,
-                offset: const Offset(0, 8),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      color: Colors.transparent,
+      child: showExpanded
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                color: colorScheme.surface,
+                border: Border.all(
+                  color: colorScheme.onSurface.withOpacity(0.25),
+                  width: 1.2,
+                ),
               ),
-            ],
-          ),
-          child: showExpanded
-              ? _buildExpandedPlayer(colorScheme, accent)
-              : _buildCompactSelector(colorScheme, accent),
-        ),
-      ),
+              child: _buildExpandedPlayer(colorScheme, accent),
+            )
+          : _buildCompactSelector(colorScheme, accent),
     );
   }
 
   Widget _buildCompactSelector(ColorScheme colorScheme, Color accent) {
-    return Row(
-      children: [
-        Expanded(
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: _openAudioPicker,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _labelText,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: accent,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        _statusText,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: colorScheme.onSurface.withOpacity(0.75),
-                          fontWeight: FontWeight.w600,
-                        ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 1),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(50),
+        color: colorScheme.surface,
+        border: Border.all(
+          color: colorScheme.onSurface.withOpacity(0.25),
+          width: 1.2,
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: _openAudioPicker,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      _statusText,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: accent,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
                       ),
                     ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      Icons.keyboard_arrow_down,
-                      size: 18,
-                      color: colorScheme.onSurface.withOpacity(0.65),
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.keyboard_arrow_down,
+                    size: 18,
+                    color: colorScheme.onSurface.withOpacity(0.65),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
-          ),
-          child: IconButton(
+          const SizedBox(width: 12),
+          IconButton(
             iconSize: 26,
             padding: const EdgeInsets.all(10),
             icon: _isDownloading
@@ -310,8 +295,8 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                         () => _showExpanded = _isPlaying || _isDownloading);
                   },
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

@@ -3,6 +3,7 @@ import '../../../../core/quran/qcf_quran.dart';
 import '../../../../core/services/audio_player_service.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
 import 'package:quran_app/core/utils/localization_helper.dart';
+import 'package:quran_app/app/app.dart'; // For BrandColors
 
 class PlayRangeDialog extends StatefulWidget {
   final int startSurah;
@@ -18,24 +19,16 @@ class PlayRangeDialog extends StatefulWidget {
   State<PlayRangeDialog> createState() => _PlayRangeDialogState();
 }
 
-class _PlayRangeDialogState extends State<PlayRangeDialog>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _PlayRangeDialogState extends State<PlayRangeDialog> {
+  int _selectedTabIndex = 0; // 0: Verse, 1: Page, 2: Surah
   late int _currentPage;
   late int _endOfSurah;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
     _currentPage = getPageNumber(widget.startSurah, widget.startVerse);
     _endOfSurah = getVerseCount(widget.startSurah);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   void _playTo(int endSurah, int endAyah) {
@@ -53,232 +46,291 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      minChildSize: 0.4,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (context, scrollController) {
-        return Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: theme.scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-          ),
-          child: Column(
-            children: [
-              // Drag Handle
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.only(top: 12, bottom: 8),
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(2),
+    return SafeArea(
+      child: FractionallySizedBox(
+        heightFactor: 0.9,
+        alignment: Alignment.bottomCenter,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+          child: Container(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Column(
+              children: [
+                // 1. Custom Header matching Screenshot
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                  child: Row(
+                    children: [
+                      TextButton.icon(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back_ios,
+                            size: 18, color: BrandColors.accent),
+                        label: Text(
+                          '${getBilingualSurahName(context, widget.startSurah)}: ${widget.startVerse}',
+                          style: const TextStyle(
+                            color: BrandColors.accent,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ),
+                      const Expanded(
+                        child: Center(
+                          child: Text(
+                            "Play To",
+                            style: TextStyle(
+                                fontWeight: FontWeight.w800, fontSize: 18),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: theme.colorScheme.onSurface.withOpacity(0.1),
+                          ),
+                          child: const Icon(Icons.close, size: 20),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
 
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      (AppLocalizations.of(context)?.translate('play_from') ??
-                              'Play from {surah} : {verse}')
-                          .replaceAll('{surah}',
-                              getBilingualSurahName(context, widget.startSurah))
-                          .replaceAll('{verse}', '${widget.startVerse}'),
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 20),
+
+                        // 2. Quick Actions Card
+                        _buildQuickActionsBox(theme),
+
+                        const SizedBox(height: 24),
+
+                        // 3. Segmented Toggle Tab Bar
+                        _buildSegmentedControl(theme),
+
+                        const SizedBox(height: 16),
+
+                        // 4. Dynamic Content List
+                        _buildActiveListContent(theme),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    _buildQuickActions(theme),
-                  ],
+                  ),
                 ),
-              ),
-
-              const Divider(height: 1),
-
-              // Tabs
-              TabBar(
-                controller: _tabController,
-                tabs: [
-                  Tab(
-                      text: AppLocalizations.of(context)
-                              ?.translate('tab_verse') ??
-                          'Verse'),
-                  Tab(
-                      text:
-                          AppLocalizations.of(context)?.translate('tab_page') ??
-                              'Page'),
-                  Tab(
-                      text: AppLocalizations.of(context)
-                              ?.translate('tab_surah') ??
-                          'Surah'),
-                ],
-              ),
-
-              // Tab Content
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildVerseList(scrollController),
-                    _buildPageList(scrollController),
-                    _buildSurahList(scrollController),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
-  Widget _buildQuickActions(ThemeData theme) {
-    return Column(
-      children: [
-        _buildQuickActionItem(
-          icon: Icons.article_outlined,
-          labelLeft: AppLocalizations.of(context)?.translate('end_of_page') ??
-              'End of Page',
-          labelRight: (AppLocalizations.of(context)?.translate('page_label') ??
-                  'Page {number}')
-              .replaceAll('{number}', '$_currentPage'),
-          onTap: () {
-            final pageData = getPageData(_currentPage);
-            if (pageData.isNotEmpty) {
-              final last = pageData.last;
-              _playTo(int.parse(last['surah'].toString()),
-                  int.parse(last['end'].toString()));
-            }
-          },
-        ),
-        const SizedBox(height: 8),
-        _buildQuickActionItem(
-          icon: Icons.format_align_right,
-          labelLeft: AppLocalizations.of(context)?.translate('end_of_surah') ??
-              'End of Surah',
-          labelRight: getBilingualSurahName(context, widget.startSurah),
-          onTap: () => _playTo(widget.startSurah, _endOfSurah),
-        ),
-        const SizedBox(height: 8),
-        _buildQuickActionItem(
-          icon: Icons.all_inclusive,
-          labelLeft:
-              AppLocalizations.of(context)?.translate('continuous_playback') ??
-                  'Continuous Playback',
-          labelRight: '∞',
-          onTap: () => _playTo(114, 6),
-        ),
-      ],
+  Widget _buildQuickActionsBox(ThemeData theme) {
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.onSurface.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          _buildQuickRow(
+            label: AppLocalizations.of(context)?.translate('end_of_page') ??
+                'End of Page',
+            value: "Page $_currentPage",
+            onTap: () {
+              final pageData = getPageData(_currentPage);
+              if (pageData.isNotEmpty) {
+                final last = pageData.last;
+                _playTo(int.parse(last['surah'].toString()),
+                    int.parse(last['end'].toString()));
+              }
+            },
+          ),
+          Divider(
+              height: 1,
+              color: theme.colorScheme.onSurface.withOpacity(0.05),
+              indent: 16,
+              endIndent: 16),
+          _buildQuickRow(
+            label: AppLocalizations.of(context)?.translate('end_of_surah') ??
+                'End of Surah',
+            value: getBilingualSurahName(context, widget.startSurah),
+            onTap: () => _playTo(widget.startSurah, _endOfSurah),
+          ),
+          Divider(
+              height: 1,
+              color: theme.colorScheme.onSurface.withOpacity(0.05),
+              indent: 16,
+              endIndent: 16),
+          _buildQuickRow(
+            label: AppLocalizations.of(context)
+                    ?.translate('continuous_playback') ??
+                'Continuous Playback',
+            value: "∞",
+            onTap: () => _playTo(114, 6),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildQuickActionItem({
-    required IconData icon,
-    required String labelLeft,
-    required String labelRight,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildQuickRow(
+      {required String label,
+      required String value,
+      required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          border: Border.all(color: Theme.of(context).dividerColor),
-          borderRadius: BorderRadius.circular(8),
-        ),
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(icon, size: 20),
-            const SizedBox(width: 12),
-            Text(labelLeft,
-                style: const TextStyle(fontWeight: FontWeight.w500)),
-            const Spacer(),
-            Text(labelRight,
+            Text(label,
                 style: TextStyle(
-                    color: Theme.of(context).primaryColor,
-                    fontWeight: FontWeight.bold)),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withOpacity(0.7))),
+            Text(value,
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withOpacity(0.5))),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildVerseList(ScrollController scrollController) {
-    final totalVerses = _endOfSurah;
-    final startVerse = widget.startVerse;
-    final count = totalVerses - startVerse + 1;
+  Widget _buildSegmentedControl(ThemeData theme) {
+    return Container(
+      height: 45,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.onSurface.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          _buildTabItem(0,
+              AppLocalizations.of(context)?.translate('tab_verse') ?? 'Verse'),
+          _buildTabItem(
+              1, AppLocalizations.of(context)?.translate('tab_page') ?? 'Page'),
+          _buildTabItem(2,
+              AppLocalizations.of(context)?.translate('tab_surah') ?? 'Sūrah'),
+        ],
+      ),
+    );
+  }
 
-    return ListView.separated(
-      controller: scrollController,
-      padding: const EdgeInsets.all(8),
+  Widget _buildTabItem(int index, String label) {
+    bool isActive = _selectedTabIndex == index;
+    return Expanded(
+      child: InkWell(
+        onTap: () => setState(() => _selectedTabIndex = index),
+        child: Container(
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isActive ? Colors.grey.withOpacity(0.3) : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: isActive ? Colors.white : Colors.white.withOpacity(0.5),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActiveListContent(ThemeData theme) {
+    Widget child;
+    switch (_selectedTabIndex) {
+      case 0:
+        child = _buildVerseList(theme);
+        break;
+      case 1:
+        child = _buildPageList(theme);
+        break;
+      case 2:
+        child = _buildSurahList(theme);
+        break;
+      default:
+        child = const SizedBox();
+    }
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      switchInCurve: Curves.easeInOut,
+      switchOutCurve: Curves.easeInOut,
+      child: KeyedSubtree(
+        key: ValueKey(_selectedTabIndex),
+        child: child,
+      ),
+    );
+  }
+
+  Widget _buildVerseList(ThemeData theme) {
+    final startVerse = widget.startVerse;
+    final count = _endOfSurah - startVerse + 1;
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       itemCount: count,
-      separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final verseNum = startVerse + index;
-        final isStartVerse = verseNum == widget.startVerse;
+        final page = getPageNumber(widget.startSurah, verseNum);
 
-        return Container(
-          color: isStartVerse
-              ? Theme.of(context).primaryColor.withOpacity(0.1)
-              : null,
-          child: ListTile(
-            onTap: () => _playTo(widget.startSurah, verseNum),
-            title: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return InkWell(
+          onTap: () => _playTo(widget.startSurah, verseNum),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  '${getBilingualSurahName(context, widget.startSurah)} : $verseNum',
-                  style: isStartVerse
-                      ? const TextStyle(fontWeight: FontWeight.bold)
-                      : null,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${getBilingualSurahName(context, widget.startSurah)}: $verseNum',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                    Text(
+                      '$page',
+                      style: TextStyle(
+                          color: Colors.white.withOpacity(0.4),
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ],
                 ),
-                Icon(Icons.play_circle_outline,
-                    size: 20,
-                    color: isStartVerse
-                        ? Theme.of(context).primaryColor
-                        : Colors.grey),
-              ],
-            ),
-            subtitle: Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: ShaderMask(
-                shaderCallback: (Rect bounds) {
-                  return const LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [Colors.transparent, Colors.white],
-                    stops: [
-                      0.0,
-                      0.12
-                    ], // Approx 40px fade on left side for RTL text
-                  ).createShader(bounds);
-                },
-                blendMode: BlendMode.dstIn,
-                child: Text(
+                const SizedBox(height: 8),
+                Text(
                   getVerse(widget.startSurah, verseNum, verseEndSymbol: true),
                   textAlign: TextAlign.right,
                   textDirection: TextDirection.rtl,
-                  maxLines: 1,
-                  softWrap: false,
-                  overflow: TextOverflow
-                      .clip, // Using clip because mask handles the fade visual
                   style: const TextStyle(
-                    fontSize: 20,
+                    fontSize: 22,
                     fontFamily: 'Amiri',
-                    height: 1.5,
+                    height: 1.6,
+                    color: Colors.white70,
                   ),
                 ),
-              ),
+              ],
             ),
           ),
         );
@@ -286,33 +338,19 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
     );
   }
 
-  Widget _buildPageList(ScrollController scrollController) {
+  Widget _buildPageList(ThemeData theme) {
     final startPage = _currentPage + 1;
-    if (startPage > 604) {
-      return Center(
-          child: Text(
-              AppLocalizations.of(context)!.translate('no_subsequent_pages')));
-    }
+    if (startPage > 604) return const Center(child: Text("No more pages"));
     final count = 604 - startPage + 1;
 
-    return ListView.separated(
-      controller: scrollController,
-      padding: const EdgeInsets.all(8),
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       itemCount: count,
-      separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final pageNum = startPage + index;
-        String pageInfo = '';
-        try {
-          final pageData = getPageData(pageNum);
-          if (pageData.isNotEmpty) {
-            final last = pageData.last;
-            pageInfo =
-                '${getBilingualSurahName(context, int.parse(last['surah'].toString()))} : ${last['end']}';
-          }
-        } catch (_) {}
-
         return ListTile(
+          contentPadding: EdgeInsets.zero,
           onTap: () {
             final pageData = getPageData(pageNum);
             if (pageData.isNotEmpty) {
@@ -321,54 +359,34 @@ class _PlayRangeDialogState extends State<PlayRangeDialog>
                   int.parse(last['end'].toString()));
             }
           },
-          leading: const Icon(Icons.auto_stories_outlined),
-          title: Text(
-            (AppLocalizations.of(context)?.translate('page_label') ??
-                    'Page {number}')
-                .replaceAll('{number}', '$pageNum'),
-          ),
-          trailing: Text(pageInfo),
+          title: Text("Page $pageNum",
+              style: const TextStyle(fontWeight: FontWeight.w600)),
+          trailing: const Icon(Icons.chevron_right, size: 18),
         );
       },
     );
   }
 
-  Widget _buildSurahList(ScrollController scrollController) {
+  Widget _buildSurahList(ThemeData theme) {
     final startSurah = widget.startSurah + 1;
-    if (startSurah > 114) {
-      return Center(
-          child: Text(
-              AppLocalizations.of(context)?.translate('no_subsequent_surahs') ??
-                  'No subsequent surahs'));
-    }
+    if (startSurah > 114) return const Center(child: Text("No more surahs"));
     final count = 114 - startSurah + 1;
 
-    return ListView.separated(
-      controller: scrollController,
-      padding: const EdgeInsets.all(8),
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       itemCount: count,
-      separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final surahNum = startSurah + index;
-        int endPage = 0;
-        try {
-          final totalV = getVerseCount(surahNum);
-          endPage = getPageNumber(surahNum, totalV);
-        } catch (_) {}
-
         return ListTile(
+          contentPadding: EdgeInsets.zero,
           onTap: () {
             final totalV = getVerseCount(surahNum);
             _playTo(surahNum, totalV);
           },
-          leading:
-              Text('$surahNum', style: const TextStyle(color: Colors.grey)),
-          title: Text(getBilingualSurahName(context, surahNum)),
-          trailing: Text(
-            (AppLocalizations.of(context)?.translate('ends_page') ??
-                    'Ends Page {number}')
-                .replaceAll('{number}', '$endPage'),
-          ),
+          title: Text(getBilingualSurahName(context, surahNum),
+              style: const TextStyle(fontWeight: FontWeight.w600)),
+          trailing: const Icon(Icons.chevron_right, size: 18),
         );
       },
     );

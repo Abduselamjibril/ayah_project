@@ -5,6 +5,7 @@ import '../../core/quran/widgets/quran_pageview.dart';
 import '../../core/services/mushaf_settings_service.dart';
 import '../../core/services/theme_service.dart';
 import 'package:quran_app/core/ui/responsive.dart';
+import 'package:quran_app/features/settings/widgets/settings_app_bar.dart';
 
 class ThemeSettingsPage extends StatelessWidget {
   const ThemeSettingsPage({super.key});
@@ -15,12 +16,7 @@ class ThemeSettingsPage extends StatelessWidget {
     final mushafSettings = MushafSettingsService();
     final theme = Theme.of(context);
     final accent = BrandColors.accent;
-    final leadingWidth =
-        ResponsiveLayout.scaled(context, 170, min: 140, max: 210);
-    final backIconSize = ResponsiveLayout.scaled(context, 18, min: 16, max: 22);
-    final backFontSize = ResponsiveLayout.scaled(context, 15, min: 13, max: 17);
-    final titleFontSize =
-        ResponsiveLayout.scaled(context, 18, min: 16, max: 20);
+    final isLight = theme.brightness == Brightness.light;
     final paddingAll = ResponsiveLayout.scaled(context, 16, min: 12, max: 20);
     final sectionGap = ResponsiveLayout.scaled(context, 12, min: 8, max: 16);
     final headerGap = ResponsiveLayout.scaled(context, 24, min: 18, max: 28);
@@ -28,41 +24,11 @@ class ThemeSettingsPage extends StatelessWidget {
     final cardHeight = ResponsiveLayout.scaled(context, 80, min: 68, max: 96);
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        leadingWidth: leadingWidth,
-        leading: TextButton.icon(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: Icon(Icons.arrow_back_ios_new_rounded,
-              color: accent, size: backIconSize),
-          label: ConstrainedBox(
-            constraints: BoxConstraints(minWidth: 60, maxWidth: 120),
-            child: Text(
-              AppLocalizations.of(context)?.translate('settings_title') ??
-                  'Settings',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              softWrap: false,
-              style: TextStyle(
-                color: accent,
-                fontSize: backFontSize,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          style: TextButton.styleFrom(
-              padding: EdgeInsets.only(
-                  left: ResponsiveLayout.scaled(context, 8, min: 6, max: 12))),
-        ),
-        title: Text(
-          AppLocalizations.of(context)?.translate('app_appearance') ??
-              'App Appearance',
-          style: theme.textTheme.titleMedium
-              ?.copyWith(fontWeight: FontWeight.w700, fontSize: titleFontSize),
-        ),
+      backgroundColor:
+          isLight ? theme.colorScheme.surface : theme.scaffoldBackgroundColor,
+      appBar: SettingsAppBar(
+        title: AppLocalizations.of(context)?.translate('app_appearance') ??
+            'App Appearance',
       ),
       body: AnimatedBuilder(
         animation: Listenable.merge([themeService, mushafSettings]),
@@ -127,6 +93,8 @@ class ThemeSettingsPage extends StatelessWidget {
                 ),
                 Card(
                   margin: EdgeInsets.symmetric(vertical: sectionGap / 2),
+                  color:
+                      isLight ? theme.scaffoldBackgroundColor : theme.cardColor,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -300,6 +268,8 @@ class ThemeSettingsPage extends StatelessWidget {
     final height = ResponsiveLayout.scaled(context, 80, min: 68, max: 96);
     final primary = Theme.of(context).primaryColor;
     final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+    final cardBg = isLight ? theme.scaffoldBackgroundColor : theme.cardColor;
 
     return GestureDetector(
       onTap: onTap,
@@ -320,7 +290,7 @@ class ThemeSettingsPage extends StatelessWidget {
                   )
                 ]
               : null,
-          color: theme.cardColor,
+          color: cardBg,
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
@@ -416,8 +386,12 @@ class ThemeSettingsPage extends StatelessWidget {
     final titleSize = ResponsiveLayout.scaled(context, 15, min: 14, max: 17);
     final subtitleSize = ResponsiveLayout.scaled(context, 13, min: 12, max: 15);
     final trailingSize = ResponsiveLayout.scaled(context, 24, min: 20, max: 28);
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+    final cardBg = isLight ? theme.scaffoldBackgroundColor : theme.cardColor;
     return Card(
       margin: EdgeInsets.symmetric(vertical: margin),
+      color: cardBg,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: isSelected

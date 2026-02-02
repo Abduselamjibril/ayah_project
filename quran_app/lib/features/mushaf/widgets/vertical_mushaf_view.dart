@@ -328,7 +328,12 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
               final isSliding = _isSliderActive;
               final panelMaxWidth =
                   ResponsiveLayout.scaled(context, 540, min: 360, max: 640);
-              final bottomPad = MediaQuery.paddingOf(context).bottom;
+              final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
+              final bottomInset = MediaQuery.paddingOf(context).bottom;
+              final extraBottom =
+                  ResponsiveLayout.scaled(context, 8, min: 6, max: 14);
+              final bottomPad = (isIOS ? bottomInset * 0.5 : bottomInset) +
+                  (isIOS ? extraBottom * 0.6 : extraBottom);
               return RepaintBoundary(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -338,10 +343,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                       child: isSliding
                           ? Card(
                               elevation: 12,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .surface
-                                  .withValues(alpha: 0.95),
+                              color: Theme.of(context).colorScheme.surface,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
                               ),
@@ -386,10 +388,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                         child: Card(
                           elevation: 16,
                           margin: EdgeInsets.zero,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surface
-                              .withOpacity(0.95),
+                          color: Theme.of(context).colorScheme.surface,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -401,9 +400,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                                   min: 1, max: 4),
                               ResponsiveLayout.scaled(context, 12,
                                   min: 10, max: 16),
-                              bottomPad +
-                                  ResponsiveLayout.scaled(context, 8,
-                                      min: 6, max: 14),
+                              bottomPad,
                             ),
                             child: Directionality(
                               textDirection: TextDirection.rtl,
@@ -552,8 +549,10 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     if (!_overlayVisible) return const SizedBox.shrink();
     final media = MediaQuery.of(context);
     final top = media.padding.top + 64;
-    // Add extra bottom padding if audio player is expanded
-    final bottom = media.padding.bottom + (_audioPlayerExpanded ? 250 : 170);
+    final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
+    final baseBottom = _audioPlayerExpanded ? 250 : 170;
+    final bottom =
+        media.padding.bottom + (isIOS ? baseBottom - 24 : baseBottom);
 
     return ValueListenableBuilder<double>(
       valueListenable: _livePageNotifier,
@@ -642,10 +641,9 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                               (trackHeight * t).clamp(0, trackHeight);
 
                           // Colors for progress and background (theme-based, mushaf page aware)
-                          final Color passedColor = Colors.black.withOpacity(
-                              Theme.of(context).brightness == Brightness.dark
-                                  ? 0.18
-                                  : 0.10);
+                          final Color passedColor = Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest;
                           final Color notPassedColor =
                               Theme.of(context).colorScheme.surface;
 
@@ -769,10 +767,8 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
               final pillTop = (trackHeight * t).clamp(0, trackHeight);
 
               // Colors for progress and background (theme-based, mushaf page aware)
-              final Color passedColor = Colors.black.withOpacity(
-                  Theme.of(context).brightness == Brightness.dark
-                      ? 0.18
-                      : 0.10);
+              final Color passedColor =
+                  Theme.of(context).colorScheme.surfaceContainerHighest;
               final Color notPassedColor =
                   Theme.of(context).colorScheme.surface;
 
@@ -856,43 +852,17 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520),
-          child: Material(
-            elevation: 2, // Lowered elevation for a softer shadow
-            color: Colors.transparent,
+          child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: _audioPlayerExpanded
-                  ? Container(
-                      decoration: BoxDecoration(
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.10),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: AudioPlayerCard(
-                        controller: widget.controller,
-                        onExpandChanged: (expanded) {
-                          // Always call setState to force a rebuild and update the slider padding
-                          setState(() {
-                            _audioPlayerExpanded = expanded;
-                          });
-                        },
-                      ),
-                    )
-                  : AudioPlayerCard(
-                      controller: widget.controller,
-                      onExpandChanged: (expanded) {
-                        if (_audioPlayerExpanded != expanded) {
-                          setState(() {
-                            _audioPlayerExpanded = expanded;
-                          });
-                        }
-                      },
-                    ),
+            child: AudioPlayerCard(
+              controller: widget.controller,
+              onExpandChanged: (expanded) {
+                if (_audioPlayerExpanded != expanded) {
+                  setState(() {
+                    _audioPlayerExpanded = expanded;
+                  });
+                }
+              },
             ),
           ),
         ),

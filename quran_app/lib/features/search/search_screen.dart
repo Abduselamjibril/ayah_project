@@ -227,10 +227,15 @@ class _SearchScreenState extends State<SearchScreen>
     return Padding(
       padding: EdgeInsets.zero,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: theme.colorScheme.onSurface.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(12),
+          color: theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: theme.colorScheme.onSurface.withOpacity(0.12),
+            width: 1,
+          ),
         ),
         child: Row(
           children: [

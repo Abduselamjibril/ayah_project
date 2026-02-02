@@ -465,11 +465,17 @@ class _DownloadsScreenState extends State<DownloadsScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isLight = theme.brightness == Brightness.light;
+    final screenBackground =
+        isLight ? colorScheme.surface : theme.scaffoldBackgroundColor;
+    final cardBackground =
+        isLight ? theme.scaffoldBackgroundColor : colorScheme.surface;
     final accent = BrandColors.accent;
     final settingsLabel =
         AppLocalizations.of(context)?.translate('settings_title') ?? 'Settings';
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: screenBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -535,6 +541,12 @@ class _DownloadsScreenState extends State<DownloadsScreen>
   }
 
   Widget _buildTranslationsTab() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isLight = theme.brightness == Brightness.light;
+    final cardBackground =
+        isLight ? theme.scaffoldBackgroundColor : colorScheme.surface;
+
     if (_isLoadingTranslations) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -586,6 +598,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
         final translations = groupedByLanguage[langName]!;
 
         return Card(
+          color: cardBackground,
           margin: const EdgeInsets.symmetric(vertical: 8),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -682,6 +695,12 @@ class _DownloadsScreenState extends State<DownloadsScreen>
   }
 
   Widget _buildTafsirsTab() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isLight = theme.brightness == Brightness.light;
+    final cardBackground =
+        isLight ? theme.scaffoldBackgroundColor : colorScheme.surface;
+
     if (_isLoadingTafsirs) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -733,6 +752,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
         final tafsirs = groupedByLanguage[langName]!;
 
         return Card(
+          color: cardBackground,
           margin: const EdgeInsets.symmetric(vertical: 8),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -830,6 +850,12 @@ class _DownloadsScreenState extends State<DownloadsScreen>
   // Removed old per-surah picker in favor of dedicated page
 
   Widget _buildAudioTab() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isLight = theme.brightness == Brightness.light;
+    final cardBackground =
+        isLight ? theme.scaffoldBackgroundColor : colorScheme.surface;
+
     if (_isLoadingAudio) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -866,6 +892,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
             .fold<double>(0.0, (a, b) => b);
 
         return Card(
+          color: cardBackground,
           margin: const EdgeInsets.symmetric(vertical: 8),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
