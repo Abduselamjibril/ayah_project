@@ -250,8 +250,8 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
         name,
         style: TextStyle(
             color: isLight ? theme.colorScheme.onSurface : Colors.white,
-        fontSize: 17,
-        fontWeight: FontWeight.w500),
+            fontSize: 17,
+            fontWeight: FontWeight.w500),
       ),
       subtitle: hasData
           ? Text(

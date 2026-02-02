@@ -105,9 +105,9 @@ class _ShareOptionsSheetState extends State<ShareOptionsSheet> {
 
     final bgColor = isLight ? theme.colorScheme.surface : Colors.black;
     final cardColor =
-      isLight ? theme.scaffoldBackgroundColor : const Color(0xFF1C1C1E);
+        isLight ? theme.scaffoldBackgroundColor : const Color(0xFF1C1C1E);
     final dividerColor =
-      isLight ? theme.colorScheme.surface : const Color(0xFF38383A);
+        isLight ? theme.colorScheme.surface : const Color(0xFF38383A);
     final accentColor = BrandColors.accent;
 
     final verseCount = (toVerse - fromVerse + 1);
@@ -396,9 +396,7 @@ class _ShareOptionsSheetState extends State<ShareOptionsSheet> {
               "$englishName: $verseNum",
               style: TextStyle(
                 fontSize: 19,
-                color: isLight
-                    ? theme.colorScheme.onSurface
-                    : Colors.white,
+                color: isLight ? theme.colorScheme.onSurface : Colors.white,
               ),
             ),
           );

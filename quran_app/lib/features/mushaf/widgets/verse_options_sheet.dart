@@ -701,9 +701,9 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                                   key: ValueKey(item),
                                   margin: const EdgeInsets.only(bottom: 8),
                                   color: isLight
-                                    ? theme.scaffoldBackgroundColor
-                                    : theme.colorScheme.onSurface
-                                      .withOpacity(0.05),
+                                      ? theme.scaffoldBackgroundColor
+                                      : theme.colorScheme.onSurface
+                                          .withOpacity(0.05),
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(14)),
                                   child: ListTile(

@@ -169,8 +169,8 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
           Divider(
               height: 1,
               color: isLight
-                ? theme.colorScheme.surface
-                : theme.colorScheme.onSurface.withOpacity(0.05),
+                  ? theme.colorScheme.surface
+                  : theme.colorScheme.onSurface.withOpacity(0.05),
               indent: 16,
               endIndent: 16),
           _buildQuickRow(
@@ -182,8 +182,8 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
           Divider(
               height: 1,
               color: isLight
-                ? theme.colorScheme.surface
-                : theme.colorScheme.onSurface.withOpacity(0.05),
+                  ? theme.colorScheme.surface
+                  : theme.colorScheme.onSurface.withOpacity(0.05),
               indent: 16,
               endIndent: 16),
           _buildQuickRow(
@@ -278,9 +278,7 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
             style: TextStyle(
               fontWeight: FontWeight.w600,
               color: isActive
-                  ? (isLight
-                      ? theme.colorScheme.onSurface
-                      : Colors.white)
+                  ? (isLight ? theme.colorScheme.onSurface : Colors.white)
                   : (isLight
                       ? theme.colorScheme.onSurface.withOpacity(0.5)
                       : Colors.white.withOpacity(0.5)),
