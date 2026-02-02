@@ -43,21 +43,18 @@ Future<AudioRecitation?> showReciterPickerSheet(
       final cardColor = theme.colorScheme.surfaceVariant.withOpacity(0.9);
       final bgColor = theme.colorScheme.surface;
       return SafeArea(
-        child: Center(
+        top: false,
+        bottom: false,
+        child: FractionallySizedBox(
+          heightFactor: 0.9,
+          alignment: Alignment.bottomCenter,
           child: Container(
-            height: maxHeight,
-            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             decoration: BoxDecoration(
               color: bgColor,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 24,
-                  offset: const Offset(0, 12),
-                ),
-              ],
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
             ),
             child: StatefulBuilder(
               builder: (context, setState) {
