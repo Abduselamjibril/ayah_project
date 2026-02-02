@@ -101,23 +101,25 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
     );
 
     return SafeArea(
+      top: false,
+      bottom: false,
       child: FractionallySizedBox(
         heightFactor: 0.9,
         alignment: Alignment.bottomCenter,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-          child: Container(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(24),
+        child: Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(24),
             ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                     Row(
                       children: [
                         TextButton(
@@ -164,8 +166,7 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                     const SizedBox(height: 8),
                     _buildQuickActions(context, bookmarkState, context,
                         widget.surah, widget.verse),
-                  ],
-                ),
+                ],
               ),
             ),
           ),
@@ -244,12 +245,13 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                     label: 'All',
                     trailing: Icons.chevron_right,
                     onTap: () async {
-                      Navigator.pop(context);
                       await bookmarkState.refresh();
-                      await Navigator.push(
-                          rootContext,
-                          MaterialPageRoute(
-                              builder: (_) => const BookmarkScreen()));
+                      await showModalBottomSheet(
+                        context: rootContext,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (_) => const BookmarkScreen(),
+                      );
                     },
                   ),
                 ),
@@ -284,7 +286,6 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                       label:
                           AppLocalizations.of(context)?.translate('play_to') ??
                               'Play to...', onTap: () {
-                Navigator.pop(context);
                 _showPlayToDialog(rootContext, surah, verse);
               })),
             ]));
@@ -345,7 +346,6 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                     label: AppLocalizations.of(context)?.translate('share') ??
                         'Share',
                     onTap: () {
-                      Navigator.pop(context);
                       _openShareSheet(rootContext, surah, verse);
                     },
                   ),

@@ -44,142 +44,168 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
             .where((b) => _isSameColor(b.colorHex, _selectedColor!))
             .toList();
 
-    return Scaffold(
-      backgroundColor:
-          isLight ? theme.colorScheme.surface : Colors.black, // iOS dark mode
-      appBar: AppBar(
-        backgroundColor: isLight ? theme.colorScheme.surface : Colors.black,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        centerTitle: true,
-        title: SizedBox(
-          width: double.infinity,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Centered Title
-              Center(
-                child: Text(
-                  AppLocalizations.of(context)?.translate('bookmarks_title') ??
-                      'Bookmarks',
-                  style: TextStyle(
-                    color: isLight ? theme.colorScheme.onSurface : Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 18,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              // Far left back icon
-              Positioned(
-                left: 0,
-                child: IconButton(
-                  icon: Icon(Icons.chevron_left,
-                      color: BrandColors.accent, size: 28),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ),
-              // Far right close icon
-              Positioned(
-                right: 0,
-                child: GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isLight
-                          ? theme.colorScheme.surfaceContainerHighest
-                          : Colors.white10,
-                      border: Border.all(
-                        color: isLight
-                            ? theme.colorScheme.surface
-                            : Colors.white24,
-                        width: 1,
-                      ),
-                    ),
-                    child: Icon(Icons.close,
-                        size: 18,
-                        color: isLight
-                            ? theme.colorScheme.onSurface.withOpacity(0.7)
-                            : Colors.white60),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        toolbarHeight: 56,
-      ),
-      body: state.isLoading && !state.isInitialized
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 1. Permanent Color Category Cards
-                  _buildGroupedContainer(
-                    children: _colorCategories.map((cat) {
-                      // Find the latest bookmark in this specific color category
-                      final latest = state.bookmarks.firstWhere(
-                        (b) => _isSameColor(b.colorHex, cat['hex']!),
-                        orElse: () => Bookmark(
-                          surahId: 0,
-                          ayahId: 0,
-                          colorHex: cat['hex']!,
-                          createdAt: DateTime.now(),
-                          updatedAt: DateTime.now(),
-                        ),
-                      );
-
-                      return _buildCategoryTile(
-                        context,
-                        cat['name']!,
-                        cat['hex']!,
-                        latest,
-                        state, // Pass state to check global quick color
-                        onTap: () {
-                          setState(() {
-                            // This filters the list below
-                            _selectedColor = (_selectedColor == cat['hex'])
-                                ? null
-                                : cat['hex'];
-                          });
-                        },
-                        isSelected: _selectedColor == cat['hex'],
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // 2. List of Bookmarks Header
-                  if (filteredBookmarks.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
-                      child: Text(
-                        _selectedColor == null
-                            ? "All Bookmarks"
-                            : "Filtered Bookmarks",
-                        style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold),
-                      ),
-                    ),
-
-                  // 3. The List of Bookmarks
-                  _buildGroupedContainer(
-                    children: filteredBookmarks.map((b) {
-                      return _buildBookmarkEntryTile(context, b);
-                    }).toList(),
-                  ),
-                ],
+    return SafeArea(
+      top: false,
+      bottom: false,
+      child: FractionallySizedBox(
+        heightFactor: 0.9,
+        alignment: Alignment.bottomCenter,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              color: isLight ? theme.colorScheme.surface : Colors.black,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
               ),
             ),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Center(
+                          child: Text(
+                            AppLocalizations.of(context)
+                                    ?.translate('bookmarks_title') ??
+                                'Bookmarks',
+                            style: TextStyle(
+                              color: isLight
+                                  ? theme.colorScheme.onSurface
+                                  : Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 18,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: IconButton(
+                            icon: Icon(Icons.chevron_left,
+                                color: BrandColors.accent, size: 28),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: GestureDetector(
+                            onTap: () => Navigator.pop(context),
+                            child: Container(
+                              width: 30,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isLight
+                                    ? theme.colorScheme.surfaceContainerHighest
+                                    : Colors.white10,
+                                border: Border.all(
+                                  color: isLight
+                                      ? theme.colorScheme.surface
+                                      : Colors.white24,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Icon(Icons.close,
+                                  size: 18,
+                                  color: isLight
+                                      ? theme.colorScheme.onSurface
+                                          .withOpacity(0.7)
+                                      : Colors.white60),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: state.isLoading && !state.isInitialized
+                      ? const Center(child: CircularProgressIndicator())
+                      : SingleChildScrollView(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // 1. Permanent Color Category Cards
+                              _buildGroupedContainer(
+                                children: _colorCategories.map((cat) {
+                                  // Find the latest bookmark in this specific color category
+                                  final latest = state.bookmarks.firstWhere(
+                                    (b) =>
+                                        _isSameColor(b.colorHex, cat['hex']!),
+                                    orElse: () => Bookmark(
+                                      surahId: 0,
+                                      ayahId: 0,
+                                      colorHex: cat['hex']!,
+                                      createdAt: DateTime.now(),
+                                      updatedAt: DateTime.now(),
+                                    ),
+                                  );
+
+                                  return _buildCategoryTile(
+                                    context,
+                                    cat['name']!,
+                                    cat['hex']!,
+                                    latest,
+                                    state, // Pass state to check global quick color
+                                    onTap: () {
+                                      setState(() {
+                                        // This filters the list below
+                                        _selectedColor =
+                                            (_selectedColor == cat['hex'])
+                                                ? null
+                                                : cat['hex'];
+                                      });
+                                    },
+                                    isSelected: _selectedColor == cat['hex'],
+                                  );
+                                }).toList(),
+                              ),
+
+                              const SizedBox(height: 32),
+
+                              // 2. List of Bookmarks Header
+                              if (filteredBookmarks.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                      left: 8.0, bottom: 8.0),
+                                  child: Text(
+                                    _selectedColor == null
+                                        ? "All Bookmarks"
+                                        : "Filtered Bookmarks",
+                                    style: TextStyle(
+                                      color: isLight
+                                          ? theme.colorScheme.onSurface
+                                              .withOpacity(0.6)
+                                          : Colors.grey,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+
+                              // 3. The List of Bookmarks
+                              _buildGroupedContainer(
+                                children: filteredBookmarks.map((b) {
+                                  return _buildBookmarkEntryTile(context, b);
+                                }).toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 

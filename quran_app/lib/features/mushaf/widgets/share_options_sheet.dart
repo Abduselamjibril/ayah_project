@@ -117,189 +117,214 @@ class _ShareOptionsSheetState extends State<ShareOptionsSheet> {
     final englishSurahName = bilingualName.split(' / ').first;
     // Removed verseReference from top bar
 
-    return FractionallySizedBox(
-      heightFactor: 0.9,
-      child: Container(
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        child: Column(
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 36,
-              height: 5,
-              decoration: BoxDecoration(
-                color: isDark ? Colors.white24 : Colors.black12,
-                borderRadius: BorderRadius.circular(2.5),
+    return SafeArea(
+      top: false,
+      bottom: false,
+      child: FractionallySizedBox(
+        heightFactor: 0.9,
+        alignment: Alignment.bottomCenter,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Center(
-                    child: Text(
-                      'Share',
-                      style: TextStyle(
-                        color: theme.colorScheme.onSurface,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
+            child: Column(
+              children: [
+                  const SizedBox(height: 12),
+                  Container(
+                    width: 36,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white24 : Colors.black12,
+                      borderRadius: BorderRadius.circular(2.5),
                     ),
                   ),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      icon: Icon(Icons.chevron_left,
-                          color: accentColor, size: 28),
-                      onPressed: () {
-                        if (widget.onBackToVerseOptions != null) {
-                          widget.onBackToVerseOptions!();
-                        } else {
-                          Navigator.pop(context);
-                        }
-                      },
-                    ),
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 12.0),
-                      child: GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: CircleAvatar(
-                          radius: 15,
-                          backgroundColor: isLight
-                              ? theme.colorScheme.surfaceContainerHighest
-                              : Colors.white10,
-                          child: Icon(
-                            Icons.close,
-                            size: 18,
-                            color: isLight
-                                ? theme.colorScheme.onSurface.withOpacity(0.7)
-                                : Colors.white60,
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Center(
+                          child: Text(
+                            'Share',
+                            style: TextStyle(
+                              color: theme.colorScheme.onSurface,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
                           ),
                         ),
-                      ),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: IconButton(
+                            icon: Icon(Icons.chevron_left,
+                                color: accentColor, size: 28),
+                            onPressed: () {
+                              if (widget.onBackToVerseOptions != null) {
+                                widget.onBackToVerseOptions!();
+                              } else {
+                                Navigator.pop(context);
+                              }
+                            },
+                          ),
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 12.0),
+                            child: GestureDetector(
+                              onTap: () => Navigator.pop(context),
+                              child: CircleAvatar(
+                                radius: 15,
+                                backgroundColor: isLight
+                                    ? theme.colorScheme.surfaceContainerHighest
+                                    : Colors.white10,
+                                child: Icon(
+                                  Icons.close,
+                                  size: 18,
+                                  color: isLight
+                                      ? theme.colorScheme.onSurface
+                                          .withOpacity(0.7)
+                                      : Colors.white60,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSectionHeader('SHARE AS'),
-                    _buildCardWrapper(
-                      cardColor,
-                      [
-                        _buildShareAsOption('Image', _ShareFormat.image),
-                        Divider(height: 1, indent: 16, color: dividerColor),
-                        _buildShareAsOption('Text', _ShareFormat.text),
-                        Divider(height: 1, indent: 16, color: dividerColor),
-                        _buildShareAsOption('Text Without Diacritics',
-                            _ShareFormat.textWithoutDiacritics),
-                      ],
-                    ),
-                    _buildSectionHeader('RANGE'),
-                    _buildCardWrapper(
-                      cardColor,
-                      [
-                        _buildRangeItem(
-                          'From',
-                          '$englishSurahName: $fromVerse',
-                          accentColor,
-                          isActive: showFromPicker,
-                          onTap: () => setState(() {
-                            showFromPicker = !showFromPicker;
-                            showToPicker = false;
-                          }),
-                        ),
-                        if (showFromPicker)
-                          _buildInlinePicker(
-                              isFrom: true, englishName: englishSurahName),
-                        Divider(height: 1, indent: 16, color: dividerColor),
-                        _buildRangeItem(
-                          'To',
-                          '$englishSurahName: $toVerse',
-                          accentColor,
-                          isActive: showToPicker,
-                          onTap: () => setState(() {
-                            showToPicker = !showToPicker;
-                            showFromPicker = false;
-                          }),
-                        ),
-                        if (showToPicker)
-                          _buildInlinePicker(
-                              isFrom: false, englishName: englishSurahName),
-                      ],
-                    ),
-                    _buildSectionHeader('APP BADGE'),
-                    _buildCardWrapper(
-                      cardColor,
-                      [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Add App Badge',
-                                  style: TextStyle(fontSize: 17)),
-                              Switch.adaptive(
-                                value: includeBadge,
-                                onChanged: (v) =>
-                                    setState(() => includeBadge = v),
-                                activeColor: accentColor,
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionHeader('SHARE AS'),
+                          _buildCardWrapper(
+                            cardColor,
+                            [
+                              _buildShareAsOption('Image', _ShareFormat.image),
+                              Divider(
+                                  height: 1,
+                                  indent: 16,
+                                  color: dividerColor),
+                              _buildShareAsOption('Text', _ShareFormat.text),
+                              Divider(
+                                  height: 1,
+                                  indent: 16,
+                                  color: dividerColor),
+                              _buildShareAsOption('Text Without Diacritics',
+                                  _ShareFormat.textWithoutDiacritics),
+                            ],
+                          ),
+                          _buildSectionHeader('RANGE'),
+                          _buildCardWrapper(
+                            cardColor,
+                            [
+                              _buildRangeItem(
+                                'From',
+                                '$englishSurahName: $fromVerse',
+                                accentColor,
+                                isActive: showFromPicker,
+                                onTap: () => setState(() {
+                                  showFromPicker = !showFromPicker;
+                                  showToPicker = false;
+                                }),
+                              ),
+                              if (showFromPicker)
+                                _buildInlinePicker(
+                                    isFrom: true,
+                                    englishName: englishSurahName),
+                              Divider(
+                                  height: 1,
+                                  indent: 16,
+                                  color: dividerColor),
+                              _buildRangeItem(
+                                'To',
+                                '$englishSurahName: $toVerse',
+                                accentColor,
+                                isActive: showToPicker,
+                                onTap: () => setState(() {
+                                  showToPicker = !showToPicker;
+                                  showFromPicker = false;
+                                }),
+                              ),
+                              if (showToPicker)
+                                _buildInlinePicker(
+                                    isFrom: false,
+                                    englishName: englishSurahName),
+                            ],
+                          ),
+                          _buildSectionHeader('APP BADGE'),
+                          _buildCardWrapper(
+                            cardColor,
+                            [
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Add App Badge',
+                                        style: TextStyle(fontSize: 17)),
+                                    Switch.adaptive(
+                                      value: includeBadge,
+                                      onChanged: (v) =>
+                                          setState(() => includeBadge = v),
+                                      activeColor: accentColor,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 120),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 120),
-                  ],
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 34),
-              decoration: BoxDecoration(
-                color: bgColor,
-                border:
-                    Border(top: BorderSide(color: dividerColor, width: 0.5)),
-              ),
-              child: SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: isSharing ? null : _handleShare,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: accentColor,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: isSharing
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white))
-                      : Text('Share $verseCountLabel',
-                          style: const TextStyle(
-                              fontSize: 17, fontWeight: FontWeight.w600)),
-                ),
-              ),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 34),
+                    decoration: BoxDecoration(
+                      color: bgColor,
+                      border: Border(
+                          top: BorderSide(color: dividerColor, width: 0.5)),
+                    ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: isSharing ? null : _handleShare,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: accentColor,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: isSharing
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white))
+                            : Text('Share $verseCountLabel',
+                                style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

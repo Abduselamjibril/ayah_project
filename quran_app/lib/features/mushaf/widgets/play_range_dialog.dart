@@ -48,18 +48,20 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
     final isLight = theme.brightness == Brightness.light;
 
     return SafeArea(
+      top: false,
+      bottom: false,
       child: FractionallySizedBox(
         heightFactor: 0.9,
         alignment: Alignment.bottomCenter,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-          child: Container(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(24),
+        child: Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(24),
             ),
-            child: Column(
-              children: [
+          ),
+          child: Column(
+            children: [
                 // 1. Custom Header matching Screenshot
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
@@ -134,8 +136,7 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
                     ),
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
         ),
       ),
