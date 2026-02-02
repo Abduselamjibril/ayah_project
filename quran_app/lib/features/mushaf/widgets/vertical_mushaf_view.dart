@@ -434,8 +434,8 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                                           children: [
                                             if (_isAutoScrolling) ...[
                                               IconButton(
-                                                icon: const Icon(
-                                                    Icons.remove_circle_outline),
+                                                icon: const Icon(Icons
+                                                    .remove_circle_outline),
                                                 color: BrandColors.accent
                                                     .withOpacity(0.8),
                                                 onPressed: () =>
@@ -474,7 +474,8 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                                                         .surfaceVariant
                                                         .withOpacity(0.35),
                                                     borderRadius:
-                                                        BorderRadius.circular(22),
+                                                        BorderRadius.circular(
+                                                            22),
                                                   ),
                                                   alignment: Alignment.center,
                                                   child:
