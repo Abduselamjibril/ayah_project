@@ -87,7 +87,7 @@ class PermanentAppBar extends StatelessWidget {
               // Left: Edit button space
               SizedBox(
                 width: 80,
-                child: (selectedTabIndex == 2 || selectedTabIndex == 3)
+                child: (selectedTabIndex == 3)
                     ? TextButton(
                         onPressed: onEditBookmarks,
                         style: TextButton.styleFrom(
@@ -298,6 +298,7 @@ class SurahDrawer extends StatefulWidget {
 class _SurahDrawerState extends State<SurahDrawer>
     with SingleTickerProviderStateMixin {
   int _selectedTabIndex = 0;
+  String? _selectedBookmarkColor;
   final TextEditingController _noteSearchController = TextEditingController();
   List<NoteModel> _noteResults = [];
   bool _isSearchingNotes = false;
@@ -315,6 +316,13 @@ class _SurahDrawerState extends State<SurahDrawer>
 
   final Map<String, TextEditingController> _categoryEditControllers = {};
   final Map<String, bool> _expandedCategories = {};
+
+  static const List<Map<String, String>> _bookmarkColorCategories = [
+    {'name': 'Red', 'hex': '#EF5350'},
+    {'name': 'Yellow', 'hex': '#FFB300'},
+    {'name': 'Green', 'hex': '#66BB6A'},
+    {'name': 'Blue', 'hex': '#42A5F5'},
+  ];
 
   static const Map<int, int> _surahStartPages = {
     1: 1,
@@ -894,11 +902,19 @@ class _SurahDrawerState extends State<SurahDrawer>
       builder: (context, state, _) {
         final theme = Theme.of(context);
         final isLight = theme.brightness == Brightness.light;
-        final cardBackground =
-            isLight ? theme.scaffoldBackgroundColor : theme.cardColor;
-        final categoryMap = state.categoryNames;
+
+        if (!state.isInitialized && !state.isLoading) {
+          state.initialize();
+        }
+
+        final filteredBookmarks = _selectedBookmarkColor == null
+            ? state.bookmarks
+            : state.bookmarks
+                .where((b) => _isSameColor(b.colorHex, _selectedBookmarkColor!))
+                .toList();
+
         return SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -914,181 +930,245 @@ class _SurahDrawerState extends State<SurahDrawer>
                       ),
                 ),
               ),
-              Container(
-                decoration: BoxDecoration(
-                  color: cardBackground,
-                  borderRadius: BorderRadius.circular(16),
+              _buildBookmarkGroupedContainer(
+                context,
+                isLight,
+                children: _bookmarkColorCategories.map((cat) {
+                  final latest = state.bookmarks.firstWhere(
+                    (b) => _isSameColor(b.colorHex, cat['hex']!),
+                    orElse: () => Bookmark(
+                      surahId: 0,
+                      ayahId: 0,
+                      colorHex: cat['hex']!,
+                      createdAt: DateTime.now(),
+                      updatedAt: DateTime.now(),
+                    ),
+                  );
+
+                  return _buildBookmarkCategoryTile(
+                    context,
+                    isLight,
+                    cat['name']!,
+                    cat['hex']!,
+                    latest,
+                    state,
+                    onTap: () {
+                      setState(() {
+                        _selectedBookmarkColor =
+                            (_selectedBookmarkColor == cat['hex'])
+                                ? null
+                                : cat['hex'];
+                      });
+                    },
+                    isSelected: _selectedBookmarkColor == cat['hex'],
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 32),
+              if (filteredBookmarks.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
+                  child: Text(
+                    _selectedBookmarkColor == null
+                        ? 'All Bookmarks'
+                        : 'Filtered Bookmarks',
+                    style: TextStyle(
+                      color: isLight
+                          ? theme.colorScheme.onSurface.withOpacity(0.6)
+                          : Colors.grey,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-                child: Column(
-                  children: categoryMap.entries.map((entry) {
-                    final colorHex = entry.key;
-                    final displayName = entry.value;
-                    final matching = state.bookmarks
-                        .where((b) =>
-                            b.colorHex.toUpperCase() == colorHex.toUpperCase())
-                        .toList();
-                    Bookmark? latest;
-                    if (matching.isNotEmpty) {
-                      matching
-                          .sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-                      latest = matching.first;
-                    } else {
-                      latest = null;
-                    }
-
-                    if (!_categoryEditControllers.containsKey(colorHex)) {
-                      _categoryEditControllers[colorHex] =
-                          TextEditingController(text: displayName);
-                    }
-
-                    final expanded = _expandedCategories[colorHex] ?? false;
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Category header tile
-                        ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          leading: (() {
-                            final color = Color(
-                                int.parse(colorHex.replaceAll('#', '0xFF')));
-                            return Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: color.withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child:
-                                  Icon(Icons.bookmark, color: color, size: 20),
-                            );
-                          })(),
-                          title: _isEditingBookmarks
-                              ? TextField(
-                                  controller:
-                                      _categoryEditControllers[colorHex],
-                                  autofocus: true,
-                                  decoration: const InputDecoration(
-                                      border: InputBorder.none, isDense: true),
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 17),
-                                )
-                              : Text(displayName,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 17)),
-                          subtitle: _isEditingBookmarks
-                              ? null
-                              : Text(
-                                  latest != null
-                                      ? _getLatestBookmarkSubtitle(latest)
-                                      : (AppLocalizations.of(context)
-                                              ?.translate(
-                                                  'no_bookmarks_found') ??
-                                          'No bookmarks'),
-                                  style: TextStyle(
-                                      fontSize: 13,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withOpacity(0.5))),
-                          onTap: _isEditingBookmarks
-                              ? null
-                              : () {
-                                  setState(() {
-                                    final cur =
-                                        _expandedCategories[colorHex] ?? false;
-                                    _expandedCategories[colorHex] = !cur;
-                                  });
-                                },
-                          trailing: Icon(
-                            _expandedCategories[colorHex] == true
-                                ? Icons.expand_less
-                                : Icons.expand_more,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withOpacity(0.5),
-                          ),
-                        ),
-
-                        // List all bookmarks in this category (if any) when expanded
-                        if (expanded && matching.isNotEmpty)
-                          ...matching.map((bm) {
-                            final bmColor = Color(
-                                int.parse(colorHex.replaceAll('#', '0xFF')));
-                            return Column(
-                              children: [
-                                ListTile(
-                                  contentPadding:
-                                      const EdgeInsets.fromLTRB(72, 6, 16, 6),
-                                  leading: Container(
-                                    width: 28,
-                                    height: 28,
-                                    decoration: BoxDecoration(
-                                      color: bmColor.withOpacity(0.12),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Icon(Icons.bookmark,
-                                        color: bmColor, size: 18),
-                                  ),
-                                  title: Text(
-                                    getBilingualSurahName(context, bm.surahId) +
-                                        ' : ${bm.ayahId}',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(fontWeight: FontWeight.w600),
-                                  ),
-                                  subtitle: Text(
-                                    _getLatestBookmarkSubtitle(bm),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.copyWith(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
-                                                .withOpacity(0.6)),
-                                  ),
-                                  onTap: () {
-                                    widget.controller
-                                        .navigateToVerse(bm.surahId, bm.ayahId);
-                                    Navigator.pop(context);
-                                  },
-                                ),
-                                if (matching.last != bm)
-                                  Divider(
-                                      height: 1,
-                                      indent: 84,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withOpacity(0.06)),
-                              ],
-                            );
-                          }).toList(),
-
-                        if (entry.key != categoryMap.keys.last)
-                          Divider(
-                              height: 1,
-                              indent: 60,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withOpacity(0.06)),
-                      ],
-                    );
-                  }).toList(),
-                ),
+              _buildBookmarkGroupedContainer(
+                context,
+                isLight,
+                children: filteredBookmarks
+                    .map((b) => _buildBookmarkEntryTile(
+                          context,
+                          isLight,
+                          b,
+                        ))
+                    .toList(),
               ),
             ],
           ),
         );
       },
     );
+  }
+
+  Widget _buildBookmarkGroupedContainer(
+    BuildContext context,
+    bool isLight, {
+    required List<Widget> children,
+  }) {
+    if (children.isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    return Container(
+      decoration: BoxDecoration(
+        color:
+            isLight ? theme.scaffoldBackgroundColor : const Color(0xFF1C1C1E),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: List.generate(children.length, (index) {
+          return Column(
+            children: [
+              children[index],
+              if (index != children.length - 1)
+                Divider(
+                  height: 1,
+                  indent: 56,
+                  color: isLight
+                      ? theme.colorScheme.surface
+                      : const Color(0xFF38383A),
+                ),
+            ],
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildBookmarkCategoryTile(
+    BuildContext context,
+    bool isLight,
+    String name,
+    String hex,
+    Bookmark latest,
+    BookmarkNotesNotifier state, {
+    required VoidCallback onTap,
+    required bool isSelected,
+  }) {
+    final theme = Theme.of(context);
+    final color = Color(_parseColor(hex));
+    final hasData = latest.surahId != 0;
+    final isQuickBookmarkColor =
+        _isSameColor(state.quickBookmarkColor ?? '#EF5350', hex);
+
+    return ListTile(
+      onTap: onTap,
+      dense: true,
+      tileColor: isSelected
+          ? (isLight
+              ? theme.colorScheme.surfaceContainerHighest
+              : Colors.white.withOpacity(0.05))
+          : null,
+      leading: GestureDetector(
+        onTap: () => state.setQuickBookmarkColor(hex),
+        child: Icon(
+          isQuickBookmarkColor ? Icons.bookmark : Icons.bookmark_outline,
+          color: color,
+          size: 28,
+        ),
+      ),
+      title: Text(
+        name,
+        style: TextStyle(
+          color: isLight ? theme.colorScheme.onSurface : Colors.white,
+          fontSize: 17,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      subtitle: hasData
+          ? Text(
+              '${_formatTime(latest.updatedAt)}  ${getBilingualSurahName(context, latest.surahId)}: ${latest.ayahId}',
+              style: TextStyle(
+                color: isLight
+                    ? theme.colorScheme.onSurface.withOpacity(0.6)
+                    : const Color(0xFF8E8E93),
+                fontSize: 14,
+              ),
+            )
+          : Text(
+              'No items',
+              style: TextStyle(
+                color: isLight
+                    ? theme.colorScheme.onSurface.withOpacity(0.4)
+                    : const Color(0xFF48484A),
+                fontSize: 14,
+              ),
+            ),
+      trailing: isSelected
+          ? const Icon(Icons.check, color: Color(0xFF4CAF50), size: 20)
+          : null,
+    );
+  }
+
+  Widget _buildBookmarkEntryTile(
+    BuildContext context,
+    bool isLight,
+    Bookmark b,
+  ) {
+    final theme = Theme.of(context);
+    final name = getBilingualSurahName(context, b.surahId);
+    final color = Color(_parseColor(b.colorHex));
+
+    return Dismissible(
+      key: ValueKey('entry_${b.surahId}_${b.ayahId}_${b.updatedAt}'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        color: Colors.red,
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: const Icon(Icons.delete, color: Colors.white),
+      ),
+      onDismissed: (_) => context
+          .read<BookmarkNotesNotifier>()
+          .deleteBookmark(b.surahId, b.ayahId),
+      child: ListTile(
+        onTap: () {
+          widget.controller.navigateToVerse(b.surahId, b.ayahId);
+          Navigator.pop(context);
+        },
+        leading: Icon(Icons.bookmark, color: color, size: 24),
+        title: Text(
+          '$name: ${b.ayahId}',
+          style: TextStyle(
+            color: isLight ? theme.colorScheme.onSurface : Colors.white,
+            fontSize: 17,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        subtitle: Text(
+          _formatTime(b.updatedAt),
+          style: TextStyle(
+            color: isLight
+                ? theme.colorScheme.onSurface.withOpacity(0.6)
+                : Colors.grey,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: isLight
+              ? theme.colorScheme.onSurface.withOpacity(0.4)
+              : const Color(0xFF38383A),
+        ),
+      ),
+    );
+  }
+
+  bool _isSameColor(String hex1, String hex2) {
+    return hex1.replaceAll('#', '').toUpperCase() ==
+        hex2.replaceAll('#', '').toUpperCase();
+  }
+
+  String _formatTime(DateTime? date) {
+    if (date == null) return '';
+    final hour =
+        date.hour == 0 ? 12 : (date.hour > 12 ? date.hour - 12 : date.hour);
+    final minute = date.minute.toString().padLeft(2, '0');
+    final period = (date.hour >= 18 || date.hour < 5) ? 'at night' : 'at day';
+    return '$hour:$minute $period';
+  }
+
+  int _parseColor(String hex) {
+    final normalized = hex.replaceAll('#', '');
+    return int.tryParse('FF$normalized', radix: 16) ?? 0xFF8E8E93;
   }
 
   Widget _buildNotesTab() {
