@@ -85,6 +85,7 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
     // Listen to the bookmark state globally
     final bookmarkState = context.watch<BookmarkNotesNotifier>();
 
@@ -379,6 +380,13 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
       bool enabled = true,
       Color? iconColor}) {
     final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+    final cardBg = isLight
+        ? theme.scaffoldBackgroundColor
+        : theme.colorScheme.onSurface.withOpacity(enabled ? 0.08 : 0.04);
+    final borderColor = isLight
+        ? theme.colorScheme.surface
+        : theme.colorScheme.onSurface.withOpacity(0.08);
     return SizedBox(
       width: width,
       child: InkWell(
@@ -388,11 +396,9 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
           height: 58,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color:
-                theme.colorScheme.onSurface.withOpacity(enabled ? 0.08 : 0.04),
+            color: cardBg,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-                color: theme.colorScheme.onSurface.withOpacity(0.08), width: 1),
+            border: Border.all(color: borderColor, width: 1),
           ),
           child: Row(
             children: [
@@ -427,16 +433,22 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
       required VoidCallback onTap,
       bool enabled = true}) {
     final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+    final cardBg = isLight
+        ? theme.scaffoldBackgroundColor
+        : theme.colorScheme.onSurface.withOpacity(enabled ? 0.08 : 0.04);
+    final borderColor = isLight
+        ? theme.colorScheme.surface
+        : theme.colorScheme.onSurface.withOpacity(0.08);
     return InkWell(
       onTap: enabled ? onTap : null,
       borderRadius: BorderRadius.circular(14),
       child: Container(
         height: 56,
         decoration: BoxDecoration(
-          color: theme.colorScheme.onSurface.withOpacity(enabled ? 0.08 : 0.04),
+          color: cardBg,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-              color: theme.colorScheme.onSurface.withOpacity(0.08), width: 1),
+          border: Border.all(color: borderColor, width: 1),
         ),
         child: Center(
           child: Icon(icon,
@@ -455,6 +467,13 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
       required VoidCallback onTap,
       bool enabled = true}) {
     final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+    final cardBg = isLight
+        ? theme.scaffoldBackgroundColor
+        : theme.colorScheme.onSurface.withOpacity(enabled ? 0.08 : 0.04);
+    final borderColor = isLight
+        ? theme.colorScheme.surface
+        : theme.colorScheme.onSurface.withOpacity(0.08);
     return InkWell(
       onTap: enabled ? onTap : null,
       borderRadius: BorderRadius.circular(14),
@@ -462,10 +481,9 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
         height: 56,
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: theme.colorScheme.onSurface.withOpacity(enabled ? 0.08 : 0.04),
+          color: cardBg,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-              color: theme.colorScheme.onSurface.withOpacity(0.08), width: 1),
+          border: Border.all(color: borderColor, width: 1),
         ),
         child: Row(
           children: [
@@ -624,6 +642,7 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
       backgroundColor: Colors.transparent,
       builder: (ctx) {
         final theme = Theme.of(ctx);
+        final isLight = theme.brightness == Brightness.light;
         return FractionallySizedBox(
           heightFactor: 0.8,
           alignment: Alignment.bottomCenter,
@@ -681,7 +700,9 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                                 return Card(
                                   key: ValueKey(item),
                                   margin: const EdgeInsets.only(bottom: 8),
-                                  color: theme.colorScheme.onSurface
+                                  color: isLight
+                                    ? theme.scaffoldBackgroundColor
+                                    : theme.colorScheme.onSurface
                                       .withOpacity(0.05),
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(14)),

@@ -64,6 +64,13 @@ class _KhatmahReadingScreenState extends State<KhatmahReadingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+    final background =
+        isLight ? theme.colorScheme.surface : theme.scaffoldBackgroundColor;
+    final barSurface =
+        isLight ? theme.colorScheme.surface : theme.scaffoldBackgroundColor;
+    final circleSurface = theme.colorScheme.surfaceContainerHighest;
     final totalPages = widget.endPage - widget.startPage + 1;
     final progress = _mushafController.currentPage - widget.startPage + 1;
 
@@ -71,7 +78,7 @@ class _KhatmahReadingScreenState extends State<KhatmahReadingScreen> {
     final displayProgress = progress.clamp(0, totalPages);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: background,
       body: Stack(
         children: [
           // We use the HorizontalMushafView directly.
@@ -82,7 +89,8 @@ class _KhatmahReadingScreenState extends State<KhatmahReadingScreen> {
           ),
 
           // Custom Top Bar for Khatmah tracking
-          _buildTopAppBar(context, displayProgress, totalPages),
+          _buildTopAppBar(
+              context, displayProgress, totalPages, barSurface, circleSurface),
 
           // Custom Bottom Progress for Khatmah
           _buildProgressIndicator(displayProgress, totalPages, context),
@@ -91,7 +99,13 @@ class _KhatmahReadingScreenState extends State<KhatmahReadingScreen> {
     );
   }
 
-  Widget _buildTopAppBar(BuildContext context, int progress, int totalPages) {
+  Widget _buildTopAppBar(
+    BuildContext context,
+    int progress,
+    int totalPages,
+    Color barSurface,
+    Color circleSurface,
+  ) {
     return Positioned(
       top: 0,
       left: 0,
@@ -104,21 +118,14 @@ class _KhatmahReadingScreenState extends State<KhatmahReadingScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              color: barSurface,
             ),
             child: SafeArea(
               bottom: false,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildCloseButton(context),
+                  _buildCloseButton(context, circleSurface),
                   _buildProgressInfo(progress, totalPages, context),
                   const SizedBox(width: 48), // Balance layout
                 ],
@@ -130,12 +137,21 @@ class _KhatmahReadingScreenState extends State<KhatmahReadingScreen> {
     );
   }
 
-  Widget _buildCloseButton(BuildContext context) {
-    return IconButton(
-      icon: const Icon(Icons.close),
-      onPressed: () => Navigator.pop(context),
-      tooltip:
-          AppLocalizations.of(context)?.translate('close_tooltip') ?? 'Close',
+  Widget _buildCloseButton(BuildContext context, Color circleSurface) {
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        color: circleSurface,
+        shape: BoxShape.circle,
+      ),
+      child: IconButton(
+        padding: EdgeInsets.zero,
+        icon: const Icon(Icons.close),
+        onPressed: () => Navigator.pop(context),
+        tooltip:
+            AppLocalizations.of(context)?.translate('close_tooltip') ?? 'Close',
+      ),
     );
   }
 
@@ -170,6 +186,7 @@ class _KhatmahReadingScreenState extends State<KhatmahReadingScreen> {
     int totalPages,
     BuildContext context,
   ) {
+    final theme = Theme.of(context);
     return Positioned(
       bottom: 0,
       left: 0,
@@ -187,9 +204,9 @@ class _KhatmahReadingScreenState extends State<KhatmahReadingScreen> {
               value: (totalPages > 0)
                   ? (progress / totalPages).clamp(0.0, 1.0)
                   : 0,
-              backgroundColor: Theme.of(context).dividerColor,
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
               valueColor: AlwaysStoppedAnimation<Color>(
-                Theme.of(context).primaryColor,
+                theme.colorScheme.primary,
               ),
               minHeight: 4,
             ),

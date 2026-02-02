@@ -101,11 +101,13 @@ class _ShareOptionsSheetState extends State<ShareOptionsSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final isLight = !isDark;
 
-    final bgColor = isDark ? Colors.black : const Color(0xFFF2F2F7);
-    final cardColor = isDark ? const Color(0xFF1C1C1E) : Colors.white;
+    final bgColor = isLight ? theme.colorScheme.surface : Colors.black;
+    final cardColor =
+      isLight ? theme.scaffoldBackgroundColor : const Color(0xFF1C1C1E);
     final dividerColor =
-        isDark ? const Color(0xFF38383A) : Colors.grey.shade300;
+      isLight ? theme.colorScheme.surface : const Color(0xFF38383A);
     final accentColor = BrandColors.accent;
 
     final verseCount = (toVerse - fromVerse + 1);
@@ -141,8 +143,8 @@ class _ShareOptionsSheetState extends State<ShareOptionsSheet> {
                   Center(
                     child: Text(
                       'Share',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface,
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
                       ),
@@ -172,11 +174,16 @@ class _ShareOptionsSheetState extends State<ShareOptionsSheet> {
                         onTap: () => Navigator.pop(context),
                         child: CircleAvatar(
                           radius: 15,
-                          backgroundColor:
-                              isDark ? Colors.white10 : Colors.black12,
-                          child: Icon(Icons.close,
-                              size: 18,
-                              color: isDark ? Colors.white60 : Colors.black54),
+                          backgroundColor: isLight
+                              ? theme.colorScheme.surfaceContainerHighest
+                              : Colors.white10,
+                          child: Icon(
+                            Icons.close,
+                            size: 18,
+                            color: isLight
+                                ? theme.colorScheme.onSurface.withOpacity(0.7)
+                                : Colors.white60,
+                          ),
                         ),
                       ),
                     ),
@@ -343,6 +350,8 @@ class _ShareOptionsSheetState extends State<ShareOptionsSheet> {
 
   Widget _buildInlinePicker(
       {required bool isFrom, required String englishName}) {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
     int min, max, initial;
     if (isFrom) {
       min = 1;
@@ -362,7 +371,9 @@ class _ShareOptionsSheetState extends State<ShareOptionsSheet> {
         itemExtent: 40,
         selectionOverlay: Container(
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
+            color: isLight
+                ? theme.colorScheme.surfaceContainerHighest
+                : Colors.white.withOpacity(0.05),
             borderRadius: BorderRadius.circular(8),
           ),
         ),
@@ -383,7 +394,12 @@ class _ShareOptionsSheetState extends State<ShareOptionsSheet> {
           return Center(
             child: Text(
               "$englishName: $verseNum",
-              style: const TextStyle(fontSize: 19, color: Colors.white),
+              style: TextStyle(
+                fontSize: 19,
+                color: isLight
+                    ? theme.colorScheme.onSurface
+                    : Colors.white,
+              ),
             ),
           );
         }),

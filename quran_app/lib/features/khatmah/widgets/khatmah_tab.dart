@@ -58,11 +58,15 @@ class _KhatmahTabState extends State<KhatmahTab> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final background = theme.scaffoldBackgroundColor;
+    final isLight = theme.brightness == Brightness.light;
+    final background =
+        isLight ? theme.colorScheme.surface : theme.scaffoldBackgroundColor;
+    final cardBackground =
+        isLight ? theme.scaffoldBackgroundColor : theme.cardColor;
     final accent = BrandColors.accent;
 
-    // Use a small fixed top padding for consistent spacing across devices
-    final double topPadding = 12;
+    // Use a slightly larger top padding to match the visual spacing in the screenshot
+    final double topPadding = 28.0;
 
     Widget bodyContent;
     Widget? floatingActionButton;
@@ -97,14 +101,23 @@ class _KhatmahTabState extends State<KhatmahTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Material(
-            elevation: 2,
-            shadowColor: Colors.black.withOpacity(0.08),
+            elevation: 0,
+            color: Colors.transparent,
             child: Container(
               width: double.infinity,
-              padding: EdgeInsets.only(top: topPadding, left: 16, right: 16),
+              padding: EdgeInsets.only(
+                  top: topPadding, left: 24, right: 24, bottom: 18),
               color: background,
-              alignment: Alignment.center,
-              // No controls, just dynamic height for app bar
+              alignment: Alignment.centerLeft,
+              child: Text(
+                AppLocalizations.of(context)?.translate('khatmah') ?? 'Khatmah',
+                style: theme.textTheme.headlineLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onSurface,
+                  fontSize: 40,
+                  letterSpacing: 0.5,
+                ),
+              ),
             ),
           ),
           Expanded(
@@ -255,13 +268,19 @@ class _KhatmahTabState extends State<KhatmahTab> {
   }
 
   Widget _buildKhatmahCard(Khatmah k) {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+    final cardBackground =
+        isLight ? theme.scaffoldBackgroundColor : theme.cardColor;
     final progress = k.lastReadPage / 604;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       elevation: 2,
+      color: cardBackground,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(18.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -279,21 +298,22 @@ class _KhatmahTabState extends State<KhatmahTab> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  icon: const Icon(Icons.delete_outline,
+                      color: Colors.redAccent, size: 20),
                   onPressed: () => _confirmDelete(k.id),
+                  splashRadius: 20,
                 ),
               ],
             ),
             const SizedBox(height: 8),
             LinearProgressIndicator(
               value: progress,
-              minHeight: 10,
-              backgroundColor: Colors.grey[200],
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Theme.of(context).primaryColor,
-              ),
+              minHeight: 8,
+              backgroundColor:
+                  Theme.of(context).colorScheme.onSurface.withOpacity(0.12),
+              valueColor: AlwaysStoppedAnimation<Color>(BrandColors.accent),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -306,70 +326,96 @@ class _KhatmahTabState extends State<KhatmahTab> {
                     '{percent}',
                     (progress * 100).toStringAsFixed(1),
                   ),
-                  style: const TextStyle(color: Colors.grey),
+                  style: TextStyle(
+                      color: theme.colorScheme.onSurface.withOpacity(0.6)),
                 ),
                 Text(
                   'Page ${k.lastReadPage} / 604',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurface.withOpacity(0.6)),
                 ),
               ],
             ),
-            const Divider(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            const Divider(height: 24, thickness: 0.5),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                // Today's goal + small read button on the right
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      AppLocalizations.of(context)?.translate('todays_goal') ??
-                          'Today\'s Goal',
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          AppLocalizations.of(context)
+                                  ?.translate('todays_goal') ??
+                              'Today\'s Goal',
+                          style:
+                              const TextStyle(color: Colors.grey, fontSize: 12),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${k.startPageForToday} - ${k.targetPageForToday}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${k.startPageForToday} - ${k.targetPageForToday}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                    ElevatedButton.icon(
+                      onPressed: () => _startReading(k),
+                      icon: const Icon(Icons.menu_book, color: Colors.white),
+                      label: Text(
+                        AppLocalizations.of(context)?.translate('read_now') ??
+                            'Read Now',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: BrandColors.accent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 18, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                        minimumSize: const Size(120, 44),
+                        elevation: 2,
                       ),
                     ),
                   ],
                 ),
+
+                const SizedBox(height: 14),
+                // Centered prominent action: mark as complete
                 ElevatedButton.icon(
                   onPressed: () async {
-                    int startPage = 1;
-                    int endPage = k.targetPageForToday;
-                    int initialPage = k.lastReadPage > 0 ? k.lastReadPage : 1;
-
-                    if (initialPage > endPage) {
-                      endPage = initialPage + k.pagesPerDay;
-                    }
-
-                    if (endPage > 604) endPage = 604;
-
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => KhatmahReadingScreen(
-                          khatmahId: k.id,
-                          startPage: startPage,
-                          endPage: endPage,
-                          initialPage: initialPage,
-                        ),
-                      ),
-                    );
-
+                    final updated =
+                        k.copyWith(isCompleted: true, lastReadPage: 604);
+                    await _service.saveKhatmah(updated);
                     _loadKhatmahs();
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(AppLocalizations.of(context)
+                              ?.translate('khatmah_marked_complete') ??
+                          'Khatmah marked as complete'),
+                      duration: const Duration(seconds: 2),
+                    ));
                   },
-                  icon: const Icon(Icons.menu_book),
+                  icon: const Icon(Icons.check_circle, color: Colors.white),
                   label: Text(
-                    AppLocalizations.of(context)?.translate('read_now') ??
-                        'Read Now',
+                    AppLocalizations.of(context)?.translate('mark_complete') ??
+                        'Mark as Complete',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: BrandColors.accent,
                     foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                    minimumSize: const Size(double.infinity, 50),
+                    elevation: 2,
                   ),
                 ),
               ],
@@ -378,6 +424,32 @@ class _KhatmahTabState extends State<KhatmahTab> {
         ),
       ),
     );
+  }
+
+  void _startReading(Khatmah k) async {
+    int startPage = 1;
+    int endPage = k.targetPageForToday;
+    int initialPage = k.lastReadPage > 0 ? k.lastReadPage : 1;
+
+    if (initialPage > endPage) {
+      endPage = initialPage + k.pagesPerDay;
+    }
+
+    if (endPage > 604) endPage = 604;
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => KhatmahReadingScreen(
+          khatmahId: k.id,
+          startPage: startPage,
+          endPage: endPage,
+          initialPage: initialPage,
+        ),
+      ),
+    );
+
+    _loadKhatmahs();
   }
 
   void _confirmDelete(String id) {

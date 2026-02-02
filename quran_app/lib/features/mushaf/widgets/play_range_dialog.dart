@@ -45,6 +45,7 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
 
     return SafeArea(
       child: FractionallySizedBox(
@@ -92,9 +93,17 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: theme.colorScheme.onSurface.withOpacity(0.1),
+                            color: isLight
+                                ? theme.colorScheme.surfaceContainerHighest
+                                : theme.colorScheme.onSurface.withOpacity(0.1),
                           ),
-                          child: const Icon(Icons.close, size: 20),
+                          child: Icon(
+                            Icons.close,
+                            size: 20,
+                            color: isLight
+                                ? theme.colorScheme.onSurface.withOpacity(0.7)
+                                : null,
+                          ),
                         ),
                       ),
                     ],
@@ -134,9 +143,12 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
   }
 
   Widget _buildQuickActionsBox(ThemeData theme) {
+    final isLight = theme.brightness == Brightness.light;
     return Container(
       decoration: BoxDecoration(
-        color: theme.colorScheme.onSurface.withOpacity(0.05),
+        color: isLight
+            ? theme.scaffoldBackgroundColor
+            : theme.colorScheme.onSurface.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -156,7 +168,9 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
           ),
           Divider(
               height: 1,
-              color: theme.colorScheme.onSurface.withOpacity(0.05),
+              color: isLight
+                ? theme.colorScheme.surface
+                : theme.colorScheme.onSurface.withOpacity(0.05),
               indent: 16,
               endIndent: 16),
           _buildQuickRow(
@@ -167,7 +181,9 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
           ),
           Divider(
               height: 1,
-              color: theme.colorScheme.onSurface.withOpacity(0.05),
+              color: isLight
+                ? theme.colorScheme.surface
+                : theme.colorScheme.onSurface.withOpacity(0.05),
               indent: 16,
               endIndent: 16),
           _buildQuickRow(
@@ -186,6 +202,8 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
       {required String label,
       required String value,
       required VoidCallback onTap}) {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -198,12 +216,16 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
                 style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white.withOpacity(0.7))),
+                    color: isLight
+                        ? theme.colorScheme.onSurface.withOpacity(0.7)
+                        : Colors.white.withOpacity(0.7))),
             Text(value,
                 style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white.withOpacity(0.5))),
+                    color: isLight
+                        ? theme.colorScheme.onSurface.withOpacity(0.5)
+                        : Colors.white.withOpacity(0.5))),
           ],
         ),
       ),
@@ -211,11 +233,14 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
   }
 
   Widget _buildSegmentedControl(ThemeData theme) {
+    final isLight = theme.brightness == Brightness.light;
     return Container(
       height: 45,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: theme.colorScheme.onSurface.withOpacity(0.05),
+        color: isLight
+            ? theme.scaffoldBackgroundColor
+            : theme.colorScheme.onSurface.withOpacity(0.05),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -233,20 +258,32 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
 
   Widget _buildTabItem(int index, String label) {
     bool isActive = _selectedTabIndex == index;
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
     return Expanded(
       child: InkWell(
         onTap: () => setState(() => _selectedTabIndex = index),
         child: Container(
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: isActive ? Colors.grey.withOpacity(0.3) : Colors.transparent,
+            color: isActive
+                ? (isLight
+                    ? theme.colorScheme.surfaceContainerHighest
+                    : Colors.grey.withOpacity(0.3))
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
             label,
             style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: isActive ? Colors.white : Colors.white.withOpacity(0.5),
+              color: isActive
+                  ? (isLight
+                      ? theme.colorScheme.onSurface
+                      : Colors.white)
+                  : (isLight
+                      ? theme.colorScheme.onSurface.withOpacity(0.5)
+                      : Colors.white.withOpacity(0.5)),
             ),
           ),
         ),
@@ -281,6 +318,7 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
   }
 
   Widget _buildVerseList(ThemeData theme) {
+    final isLight = theme.brightness == Brightness.light;
     final startVerse = widget.startVerse;
     final count = _endOfSurah - startVerse + 1;
 
@@ -303,18 +341,23 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '${getBilingualSurahName(context, widget.startSurah)}: $verseNum',
+                      '$verseNum',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 16,
-                        color: Colors.white.withOpacity(0.8),
+                        color: isLight
+                            ? theme.colorScheme.onSurface.withOpacity(0.8)
+                            : Colors.white.withOpacity(0.8),
                       ),
                     ),
                     Text(
                       '$page',
                       style: TextStyle(
-                          color: Colors.white.withOpacity(0.4),
-                          fontWeight: FontWeight.bold),
+                        color: isLight
+                            ? theme.colorScheme.onSurface.withOpacity(0.4)
+                            : Colors.white.withOpacity(0.4),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -323,11 +366,13 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
                   getVerse(widget.startSurah, verseNum, verseEndSymbol: true),
                   textAlign: TextAlign.right,
                   textDirection: TextDirection.rtl,
-                  style: const TextStyle(
+                  style: TextStyle(
+                    color: isLight
+                        ? theme.colorScheme.onSurface.withOpacity(0.8)
+                        : Colors.white70,
                     fontSize: 22,
                     fontFamily: 'Amiri',
                     height: 1.6,
-                    color: Colors.white70,
                   ),
                 ),
               ],

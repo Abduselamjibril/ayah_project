@@ -78,8 +78,8 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     _loopMode = _audioPlayer.loopMode.value;
 
     _reciterName = _audioPlayer.recitationName;
-    _showExpanded =
-        _audioPlayer.isPlaying.value || _audioPlayer.hasSourceNotifier.value;
+    // Always expand if downloading, playing, or has source
+    _showExpanded = _isDownloading || _isPlaying || _hasSource;
 
     void notifyExpand() {
       widget.onExpandChanged?.call(_showExpanded);
@@ -92,10 +92,10 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
       setState(() {
         _isPlaying = playing;
         _hasSource = hasSource;
-        // Keep expanded when paused (hasSource=true), only collapse when stopped
+        // Keep expanded when downloading, playing, or hasSource
         if (playing || hasSource || _isDownloading) {
           _showExpanded = true;
-        } else {
+        } else if (!_isDownloading) {
           _showExpanded = false;
         }
         notifyExpand();
@@ -110,7 +110,9 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
       final downloading = _audioPlayer.isDownloading.value;
       setState(() {
         _isDownloading = downloading;
-        if (!downloading && !_isPlaying && !_hasSource) {
+        if (downloading) {
+          _showExpanded = true;
+        } else if (!_isPlaying && !_hasSource) {
           _showExpanded = false;
         }
         notifyExpand();
@@ -195,8 +197,9 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     final colorScheme = theme.colorScheme;
     final accent = BrandColors.accent;
 
-    // Only show expanded view when playing or explicitly expanded
-    final showExpanded = _showExpanded || _isPlaying;
+    // Always show expanded view if downloading, playing, or has source
+    final showExpanded =
+        _isDownloading || _isPlaying || _hasSource || _showExpanded;
 
     // Notify parent if expanded/collapsed state changes
     if (_lastReportedExpanded != showExpanded) {
@@ -272,27 +275,16 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
           IconButton(
             iconSize: 26,
             padding: const EdgeInsets.all(10),
-            icon: _isDownloading
-                ? SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      value: _downloadProgress > 0 ? _downloadProgress : null,
-                      strokeWidth: 3,
-                      color: accent,
-                    ),
-                  )
-                : Icon(
-                    _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                    color: accent,
-                  ),
+            icon: Icon(
+              _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+              color: accent,
+            ),
             onPressed: _isDownloading
                 ? null
                 : () async {
                     // pressing play from compact expands and starts/resumes
                     await _togglePlayPause();
-                    setState(
-                        () => _showExpanded = _isPlaying || _isDownloading);
+                    setState(() => _showExpanded = true);
                   },
           ),
         ],

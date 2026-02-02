@@ -7,6 +7,7 @@ import 'package:quran_app/core/utils/localization_helper.dart';
 import 'state/bookmark_notes_notifier.dart';
 import 'data/models/bookmark.dart';
 import '../../core/quran/qcf_quran.dart';
+import 'package:quran_app/app/app.dart';
 
 class BookmarkScreen extends StatefulWidget {
   const BookmarkScreen({super.key});
@@ -27,6 +28,8 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
     // We use watch to rebuild when bookmarks or the quickBookmarkColor changes
     final state = Provider.of<BookmarkNotesNotifier>(context, listen: true);
 
@@ -42,9 +45,10 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
             .toList();
 
     return Scaffold(
-      backgroundColor: Colors.black, // Pure black like iOS dark mode
+      backgroundColor:
+          isLight ? theme.colorScheme.surface : Colors.black, // iOS dark mode
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: isLight ? theme.colorScheme.surface : Colors.black,
         elevation: 0,
         automaticallyImplyLeading: false,
         centerTitle: true,
@@ -58,8 +62,8 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
                 child: Text(
                   AppLocalizations.of(context)?.translate('bookmarks_title') ??
                       'Bookmarks',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: isLight ? theme.colorScheme.onSurface : Colors.white,
                     fontWeight: FontWeight.w800,
                     fontSize: 18,
                   ),
@@ -71,8 +75,8 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
               Positioned(
                 left: 0,
                 child: IconButton(
-                  icon: const Icon(Icons.chevron_left,
-                      color: Color(0xFF4CAF50), size: 28),
+                  icon: Icon(Icons.chevron_left,
+                      color: BrandColors.accent, size: 28),
                   onPressed: () => Navigator.pop(context),
                 ),
               ),
@@ -81,11 +85,26 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
                 right: 0,
                 child: GestureDetector(
                   onTap: () => Navigator.pop(context),
-                  child: CircleAvatar(
-                    radius: 15,
-                    backgroundColor: Colors.white10,
-                    child: const Icon(Icons.close,
-                        size: 18, color: Colors.white60),
+                  child: Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isLight
+                          ? theme.colorScheme.surfaceContainerHighest
+                          : Colors.white10,
+                      border: Border.all(
+                        color: isLight
+                            ? theme.colorScheme.surface
+                            : Colors.white24,
+                        width: 1,
+                      ),
+                    ),
+                    child: Icon(Icons.close,
+                        size: 18,
+                        color: isLight
+                            ? theme.colorScheme.onSurface.withOpacity(0.7)
+                            : Colors.white60),
                   ),
                 ),
               ),
@@ -166,10 +185,14 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
 
   Widget _buildGroupedContainer({required List<Widget> children}) {
     if (children.isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1C1C1E), // iOS Secondary Fill
+        color: isLight
+            ? theme.scaffoldBackgroundColor
+            : const Color(0xFF1C1C1E), // iOS Secondary Fill
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -178,7 +201,13 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
             children: [
               children[index],
               if (index != children.length - 1)
-                const Divider(height: 1, indent: 56, color: Color(0xFF38383A)),
+                Divider(
+                  height: 1,
+                  indent: 56,
+                  color: isLight
+                      ? theme.colorScheme.surface
+                      : const Color(0xFF38383A),
+                ),
             ],
           );
         }),
@@ -191,6 +220,8 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
       {required VoidCallback onTap, required bool isSelected}) {
     final bool hasData = latest.surahId != 0;
     final color = Color(_parseColor(hex));
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
 
     // Check if THIS specific tile's color is the one set as the global Quick Bookmark
     final isQuickBookmarkColor =
@@ -199,7 +230,11 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
     return ListTile(
       onTap: onTap,
       dense: true,
-      tileColor: isSelected ? Colors.white.withOpacity(0.05) : null,
+      tileColor: isSelected
+          ? (isLight
+              ? theme.colorScheme.surfaceContainerHighest
+              : Colors.white.withOpacity(0.05))
+          : null,
       leading: GestureDetector(
         onTap: () {
           // UPDATE: Save this color as the global quick choice
@@ -213,16 +248,26 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
       ),
       title: Text(
         name,
-        style: const TextStyle(
-            color: Colors.white, fontSize: 17, fontWeight: FontWeight.w400),
+        style: TextStyle(
+            color: isLight ? theme.colorScheme.onSurface : Colors.white,
+        fontSize: 17,
+        fontWeight: FontWeight.w500),
       ),
       subtitle: hasData
           ? Text(
               '${_formatTime(latest.updatedAt)}  ${getBilingualSurahName(context, latest.surahId)}: ${latest.ayahId}',
-              style: const TextStyle(color: Color(0xFF8E8E93), fontSize: 14),
+              style: TextStyle(
+                  color: isLight
+                      ? theme.colorScheme.onSurface.withOpacity(0.6)
+                      : const Color(0xFF8E8E93),
+                  fontSize: 14),
             )
-          : const Text('No items',
-              style: TextStyle(color: Color(0xFF48484A), fontSize: 14)),
+          : Text('No items',
+              style: TextStyle(
+                  color: isLight
+                      ? theme.colorScheme.onSurface.withOpacity(0.4)
+                      : const Color(0xFF48484A),
+                  fontSize: 14)),
       trailing: isSelected
           ? const Icon(Icons.check, color: Color(0xFF4CAF50), size: 20)
           : null,
@@ -232,6 +277,8 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
   Widget _buildBookmarkEntryTile(BuildContext context, Bookmark b) {
     final name = getBilingualSurahName(context, b.surahId);
     final color = Color(_parseColor(b.colorHex));
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
 
     return Dismissible(
       key: ValueKey('entry_${b.surahId}_${b.ayahId}_${b.updatedAt}'),
@@ -251,10 +298,21 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
         },
         leading: Icon(Icons.bookmark, color: color, size: 24),
         title: Text('$name: ${b.ayahId}',
-            style: const TextStyle(color: Colors.white, fontSize: 16)),
+            style: TextStyle(
+                color: isLight ? theme.colorScheme.onSurface : Colors.white,
+                fontSize: 17,
+                fontWeight: FontWeight.w500)),
         subtitle: Text(_formatTime(b.updatedAt),
-            style: const TextStyle(color: Colors.grey, fontSize: 12)),
-        trailing: const Icon(Icons.chevron_right, color: Color(0xFF38383A)),
+            style: TextStyle(
+                color: isLight
+                    ? theme.colorScheme.onSurface.withOpacity(0.6)
+                    : Colors.grey,
+                fontSize: 14,
+                fontWeight: FontWeight.w500)),
+        trailing: Icon(Icons.chevron_right,
+            color: isLight
+                ? theme.colorScheme.onSurface.withOpacity(0.4)
+                : const Color(0xFF38383A)),
       ),
     );
   }
