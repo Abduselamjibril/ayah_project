@@ -174,12 +174,6 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
 
   void _onControllerChanged() {
     if (widget.controller.currentPage != _lastPage) {
-      final isAudioActive = _audioPlayer.isPlaying.value ||
-          _audioPlayer.hasSourceNotifier.value ||
-          _audioPlayer.isDownloading.value;
-      if (isAudioActive) {
-        unawaited(_audioPlayer.stop());
-      }
       _lastPage = widget.controller.currentPage;
       _sliderValue = null;
       _isSliderActive = false;
@@ -871,6 +865,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
             borderRadius: BorderRadius.circular(12),
             child: AudioPlayerCard(
               controller: widget.controller,
+              overrideCurrentPage: _getDisplayPage().round(),
               onExpandChanged: (expanded) {
                 if (_audioPlayerExpanded != expanded) {
                   setState(() {

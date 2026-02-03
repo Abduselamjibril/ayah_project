@@ -17,9 +17,14 @@ import 'package:quran_app/features/mushaf/widgets/mushaf_audio_navigation.dart';
 class AudioPlayerCard extends StatefulWidget {
   final MushafController controller;
   final ValueChanged<bool>? onExpandChanged;
-  const AudioPlayerCard(
-      {Key? key, required this.controller, this.onExpandChanged})
-      : super(key: key);
+  final int? overrideCurrentPage;
+
+  const AudioPlayerCard({
+    Key? key,
+    required this.controller,
+    this.onExpandChanged,
+    this.overrideCurrentPage,
+  }) : super(key: key);
 
   @override
   State<AudioPlayerCard> createState() => _AudioPlayerCardState();
@@ -241,52 +246,78 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
           width: 1.2,
         ),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: _openAudioPicker,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: Text(
-                      _statusText,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: accent,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: _openAudioPicker,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          _statusText,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: accent,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.keyboard_arrow_down,
+                        size: 18,
+                        color: colorScheme.onSurface.withOpacity(0.65),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    Icons.keyboard_arrow_down,
-                    size: 18,
-                    color: colorScheme.onSurface.withOpacity(0.65),
-                  ),
-                ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              IconButton(
+                iconSize: 26,
+                padding: const EdgeInsets.all(10),
+                icon: Icon(
+                  _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  color: accent,
+                ),
+                onPressed: _isDownloading
+                    ? null
+                    : () async {
+                        // From compact view: if playing, pause. Otherwise always start fresh from current page.
+                        if (_isPlaying) {
+                          await _audioPlayer.pause();
+                        } else {
+                          // Stop any existing source and start fresh from current page
+                          if (_audioPlayer.hasSource) {
+                            await _audioPlayer.stop();
+                          }
+                          await _startPlaybackFromCurrentPage();
+                        }
+                        setState(() => _showExpanded = true);
+                      },
+              ),
+            ],
+          ),
+          if (_isDownloading)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8, left: 4, right: 4),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LinearProgressIndicator(
+                  value: _downloadProgress > 0 ? _downloadProgress : null,
+                  minHeight: 3,
+                  color: accent,
+                  backgroundColor: colorScheme.onSurface.withOpacity(0.08),
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          IconButton(
-            iconSize: 26,
-            padding: const EdgeInsets.all(10),
-            icon: Icon(
-              _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-              color: accent,
-            ),
-            onPressed: _isDownloading
-                ? null
-                : () async {
-                    // pressing play from compact expands and starts/resumes
-                    await _togglePlayPause();
-                    setState(() => _showExpanded = true);
-                  },
-          ),
         ],
       ),
     );
@@ -327,17 +358,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                                 key: const ValueKey('downloading'),
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      value: _downloadProgress > 0
-                                          ? _downloadProgress
-                                          : null,
-                                      strokeWidth: 2.5,
-                                      color: accent,
-                                    ),
-                                  ),
+                                  const SizedBox.shrink(),
                                   const SizedBox(width: 8),
                                   Flexible(
                                     child: Text(
@@ -506,17 +527,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         iconSize: filled ? 28 : 24,
         padding: const EdgeInsets.all(10),
         onPressed: isDisabled || showProgress ? null : onPressed,
-        icon: showProgress
-            ? SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  value: _downloadProgress > 0 ? _downloadProgress : null,
-                  strokeWidth: 3,
-                  color: BrandColors.accent,
-                ),
-              )
-            : Icon(icon, color: iconColor),
+        icon: Icon(icon, color: iconColor),
       ),
     );
   }
@@ -581,7 +592,10 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     int endAyah;
 
     await AudioService.instance.initialize();
-    final currentPage = widget.controller.currentPage;
+
+    // Use override page if available, otherwise fallback to controller
+    final currentPage =
+        widget.overrideCurrentPage ?? widget.controller.currentPage;
     final pd = getPageData(currentPage);
 
     if (pd.isEmpty) {
@@ -596,7 +610,6 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
       final pageStartSurah = int.tryParse(firstVerse['surah'].toString()) ?? 1;
       final pageStartAyah = int.tryParse(firstVerse['start'].toString()) ?? 1;
       final pageEndSurah = int.tryParse(lastVerse['surah'].toString()) ?? 1;
-      final pageEndAyah = int.tryParse(lastVerse['end'].toString()) ?? 1;
 
       bool isHighlightOnCurrentPage = false;
       if (hs != null && hv != null) {
@@ -612,12 +625,14 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         startSurah = hs;
         startAyah = hv;
         endSurah = pageEndSurah;
-        endAyah = pageEndAyah;
+        // User requested to play until end of Surah, not just page
+        endAyah = getVerseCount(endSurah);
       } else {
         startSurah = pageStartSurah;
         startAyah = pageStartAyah;
         endSurah = pageEndSurah;
-        endAyah = pageEndAyah;
+        // User requested to play until end of Surah, not just page
+        endAyah = getVerseCount(endSurah);
       }
     }
 
