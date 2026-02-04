@@ -14,6 +14,7 @@ import '../../data/models/tafsir_model.dart';
 import '../../data/models/audio_model.dart';
 import '../../core/utils/language_utils.dart';
 import '../../data/sources/remote/translation_api.dart';
+import '../../core/ui/snackbar_utils.dart';
 import 'download_settings_page.dart';
 import 'audio_surah_list_page.dart';
 
@@ -86,12 +87,13 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     } catch (e) {
       setState(() => _isLoadingTranslations = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text((AppLocalizations.of(context)
-                          ?.translate('error_loading_translations') ??
-                      'Error loading translations: {error}')
-                  .replaceAll('{error}', '$e'))),
+        showAppSnack(
+          context,
+          (AppLocalizations.of(context)
+                      ?.translate('error_loading_translations') ??
+                  'Error loading translations: {error}')
+              .replaceAll('{error}', '$e'),
+          type: AppSnackType.error,
         );
       }
     }
@@ -108,12 +110,12 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     } catch (e) {
       setState(() => _isLoadingTafsirs = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text((AppLocalizations.of(context)
-                          ?.translate('error_loading_tafsirs') ??
-                      'Error loading tafsirs: {error}')
-                  .replaceAll('{error}', '$e'))),
+        showAppSnack(
+          context,
+          (AppLocalizations.of(context)?.translate('error_loading_tafsirs') ??
+                  'Error loading tafsirs: {error}')
+              .replaceAll('{error}', '$e'),
+          type: AppSnackType.error,
         );
       }
     }
@@ -132,9 +134,11 @@ class _DownloadsScreenState extends State<DownloadsScreen>
       setState(() => _isLoadingAudio = false);
       if (mounted) {
         _showSnack(
-            (AppLocalizations.of(context)?.translate('error_loading_audio') ??
-                    'Error loading audio recitations: {error}')
-                .replaceAll('{error}', '$e'));
+          (AppLocalizations.of(context)?.translate('error_loading_audio') ??
+                  'Error loading audio recitations: {error}')
+              .replaceAll('{error}', '$e'),
+          type: AppSnackType.error,
+        );
       }
     }
   }
@@ -184,8 +188,11 @@ class _DownloadsScreenState extends State<DownloadsScreen>
 
     // If WiFi-only is enabled, block downloads when on mobile data without prompts
     if (wifiOnly && !onWifi && onMobile) {
-      _showSnack(AppLocalizations.of(context)?.translate('wifi_only_warning') ??
-          'WiFi-only enabled. Connect to WiFi to download.');
+      _showSnack(
+        AppLocalizations.of(context)?.translate('wifi_only_warning') ??
+            'WiFi-only enabled. Connect to WiFi to download.',
+        type: AppSnackType.info,
+      );
       return false;
     }
 
@@ -193,11 +200,9 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     return true;
   }
 
-  void _showSnack(String message) {
+  void _showSnack(String message, {AppSnackType type = AppSnackType.info}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    showAppSnack(context, message, type: type);
   }
 
   Future<void> _showNoInternetDialog() async {
@@ -251,14 +256,12 @@ class _DownloadsScreenState extends State<DownloadsScreen>
       if (success) {
         await _loadDownloadedEditions();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                (AppLocalizations.of(context)?.translate('download_success') ??
-                        '{name} downloaded successfully')
-                    .replaceAll('{name}', edition.name),
-              ),
-            ),
+          showAppSnack(
+            context,
+            (AppLocalizations.of(context)?.translate('download_success') ??
+                    '{name} downloaded successfully')
+                .replaceAll('{name}', edition.name),
+            type: AppSnackType.success,
           );
         }
         await AppNotificationService.instance.complete(
@@ -269,14 +272,12 @@ class _DownloadsScreenState extends State<DownloadsScreen>
             success: true);
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                AppLocalizations.of(context)
-                        ?.translate('download_failed_try_again') ??
-                    'Download failed. Please try again.',
-              ),
-            ),
+          showAppSnack(
+            context,
+            AppLocalizations.of(context)
+                    ?.translate('download_failed_try_again') ??
+                'Download failed. Please try again.',
+            type: AppSnackType.error,
           );
         }
         await AppNotificationService.instance.complete(
@@ -324,14 +325,12 @@ class _DownloadsScreenState extends State<DownloadsScreen>
       if (success) {
         await _loadDownloadedEditions();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                (AppLocalizations.of(context)?.translate('download_success') ??
-                        '{name} downloaded successfully')
-                    .replaceAll('{name}', edition.name),
-              ),
-            ),
+          showAppSnack(
+            context,
+            (AppLocalizations.of(context)?.translate('download_success') ??
+                    '{name} downloaded successfully')
+                .replaceAll('{name}', edition.name),
+            type: AppSnackType.success,
           );
         }
         await AppNotificationService.instance.complete(
@@ -342,14 +341,12 @@ class _DownloadsScreenState extends State<DownloadsScreen>
             success: true);
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                AppLocalizations.of(context)
-                        ?.translate('download_failed_try_again') ??
-                    'Download failed. Please try again.',
-              ),
-            ),
+          showAppSnack(
+            context,
+            AppLocalizations.of(context)
+                    ?.translate('download_failed_try_again') ??
+                'Download failed. Please try again.',
+            type: AppSnackType.error,
           );
         }
         await AppNotificationService.instance.complete(
@@ -402,14 +399,12 @@ class _DownloadsScreenState extends State<DownloadsScreen>
       if (success) {
         await _loadDownloadedEditions();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                (AppLocalizations.of(context)?.translate('delete_success') ??
-                        '{name} deleted')
-                    .replaceAll('{name}', name),
-              ),
-            ),
+          showAppSnack(
+            context,
+            (AppLocalizations.of(context)?.translate('delete_success') ??
+                    '{name} deleted')
+                .replaceAll('{name}', name),
+            type: AppSnackType.success,
           );
         }
       }
@@ -448,14 +443,12 @@ class _DownloadsScreenState extends State<DownloadsScreen>
       if (success) {
         await _loadDownloadedEditions();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                (AppLocalizations.of(context)?.translate('delete_success') ??
-                        '{name} deleted')
-                    .replaceAll('{name}', name),
-              ),
-            ),
+          showAppSnack(
+            context,
+            (AppLocalizations.of(context)?.translate('delete_success') ??
+                    '{name} deleted')
+                .replaceAll('{name}', name),
+            type: AppSnackType.success,
           );
         }
       }

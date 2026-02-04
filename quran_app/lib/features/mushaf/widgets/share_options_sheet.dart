@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:quran_app/core/utils/localization_helper.dart';
 import 'package:quran_app/features/share/services/share_service.dart';
 import 'package:quran_app/app/app.dart';
+import 'package:quran_app/core/ui/snackbar_utils.dart';
 // Assuming this is where verse count logic lives,
 // if not, replace with your app's specific verse count utility
 import 'package:quran_app/core/quran/qcf_quran.dart';
@@ -52,9 +53,7 @@ class _ShareOptionsSheetState extends State<ShareOptionsSheet> {
 
   void _showSnack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
-    );
+    showAppSnack(context, message, type: AppSnackType.info);
   }
 
   Future<void> _handleShare() async {

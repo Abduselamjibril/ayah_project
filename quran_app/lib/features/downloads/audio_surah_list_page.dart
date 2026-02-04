@@ -6,6 +6,7 @@ import 'package:quran_app/data/models/chapter_model.dart';
 import 'package:quran_app/data/sources/remote/chapter_api.dart';
 import 'package:quran_app/core/services/audio_service.dart';
 import 'package:quran_app/core/services/notification_service.dart';
+import 'package:quran_app/core/ui/snackbar_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
 import 'package:quran_app/core/utils/localization_helper.dart';
@@ -55,12 +56,12 @@ class _AudioSurahListPageState extends State<AudioSurahListPage> {
       });
     } catch (e) {
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text((AppLocalizations.of(context)
-                        ?.translate('failed_load_surahs') ??
-                    'Failed to load surahs: {error}')
-                .replaceAll('{error}', '$e'))),
+      showAppSnack(
+        context,
+        (AppLocalizations.of(context)?.translate('failed_load_surahs') ??
+                'Failed to load surahs: {error}')
+            .replaceAll('{error}', '$e'),
+        type: AppSnackType.error,
       );
     }
   }
@@ -90,9 +91,7 @@ class _AudioSurahListPageState extends State<AudioSurahListPage> {
 
   void _showSnack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    showAppSnack(context, message, type: AppSnackType.info);
   }
 
   Future<void> _showNoInternetDialog() async {
@@ -145,12 +144,12 @@ class _AudioSurahListPageState extends State<AudioSurahListPage> {
       );
       if (ok) {
         setState(() => _downloadedSurahs.add(surahNumber));
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text((AppLocalizations.of(context)
-                          ?.translate('downloaded_surah') ??
-                      'Downloaded Surah {number}')
-                  .replaceAll('{number}', '$surahNumber'))),
+        showAppSnack(
+          context,
+          (AppLocalizations.of(context)?.translate('downloaded_surah') ??
+                  'Downloaded Surah {number}')
+              .replaceAll('{number}', '$surahNumber'),
+          type: AppSnackType.success,
         );
         await AppNotificationService.instance.complete(
             notifId,
@@ -160,11 +159,11 @@ class _AudioSurahListPageState extends State<AudioSurahListPage> {
                 .replaceAll('{reciter}', widget.recitation.reciterName),
             success: true);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  AppLocalizations.of(context)?.translate('download_failed') ??
-                      'Audio download failed.')),
+        showAppSnack(
+          context,
+          AppLocalizations.of(context)?.translate('download_failed') ??
+              'Audio download failed.',
+          type: AppSnackType.error,
         );
         await AppNotificationService.instance.complete(
             notifId,

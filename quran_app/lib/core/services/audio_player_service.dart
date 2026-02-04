@@ -13,6 +13,7 @@ import 'quran_audio_handler.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
 import 'package:quran_app/core/quran/qcf_quran.dart';
 import 'notification_service.dart';
+import 'package:quran_app/core/ui/snackbar_utils.dart';
 
 class AudioPlayerService {
   static final AudioPlayerService instance = AudioPlayerService._();
@@ -244,16 +245,13 @@ class AudioPlayerService {
         final ok = await downloadSurahIfNeeded(recitation, surahToDownload);
         if (!ok) {
           if (context != null && context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  (AppLocalizations.of(context)
-                              ?.translate('failed_download_surah') ??
-                          'Failed to download Surah {number}')
-                      .replaceAll('{number}', '$surahToDownload'),
-                ),
-                duration: Duration(seconds: 3),
-              ),
+            showAppSnack(
+              context,
+              (AppLocalizations.of(context)
+                          ?.translate('failed_download_surah') ??
+                      'Failed to download Surah {number}')
+                  .replaceAll('{number}', '$surahToDownload'),
+              type: AppSnackType.error,
             );
           }
           return;

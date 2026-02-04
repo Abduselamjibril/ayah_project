@@ -5,6 +5,7 @@ import '../../core/services/translation_service.dart';
 
 import '../../core/services/tafsir_service.dart';
 import '../../core/services/audio_service.dart';
+import '../../core/ui/snackbar_utils.dart';
 
 class StorageManagementPage extends StatefulWidget {
   const StorageManagementPage({super.key});
@@ -94,11 +95,11 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     }
     await _load();
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content: Text(AppLocalizations.of(context)
-                  ?.translate('all_translations_deleted') ??
-              'All translations deleted')),
+    showAppSnack(
+      context,
+      AppLocalizations.of(context)?.translate('all_translations_deleted') ??
+          'All translations deleted',
+      type: AppSnackType.success,
     );
   }
 
@@ -131,11 +132,11 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     }
     await _load();
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content: Text(
-              AppLocalizations.of(context)?.translate('all_tafsir_deleted') ??
-                  'All tafsir deleted')),
+    showAppSnack(
+      context,
+      AppLocalizations.of(context)?.translate('all_tafsir_deleted') ??
+          'All tafsir deleted',
+      type: AppSnackType.success,
     );
   }
 
@@ -168,11 +169,11 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     }
     await _load();
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content: Text(
-              AppLocalizations.of(context)?.translate('all_audio_deleted') ??
-                  'All audio deleted')),
+    showAppSnack(
+      context,
+      AppLocalizations.of(context)?.translate('all_audio_deleted') ??
+          'All audio deleted',
+      type: AppSnackType.success,
     );
   }
 

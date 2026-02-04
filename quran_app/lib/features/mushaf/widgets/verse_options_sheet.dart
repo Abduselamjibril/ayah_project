@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:quran_app/app/app.dart';
+import 'package:quran_app/core/ui/snackbar_utils.dart';
 import 'package:quran_app/core/quran/qcf_quran.dart';
 import 'package:quran_app/core/services/audio_player_service.dart';
 import 'package:quran_app/features/bookmarks/bookmark_screen.dart';
@@ -920,8 +921,7 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
 
   void _showSnack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), duration: const Duration(seconds: 2)));
+    showAppSnack(context, message, type: AppSnackType.info);
   }
 
   String _getCategoryName(String hex) {

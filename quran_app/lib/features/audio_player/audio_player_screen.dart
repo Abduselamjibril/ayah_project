@@ -7,6 +7,7 @@ import 'package:quran_app/core/i18n/app_localizations.dart';
 import 'package:quran_app/core/quran/qcf_quran.dart';
 import 'package:quran_app/core/services/audio_player_service.dart';
 import 'package:quran_app/core/services/audio_service.dart';
+import 'package:quran_app/core/ui/snackbar_utils.dart';
 import 'package:quran_app/core/utils/localization_helper.dart';
 import 'package:quran_app/data/models/audio_model.dart';
 import 'package:quran_app/features/downloads/audio_surah_list_page.dart';
@@ -704,7 +705,6 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
 
   void _showSnack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    showAppSnack(context, message, type: AppSnackType.info);
   }
 }

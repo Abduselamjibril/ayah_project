@@ -12,6 +12,7 @@ import 'package:quran_app/features/mushaf/widgets/surah_drawer.dart';
 import '../../daily_verse/verse_of_the_day_screen.dart';
 import 'package:quran_app/app/app.dart';
 import 'package:quran_app/core/ui/responsive.dart';
+import 'package:quran_app/core/ui/snackbar_utils.dart';
 
 class MushafScreen extends StatefulWidget {
   const MushafScreen({super.key});
@@ -25,6 +26,7 @@ class _MushafScreenState extends State<MushafScreen> {
   final MushafController _controller = MushafController();
 
   bool _appBarVisible = true;
+  DateTime? _lastBackPress;
 
   @override
   void dispose() {
@@ -34,22 +36,46 @@ class _MushafScreenState extends State<MushafScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: _scaffoldKey,
-      drawer: SurahDrawer(
-        onSurahSelected: _jumpToSurah,
-        controller: _controller,
-      ),
-      body: Stack(
-        children: [
-          ValueListenableBuilder<ScrollMode>(
-            valueListenable: _controller.scrollModeListenable,
-            builder: (context, mode, _) => _buildMushafView(mode),
-          ),
-          _buildFloatingAppBar(context),
-        ],
+    return WillPopScope(
+      onWillPop: _handleBackPress,
+      child: Scaffold(
+        key: _scaffoldKey,
+        drawer: SurahDrawer(
+          onSurahSelected: _jumpToSurah,
+          controller: _controller,
+        ),
+        body: Stack(
+          children: [
+            ValueListenableBuilder<ScrollMode>(
+              valueListenable: _controller.scrollModeListenable,
+              builder: (context, mode, _) => _buildMushafView(mode),
+            ),
+            _buildFloatingAppBar(context),
+          ],
+        ),
       ),
     );
+  }
+
+  Future<bool> _handleBackPress() async {
+    final scaffoldState = _scaffoldKey.currentState;
+    if (scaffoldState?.isDrawerOpen == true) {
+      Navigator.of(context).pop();
+      return false;
+    }
+
+    final now = DateTime.now();
+    if (_lastBackPress != null &&
+        now.difference(_lastBackPress!) <= const Duration(seconds: 2)) {
+      return true;
+    }
+    _lastBackPress = now;
+
+    final message =
+        AppLocalizations.of(context)?.translate('press_back_again_to_exit') ??
+            'Press back again to exit';
+    showAppSnack(context, message, type: AppSnackType.info);
+    return false;
   }
 
   Widget _buildFloatingAppBar(BuildContext context) {

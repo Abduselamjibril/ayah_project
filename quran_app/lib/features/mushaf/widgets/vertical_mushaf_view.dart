@@ -330,7 +330,6 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
             builder: (context, child) {
               final currentDouble = _getDisplayPage();
               final currentPage = currentDouble.round();
-              final surahName = _surahNameForPage(currentPage);
               final isSliding = _isSliderActive;
               final panelMaxWidth =
                   ResponsiveLayout.scaled(context, 540, min: 360, max: 640);
@@ -344,48 +343,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 200),
-                      child: isSliding
-                          ? Card(
-                              elevation: 12,
-                              color: Theme.of(context).colorScheme.surface,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 10),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      surahName,
-                                      style: TextStyle(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Page ${currentPage.toString().padLeft(2, '0')}',
-                                      style: TextStyle(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-                    const SizedBox(height: 8),
+                    if (isSliding) const SizedBox(height: 8),
                     _buildAudioPlayerCard(),
                     const SizedBox(height: 8),
                     Center(
@@ -570,6 +528,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
       builder: (context, livePage, _) {
         final currentDouble = _getDisplayPage();
         final currentPage = currentDouble.round();
+        final surahName = _surahNameForPage(currentPage);
 
         return Positioned(
           left: 10,
@@ -670,79 +629,138 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                             onTapDown: (details) =>
                                 handleDrag(details.localPosition.dy),
                             onTapUp: (_) => handleEnd(),
-                            child: Container(
-                              width: compactSlider ? 40 : 48,
-                              decoration: BoxDecoration(
-                                color: notPassedColor,
-                                borderRadius:
-                                    BorderRadius.circular(14), // More rounded
-                                // Removed boxShadow for no shadow
-                                border: Border.all(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .outline
-                                      .withOpacity(0.18),
-                                  width: 1.2,
-                                ),
-                              ),
+                            child: SizedBox(
+                              width: 48 + 120,
                               child: Stack(
+                                clipBehavior: Clip.none,
                                 children: [
-                                  // Passed area (darker area)
-                                  Positioned(
-                                    left: 0,
-                                    right: 0,
-                                    top: 0,
-                                    height: pillTop + pillHeight / 2,
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: passedColor,
-                                        borderRadius: BorderRadius.vertical(
-                                          top: Radius.circular(14),
-                                          bottom: Radius.circular(0),
-                                        ),
+                                  Container(
+                                    width: 48,
+                                    decoration: BoxDecoration(
+                                      color: notPassedColor,
+                                      borderRadius: BorderRadius.circular(
+                                          14), // More rounded
+                                      // Removed boxShadow for no shadow
+                                      border: Border.all(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .outline
+                                            .withOpacity(0.18),
+                                        width: 1.2,
                                       ),
                                     ),
+                                    child: Stack(
+                                      children: [
+                                        // Passed area (darker area)
+                                        Positioned(
+                                          left: 0,
+                                          right: 0,
+                                          top: 0,
+                                          height: pillTop + pillHeight / 2,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: passedColor,
+                                              borderRadius:
+                                                  BorderRadius.vertical(
+                                                top: Radius.circular(14),
+                                                bottom: Radius.circular(0),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        // The pill
+                                        Positioned(
+                                          left: 0,
+                                          right: 0,
+                                          top: pillTop.toDouble(),
+                                          height: pillHeight,
+                                          child: Center(
+                                            child: Container(
+                                              width: 44,
+                                              height: pillHeight,
+                                              decoration: BoxDecoration(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .primary,
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                                border: Border.all(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .outline
+                                                      .withOpacity(0.18),
+                                                  width: 1.2,
+                                                ),
+                                                // No shadow
+                                              ),
+                                              child: Center(
+                                                child: Text(
+                                                  currentPage.toString(),
+                                                  style: TextStyle(
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onPrimary,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: fontSize,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  // The pill
-                                  Positioned(
-                                    left: 0,
-                                    right: 0,
-                                    top: pillTop.toDouble(),
-                                    height: pillHeight,
-                                    child: Center(
+                                  if (_isSliderActive)
+                                    Positioned(
+                                      left: 56,
+                                      top: ((pillTop - 6).clamp(0, trackHeight))
+                                          .toDouble(),
                                       child: Container(
-                                        width: compactSlider ? 36 : 44,
-                                        height: pillHeight,
                                         decoration: BoxDecoration(
                                           color: Theme.of(context)
                                               .colorScheme
-                                              .primary,
+                                              .surfaceVariant
+                                              .withOpacity(0.95),
                                           borderRadius:
-                                              BorderRadius.circular(20),
+                                              BorderRadius.circular(14),
                                           border: Border.all(
                                             color: Theme.of(context)
                                                 .colorScheme
                                                 .outline
-                                                .withOpacity(0.18),
-                                            width: 1.2,
+                                                .withOpacity(0.2),
                                           ),
-                                          // No shadow
                                         ),
-                                        child: Center(
-                                          child: Text(
-                                            currentPage.toString(),
-                                            style: TextStyle(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onPrimary,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: fontSize,
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 6),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              surahName,
+                                              style: TextStyle(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface,
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                              ),
                                             ),
-                                          ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              'Page ${currentPage.toString().padLeft(2, '0')}',
+                                              style: TextStyle(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface,
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ),
-                                  ),
                                 ],
                               ),
                             ),
@@ -779,7 +797,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
               final t = (currentDouble - 1) / 603;
               final pillTop = (trackHeight * t).clamp(0, trackHeight);
               final normalPillHeight = compactSlider ? 22.0 : pillHeight;
-              final normalBarWidth = compactSlider ? 26.0 : 32.0;
+              final normalBarWidth = 32.0;
 
               // Colors for progress and background (theme-based, mushaf page aware)
               final Color passedColor =
@@ -794,62 +812,116 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                 onPanEnd: (_) => handleEnd(),
                 onTapDown: (details) => handleDrag(details.localPosition.dy),
                 onTapUp: (_) => handleEnd(),
-                child: Container(
-                  width: normalBarWidth,
-                  decoration: BoxDecoration(
-                    color: notPassedColor,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .outline
-                          .withOpacity(0.18),
-                      width: 1.2,
-                    ),
-                  ),
+                child: SizedBox(
+                  width: normalBarWidth + 120,
                   child: Stack(
+                    clipBehavior: Clip.none,
                     children: [
-                      // Passed area (darker area)
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        top: 0,
-                        height: pillTop + normalPillHeight / 2,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: passedColor,
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(10),
-                              bottom: Radius.circular(0),
+                      Container(
+                        width: normalBarWidth,
+                        decoration: BoxDecoration(
+                          color: notPassedColor,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .outline
+                                .withOpacity(0.18),
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Stack(
+                          children: [
+                            // Passed area (darker area)
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              top: 0,
+                              height: pillTop + normalPillHeight / 2,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: passedColor,
+                                  borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(10),
+                                    bottom: Radius.circular(0),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // The pill (expanded to fit bar width)
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              top: pillTop.toDouble(),
+                              child: Container(
+                                height: normalPillHeight,
+                                decoration: BoxDecoration(
+                                  color: BrandColors.accent,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  '$currentPage',
+                                  textScaler: const TextScaler.linear(1.0),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: fontSize,
+                                    height: 1.05,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_isSliderActive)
+                        Positioned(
+                          left: normalBarWidth + 8,
+                          top: ((pillTop - 6).clamp(0, trackHeight)).toDouble(),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceVariant
+                                  .withOpacity(0.95),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outline
+                                    .withOpacity(0.2),
+                              ),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  surahName,
+                                  style: TextStyle(
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Page ${currentPage.toString().padLeft(2, '0')}',
+                                  style: TextStyle(
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                      ),
-                      // The pill (expanded to fit bar width)
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        top: pillTop.toDouble(),
-                        child: Container(
-                          height: normalPillHeight,
-                          decoration: BoxDecoration(
-                            color: BrandColors.accent,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            '$currentPage',
-                            textScaler: const TextScaler.linear(1.0),
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w800,
-                              fontSize: fontSize,
-                              height: 1.05,
-                            ),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),

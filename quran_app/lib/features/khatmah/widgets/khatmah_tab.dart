@@ -5,6 +5,7 @@ import '../services/khatmah_service.dart';
 import '../../mushaf/controller/mushaf_controller.dart';
 import '../screens/khatmah_reading_screen.dart';
 import 'package:quran_app/app/app.dart';
+import 'package:quran_app/core/ui/snackbar_utils.dart';
 
 class KhatmahTab extends StatefulWidget {
   final MushafController controller;
@@ -395,12 +396,13 @@ class _KhatmahTabState extends State<KhatmahTab> {
                         k.copyWith(isCompleted: true, lastReadPage: 604);
                     await _service.saveKhatmah(updated);
                     _loadKhatmahs();
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text(AppLocalizations.of(context)
+                    showAppSnack(
+                      context,
+                      AppLocalizations.of(context)
                               ?.translate('khatmah_marked_complete') ??
-                          'Khatmah marked as complete'),
-                      duration: const Duration(seconds: 2),
-                    ));
+                          'Khatmah marked as complete',
+                      type: AppSnackType.success,
+                    );
                   },
                   icon: const Icon(Icons.check_circle, color: Colors.white),
                   label: Text(
