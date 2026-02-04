@@ -1341,8 +1341,10 @@ class _SurahDrawerState extends State<SurahDrawer>
     final colorCategories = [
       {'name': 'Red', 'hex': '#EF5350'},
       {'name': 'Yellow', 'hex': '#FFB300'},
+      {'name': 'Orange', 'hex': '#FFA726'},
       {'name': 'Green', 'hex': '#66BB6A'},
       {'name': 'Blue', 'hex': '#42A5F5'},
+      {'name': 'Purple', 'hex': '#AB47BC'},
     ];
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),

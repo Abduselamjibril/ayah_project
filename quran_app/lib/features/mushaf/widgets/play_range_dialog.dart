@@ -113,7 +113,7 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
               ),
 
               Expanded(
-                child: SingleChildScrollView(
+                child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,7 +131,7 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
                       const SizedBox(height: 16),
 
                       // 4. Dynamic Content List
-                      _buildActiveListContent(theme),
+                      Expanded(child: _buildActiveListContent(theme)),
                     ],
                   ),
                 ),
@@ -291,6 +291,7 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
   }
 
   Widget _buildActiveListContent(ThemeData theme) {
+    final isLight = theme.brightness == Brightness.light;
     Widget child;
     switch (_selectedTabIndex) {
       case 0:
@@ -311,7 +312,21 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
       switchOutCurve: Curves.easeInOut,
       child: KeyedSubtree(
         key: ValueKey(_selectedTabIndex),
-        child: child,
+        child: Container(
+          decoration: BoxDecoration(
+            color: isLight
+                ? theme.scaffoldBackgroundColor
+                : theme.colorScheme.onSurface.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+              child: child,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -321,10 +336,14 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
     final startVerse = widget.startVerse;
     final count = _endOfSurah - startVerse + 1;
 
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+    return ListView.separated(
+      key: const PageStorageKey<String>('play_range_verse_list'),
       itemCount: count,
+      separatorBuilder: (context, index) => Divider(
+          height: 1,
+          color: isLight
+              ? theme.colorScheme.onSurface.withOpacity(0.08)
+              : theme.colorScheme.onSurface.withOpacity(0.06)),
       itemBuilder: (context, index) {
         final verseNum = startVerse + index;
         final page = getPageNumber(widget.startSurah, verseNum);
@@ -340,7 +359,7 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '$verseNum',
+                      '${getBilingualSurahName(context, widget.startSurah)}: $verseNum',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 16,
@@ -383,54 +402,115 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
   }
 
   Widget _buildPageList(ThemeData theme) {
+    final isLight = theme.brightness == Brightness.light;
     final startPage = _currentPage + 1;
     if (startPage > 604) return const Center(child: Text("No more pages"));
     final count = 604 - startPage + 1;
 
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+    return ListView.separated(
+      key: const PageStorageKey<String>('play_range_page_list'),
       itemCount: count,
+      separatorBuilder: (context, index) => Divider(
+          height: 1,
+          color: isLight
+              ? theme.colorScheme.onSurface.withOpacity(0.08)
+              : theme.colorScheme.onSurface.withOpacity(0.06)),
       itemBuilder: (context, index) {
         final pageNum = startPage + index;
-        return ListTile(
-          contentPadding: EdgeInsets.zero,
+        final pageData = getPageData(pageNum);
+        final first = pageData.isNotEmpty ? pageData.first : null;
+        final trailingText = first == null
+            ? ''
+            : '${getBilingualSurahName(context, int.parse(first['surah'].toString()))}: ${int.parse(first['start'].toString())}';
+        return InkWell(
           onTap: () {
-            final pageData = getPageData(pageNum);
             if (pageData.isNotEmpty) {
               final last = pageData.last;
               _playTo(int.parse(last['surah'].toString()),
                   int.parse(last['end'].toString()));
             }
           },
-          title: Text("Page $pageNum",
-              style: const TextStyle(fontWeight: FontWeight.w600)),
-          trailing: const Icon(Icons.chevron_right, size: 18),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Page $pageNum',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: isLight
+                        ? theme.colorScheme.onSurface.withOpacity(0.8)
+                        : Colors.white.withOpacity(0.8),
+                  ),
+                ),
+                Text(
+                  trailingText,
+                  style: TextStyle(
+                    color: isLight
+                        ? theme.colorScheme.onSurface.withOpacity(0.4)
+                        : Colors.white.withOpacity(0.4),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
   }
 
   Widget _buildSurahList(ThemeData theme) {
+    final isLight = theme.brightness == Brightness.light;
     final startSurah = widget.startSurah + 1;
     if (startSurah > 114) return const Center(child: Text("No more surahs"));
     final count = 114 - startSurah + 1;
 
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+    return ListView.separated(
+      key: const PageStorageKey<String>('play_range_surah_list'),
       itemCount: count,
+      separatorBuilder: (context, index) => Divider(
+          height: 1,
+          color: isLight
+              ? theme.colorScheme.onSurface.withOpacity(0.08)
+              : theme.colorScheme.onSurface.withOpacity(0.06)),
       itemBuilder: (context, index) {
         final surahNum = startSurah + index;
-        return ListTile(
-          contentPadding: EdgeInsets.zero,
+        final firstPage = getPageNumber(surahNum, 1);
+        return InkWell(
           onTap: () {
             final totalV = getVerseCount(surahNum);
             _playTo(surahNum, totalV);
           },
-          title: Text(getBilingualSurahName(context, surahNum),
-              style: const TextStyle(fontWeight: FontWeight.w600)),
-          trailing: const Icon(Icons.chevron_right, size: 18),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  getBilingualSurahName(context, surahNum),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: isLight
+                        ? theme.colorScheme.onSurface.withOpacity(0.8)
+                        : Colors.white.withOpacity(0.8),
+                  ),
+                ),
+                Text(
+                  'Page $firstPage',
+                  style: TextStyle(
+                    color: isLight
+                        ? theme.colorScheme.onSurface.withOpacity(0.4)
+                        : Colors.white.withOpacity(0.4),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );

@@ -44,8 +44,10 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
   static const List<String> _bookmarkColors = [
     '#EF5350', // Red
     '#FFB300', // Yellow
+    '#FFA726', // Orange
     '#66BB6A', // Green
     '#42A5F5', // Blue
+    '#AB47BC', // Purple
   ];
 
   static const List<String> _defaultSectionOrder = [
@@ -925,8 +927,10 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
   String _getCategoryName(String hex) {
     if (hex.toUpperCase() == '#EF5350') return 'Red';
     if (hex.toUpperCase() == '#FFB300') return 'Yellow';
+    if (hex.toUpperCase() == '#FFA726') return 'Orange';
     if (hex.toUpperCase() == '#66BB6A') return 'Green';
     if (hex.toUpperCase() == '#42A5F5') return 'Blue';
+    if (hex.toUpperCase() == '#AB47BC') return 'Purple';
     return 'Bookmark';
   }
 
