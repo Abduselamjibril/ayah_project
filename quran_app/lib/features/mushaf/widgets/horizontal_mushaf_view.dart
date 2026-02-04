@@ -8,6 +8,7 @@ import '../../../core/quran/qcf_quran.dart';
 import '../../../core/services/audio_player_service.dart';
 import '../../audio_player/audio_player_screen.dart';
 import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart';
+import 'package:quran_app/features/highlights/state/highlight_notifier.dart';
 import '../controller/mushaf_controller.dart';
 import 'surah_info_sheet.dart';
 import 'package:quran_app/app/app.dart';
@@ -144,6 +145,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   @override
   Widget build(BuildContext context) {
     final bookmarkState = context.watch<BookmarkNotesNotifier>();
+    final highlightState = context.watch<HighlightNotifier>();
     return Stack(
       children: [
         AnimatedOpacity(
@@ -252,6 +254,14 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     if (highlightedSurah == surah && highlightedVerse == verse) {
       return Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5);
     }
+    // Highlight logic
+    final highlight =
+        context.read<HighlightNotifier>().getHighlight(surah, verse);
+    if (highlight != null) {
+      final color = Color(_parseColor(highlight.colorHex));
+      return color.withOpacity(0.25);
+    }
+    // Bookmark logic
     final b = state.bookmarkForVerse(surah, verse);
     if (b != null) {
       if (b.isKhatmahPin) return null;

@@ -8,6 +8,8 @@ import 'package:quran_app/core/quran/qcf_quran.dart';
 import 'package:quran_app/core/services/audio_player_service.dart';
 import 'package:quran_app/features/bookmarks/bookmark_screen.dart';
 import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart';
+import 'package:quran_app/features/highlights/state/highlight_notifier.dart';
+import 'package:quran_app/features/highlights/data/models/highlight.dart';
 import 'package:quran_app/features/downloads/downloads_screen.dart';
 import 'package:quran_app/features/share/presentation/dialogs/share_preview_dialog.dart';
 import 'package:quran_app/features/mushaf/screens/verse_details_screen.dart';
@@ -506,10 +508,11 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
   }
 
   Widget _buildHighlightRow(
-      BuildContext context, BookmarkNotesNotifier state, int surah, int verse) {
+      BuildContext context, BookmarkNotesNotifier _, int surah, int verse) {
+    final highlightState = context.watch<HighlightNotifier>();
     final chips = <Widget>[];
-    final existingColor =
-        state.bookmarkForVerse(surah, verse)?.colorHex.toLowerCase();
+    final existingHighlight = highlightState.getHighlight(surah, verse);
+    final existingColor = existingHighlight?.colorHex.toLowerCase();
     for (var i = 0; i < _bookmarkColors.length; i++) {
       final hex = _bookmarkColors[i];
       final color = Color(_parseColor(hex));
@@ -517,16 +520,25 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
       chips.add(Padding(
         padding: const EdgeInsets.only(right: 10),
         child: InkWell(
-          onTap: () {
+          onTap: () async {
             Navigator.pop(context);
             if (isSelected) {
-              state.deleteBookmark(surah, verse);
+              await highlightState.removeHighlight(surah, verse);
+              _showSnack(AppLocalizations.of(context)
+                      ?.translate('highlight_removed') ??
+                  'Highlight removed');
             } else {
-              state.saveBookmark(
+              await highlightState.addHighlight(
+                Highlight(
                   surahId: surah,
                   ayahId: verse,
                   colorHex: hex,
-                  category: _getCategoryName(hex));
+                  createdAt: DateTime.now(),
+                ),
+              );
+              _showSnack(
+                  AppLocalizations.of(context)?.translate('highlight_added') ??
+                      'Verse highlighted');
             }
           },
           borderRadius: BorderRadius.circular(20),
@@ -567,16 +579,6 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
               'Set as last read', onTap: () {
         Navigator.pop(context);
         unawaited(_toggleLastReadAt(state, surah, verse));
-      }),
-      const SizedBox(height: 10),
-      _buildActionCard(context,
-          width: double.infinity,
-          icon: Icons.note_add_outlined,
-          label: AppLocalizations.of(context)?.translate('write_note') ??
-              'Write note',
-          trailing: Icons.chevron_right, onTap: () {
-        Navigator.pop(context);
-        unawaited(_openNoteSheet(rootContext, state, surah, verse));
       }),
       const SizedBox(height: 10),
       _buildActionCard(context,

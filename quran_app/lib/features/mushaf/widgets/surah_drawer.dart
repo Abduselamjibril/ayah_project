@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart';
 import 'package:quran_app/features/bookmarks/data/models/note.dart';
 import 'package:quran_app/features/bookmarks/data/models/bookmark.dart';
+import 'package:quran_app/features/highlights/state/highlight_notifier.dart';
+import 'package:quran_app/features/highlights/data/models/highlight.dart';
 import '../controller/mushaf_controller.dart';
 import '../../../core/quran/data/suwar.dart';
 import '../../../core/quran/data/juzs.dart';
@@ -87,25 +89,7 @@ class PermanentAppBar extends StatelessWidget {
               // Left: Edit button space
               SizedBox(
                 width: 80,
-                child: (selectedTabIndex == 3)
-                    ? TextButton(
-                        onPressed: onEditBookmarks,
-                        style: TextButton.styleFrom(
-                            alignment: Alignment.centerLeft),
-                        child: Text(
-                          isEditingBookmarks
-                              ? (AppLocalizations.of(context)
-                                      ?.translate('done') ??
-                                  'Done')
-                              : (AppLocalizations.of(context)
-                                      ?.translate('edit') ??
-                                  'Edit'),
-                          style: const TextStyle(
-                              color: BrandColors.accent,
-                              fontWeight: FontWeight.bold),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
+                child: const SizedBox.shrink(),
               ),
               // Center: Surah/Juz toggle or Highlights pills
               if (selectedTabIndex == 0)
@@ -131,9 +115,10 @@ class PermanentAppBar extends StatelessWidget {
                           height: 34,
                           padding: const EdgeInsets.all(2),
                           decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest,
+                            color:
+                                Theme.of(context).brightness == Brightness.light
+                                    ? const Color(0xFFE3E3E3)
+                                    : const Color(0xFF2C2C2E),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -203,13 +188,16 @@ class _SurahJuzToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+    final trackColor =
+        isLight ? const Color(0xFFE3E3E3) : const Color(0xFF2C2C2E);
     return SizedBox(
       width: 180,
       child: Container(
         height: 34,
         padding: const EdgeInsets.all(2),
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest,
+          color: trackColor,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -248,32 +236,27 @@ class _ToggleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+    final selectedBg = isLight ? Colors.white : const Color(0xFF5A5A5D);
+    final selectedText = isLight ? const Color(0xFF111111) : Colors.white;
+    final unselectedText =
+        isLight ? const Color(0xFF7A7A7A) : const Color(0xFFC8C8CC);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color:
-              isSelected ? Theme.of(context).canvasColor : Colors.transparent,
+          color: isSelected ? selectedBg : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 2,
-                      offset: const Offset(0, 1))
-                ]
-              : null,
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 13,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            color: isSelected
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            color: isSelected ? selectedText : unselectedText,
           ),
         ),
       ),
@@ -307,6 +290,8 @@ class _SurahDrawerState extends State<SurahDrawer>
   bool _isEditingBookmarks = false;
   bool _isEditingNotes = false;
   int _highlightsMode = 0; // 0: Surahs, 1: Colors
+  final Set<int> _collapsedHighlightSurahs = {};
+  final Set<String> _collapsedHighlightColors = {};
 
   final ScrollController _drawerScrollController = ScrollController();
   final Map<int, GlobalKey> _juzHeaderKeys = {};
@@ -1176,104 +1161,311 @@ class _SurahDrawerState extends State<SurahDrawer>
     final isLight = theme.brightness == Brightness.light;
     final cardBackground =
         isLight ? theme.scaffoldBackgroundColor : theme.cardColor;
-    return Column(
+    return Consumer<HighlightNotifier>(
+      builder: (context, highlightState, _) {
+        // Ensure highlights are loaded
+        if (!highlightState.highlights.isNotEmpty &&
+            highlightState is HighlightNotifier) {
+          highlightState.initialize();
+        }
+        final highlights = highlightState.highlights;
+        // Search logic
+        String searchQuery = _noteSearchController.text.trim();
+        List<Highlight> filteredHighlights = highlights;
+        if (searchQuery.isNotEmpty) {
+          filteredHighlights = highlights.where((h) {
+            final verseText = _getVerseTextCached(h.surahId, h.ayahId);
+            final surahName = getBilingualSurahName(context, h.surahId);
+            return verseText
+                    .toLowerCase()
+                    .contains(searchQuery.toLowerCase()) ||
+                surahName.toLowerCase().contains(searchQuery.toLowerCase());
+          }).toList();
+        }
+        if (highlights.isEmpty) {
+          return _buildEmptyState(
+            icon: Icons.edit_rounded,
+            title: AppLocalizations.of(context)
+                    ?.translate('no_highlights_found') ??
+                'No Highlights',
+            message: AppLocalizations.of(context)
+                    ?.translate('no_highlights_instruction') ??
+                'Touch and hold a verse, then choose a highlight color.',
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 24, top: 24, bottom: 0),
+              child: Text(
+                'Highlight',
+                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontSize: 36,
+                        ) ??
+                    const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 36,
+                    ),
+                textAlign: TextAlign.left,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Container(
+                height: 44,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.12),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.search,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.6)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _noteSearchController,
+                        decoration: InputDecoration(
+                          hintText: AppLocalizations.of(context)
+                                  ?.translate('search_highlights') ??
+                              'Search',
+                          hintStyle:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withOpacity(0.6),
+                                  ),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        onChanged: (_) => setState(() {}),
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Expanded(
+              child: _highlightsMode == 0
+                  ? _buildHighlightsGroupedBySurah(
+                      filteredHighlights, theme, isLight)
+                  : _buildHighlightsGroupedByColor(
+                      filteredHighlights, theme, isLight),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildHighlightsGroupedBySurah(
+      List<Highlight> highlights, ThemeData theme, bool isLight) {
+    final Map<int, List<Highlight>> surahMap = {};
+    for (final h in highlights) {
+      surahMap.putIfAbsent(h.surahId, () => []).add(h);
+    }
+    final surahIds = surahMap.keys.toList()..sort();
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 16, top: 20, bottom: 8),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              (AppLocalizations.of(context)?.translate('tab_notes') ??
-                  'Highlights'),
-              style: theme.textTheme.headlineLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.onSurface,
-                fontSize: 34,
+        for (final surahId in surahIds) ...[
+          Padding(
+            padding:
+                const EdgeInsets.only(left: 4, top: 18, bottom: 6, right: 4),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () {
+                final isCollapsed = _collapsedHighlightSurahs.contains(surahId);
+                setState(() {
+                  if (isCollapsed) {
+                    _collapsedHighlightSurahs.remove(surahId);
+                  } else {
+                    _collapsedHighlightSurahs.add(surahId);
+                  }
+                });
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        getBilingualSurahName(context, surahId),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      _collapsedHighlightSurahs.contains(surahId)
+                          ? Icons.chevron_right
+                          : Icons.expand_more,
+                      size: 22,
+                      color: theme.colorScheme.onSurface.withOpacity(0.5),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
+          if (!_collapsedHighlightSurahs.contains(surahId))
+            ...surahMap[surahId]!
+                .map((h) => _buildHighlightTile(h, isLight, theme))
+                .toList(),
+        ]
+      ],
+    );
+  }
 
-        // Search field
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-          child: Container(
-            height: 44,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: theme.colorScheme.onSurface.withOpacity(0.12),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.search,
-                    color: theme.colorScheme.onSurface.withOpacity(0.6)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _noteSearchController,
-                    decoration: InputDecoration(
-                      hintText:
-                          AppLocalizations.of(context)?.translate('search') ??
-                              'Search',
-                      hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+  Widget _buildHighlightsGroupedByColor(
+      List<Highlight> highlights, ThemeData theme, bool isLight) {
+    final colorCategories = [
+      {'name': 'Red', 'hex': '#EF5350'},
+      {'name': 'Yellow', 'hex': '#FFB300'},
+      {'name': 'Green', 'hex': '#66BB6A'},
+      {'name': 'Blue', 'hex': '#42A5F5'},
+    ];
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+      children: [
+        for (final cat in colorCategories)
+          if (highlights.any((h) => _isSameColor(h.colorHex, cat['hex']!)))
+            ...(() {
+              final isCollapsed =
+                  _collapsedHighlightColors.contains(cat['hex']!);
+              return [
+                Padding(
+                  padding: const EdgeInsets.only(left: 20, top: 16, bottom: 4),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () {
+                      setState(() {
+                        if (isCollapsed) {
+                          _collapsedHighlightColors.remove(cat['hex']!);
+                        } else {
+                          _collapsedHighlightColors.add(cat['hex']!);
+                        }
+                      });
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              cat['name']!,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(_parseColor(cat['hex']!))),
+                            ),
+                          ),
+                          Icon(
+                            isCollapsed
+                                ? Icons.chevron_right
+                                : Icons.expand_more,
+                            size: 20,
+                            color: theme.colorScheme.onSurface.withOpacity(0.5),
+                          ),
+                        ],
                       ),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
                     ),
-                    onChanged: (val) => _onNoteSearchChanged(
-                        val, context.read<BookmarkNotesNotifier>()),
                   ),
+                ),
+                if (!isCollapsed)
+                  ...highlights
+                      .where((h) => _isSameColor(h.colorHex, cat['hex']!))
+                      .map((h) => _buildHighlightTile(h, isLight, theme))
+                      .toList(),
+              ];
+            })(),
+      ],
+    );
+  }
+
+  Widget _buildHighlightTile(Highlight h, bool isLight, ThemeData theme) {
+    final color = Color(_parseColor(h.colorHex));
+    final surahName = getBilingualSurahName(context, h.surahId);
+    final verseText = _getVerseTextCached(h.surahId, h.ayahId);
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 7, horizontal: 0),
+      decoration: BoxDecoration(
+        color: isLight
+            ? const Color(0xFF232323).withOpacity(0.04)
+            : theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () {
+            widget.controller.navigateToVerse(h.surahId, h.ayahId);
+            Navigator.pop(context);
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  verseText,
+                  style: TextStyle(
+                    fontFamily: 'Amiri',
+                    fontSize: 20,
+                    fontWeight: FontWeight.w500,
+                    height: 1.7,
+                    color: isLight ? theme.colorScheme.onSurface : Colors.white,
+                  ),
+                  textDirection: TextDirection.rtl,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '$surahName: ${h.ayahId}',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
         ),
-        if (_isSearchingNotes) const LinearProgressIndicator(),
-        Expanded(
-          child: Consumer<BookmarkNotesNotifier>(
-            builder: (context, state, _) {
-              final notes = _noteSearchController.text.isEmpty
-                  ? state.notes
-                  : _noteResults;
-              if (notes.isEmpty)
-                return _buildEmptyState(
-                    icon: Icons.note_alt_outlined,
-                    title: AppLocalizations.of(context)
-                            ?.translate('no_highlights_found') ??
-                        'No Highlights',
-                    message: AppLocalizations.of(context)
-                            ?.translate('no_highlights_instruction') ??
-                        'Touch and hold a verse, then choose a highlight color.');
-              return ListView.separated(
-                padding: const EdgeInsets.only(bottom: 20),
-                itemCount: notes.length,
-                separatorBuilder: (_, __) => const Divider(),
-                itemBuilder: (context, index) {
-                  final note = notes[index];
-                  return ListTile(
-                    title: Text(
-                        '${surah[note.surahId - 1]['name']} (${note.surahId}:${note.ayahId})'),
-                    subtitle: Text(note.content,
-                        maxLines: 2, overflow: TextOverflow.ellipsis),
-                    onTap: () {
-                      widget.controller
-                          .navigateToVerse(note.surahId, note.ayahId);
-                      Navigator.pop(context);
-                    },
-                  );
-                },
-              );
-            },
-          ),
-        ),
-      ],
+      ),
     );
   }
 

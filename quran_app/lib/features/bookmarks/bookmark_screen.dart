@@ -54,7 +54,7 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
           color: Colors.transparent,
           child: Container(
             decoration: BoxDecoration(
-              color: isLight ? theme.colorScheme.surface : Colors.black,
+              color: theme.colorScheme.surface,
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(24),
               ),
@@ -103,11 +103,13 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
                                 shape: BoxShape.circle,
                                 color: isLight
                                     ? theme.colorScheme.surfaceContainerHighest
-                                    : Colors.white10,
+                                    : theme.colorScheme.onSurface
+                                        .withOpacity(0.08),
                                 border: Border.all(
                                   color: isLight
                                       ? theme.colorScheme.surface
-                                      : Colors.white24,
+                                      : theme.colorScheme.onSurface
+                                          .withOpacity(0.12),
                                   width: 1,
                                 ),
                               ),
@@ -218,7 +220,7 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
       decoration: BoxDecoration(
         color: isLight
             ? theme.scaffoldBackgroundColor
-            : const Color(0xFF1C1C1E), // iOS Secondary Fill
+            : theme.colorScheme.onSurface.withOpacity(0.08),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -232,7 +234,7 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
                   indent: 56,
                   color: isLight
                       ? theme.colorScheme.surface
-                      : const Color(0xFF38383A),
+                      : theme.colorScheme.onSurface.withOpacity(0.08),
                 ),
             ],
           );

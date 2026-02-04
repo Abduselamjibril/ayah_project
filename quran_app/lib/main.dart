@@ -8,6 +8,7 @@ import 'package:quran_app/core/services/mushaf_settings_service.dart';
 import 'package:quran_app/core/services/theme_service.dart';
 import 'package:quran_app/core/services/home_widget_service.dart';
 import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart';
+import 'package:quran_app/features/highlights/state/highlight_notifier.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:quran_app/core/services/language_service.dart';
@@ -59,6 +60,9 @@ class AppBootstrap extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(
           create: (_) => BookmarkNotesNotifier()..initialize(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => HighlightNotifier()..initialize(),
         ),
       ],
       child: const MyApp(),

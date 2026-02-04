@@ -103,11 +103,13 @@ class _ShareOptionsSheetState extends State<ShareOptionsSheet> {
     final isDark = theme.brightness == Brightness.dark;
     final isLight = !isDark;
 
-    final bgColor = isLight ? theme.colorScheme.surface : Colors.black;
-    final cardColor =
-        isLight ? theme.scaffoldBackgroundColor : const Color(0xFF1C1C1E);
-    final dividerColor =
-        isLight ? theme.colorScheme.surface : const Color(0xFF38383A);
+    final bgColor = theme.colorScheme.surface;
+    final cardColor = isLight
+        ? theme.scaffoldBackgroundColor
+        : theme.colorScheme.onSurface.withOpacity(0.08);
+    final dividerColor = isLight
+        ? theme.colorScheme.surface
+        : theme.colorScheme.onSurface.withOpacity(0.08);
     final accentColor = BrandColors.accent;
 
     final verseCount = (toVerse - fromVerse + 1);
@@ -185,14 +187,16 @@ class _ShareOptionsSheetState extends State<ShareOptionsSheet> {
                               radius: 15,
                               backgroundColor: isLight
                                   ? theme.colorScheme.surfaceContainerHighest
-                                  : Colors.white10,
+                                  : theme.colorScheme.onSurface
+                                      .withOpacity(0.08),
                               child: Icon(
                                 Icons.close,
                                 size: 18,
                                 color: isLight
                                     ? theme.colorScheme.onSurface
                                         .withOpacity(0.7)
-                                    : Colors.white60,
+                                    : theme.colorScheme.onSurface
+                                        .withOpacity(0.6),
                               ),
                             ),
                           ),

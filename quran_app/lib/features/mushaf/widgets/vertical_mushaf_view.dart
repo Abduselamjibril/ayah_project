@@ -11,6 +11,7 @@ import 'package:quran_app/core/i18n/app_localizations.dart';
 import 'package:quran_app/core/utils/localization_helper.dart';
 
 import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart';
+import 'package:quran_app/features/highlights/state/highlight_notifier.dart';
 import 'package:quran_app/features/mushaf/controller/mushaf_controller.dart';
 
 import 'surah_info_sheet.dart';
@@ -195,6 +196,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   @override
   Widget build(BuildContext context) {
     final bookmarkState = context.watch<BookmarkNotesNotifier>();
+    final highlightState = context.watch<HighlightNotifier>();
 
     return Stack(
       children: [
@@ -297,19 +299,23 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     final highlightedSurah = widget.controller.highlightedSurah;
     final highlightedVerse = widget.controller.highlightedVerse;
     if (highlightedSurah == surah && highlightedVerse == verse) {
-      return Theme.of(context)
-          .colorScheme
-          .primaryContainer
-          .withValues(alpha: 0.5);
+      return Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5);
     }
-
+    // Highlight logic
+    final highlight =
+        context.read<HighlightNotifier>().getHighlight(surah, verse);
+    if (highlight != null) {
+      final color = Color(_parseColor(highlight.colorHex));
+      return color.withOpacity(0.25);
+    }
+    // Bookmark logic
     final b = state.bookmarkForVerse(surah, verse);
     if (b != null) {
       if (b.isKhatmahPin) {
         return null;
       }
       final color = Color(_parseColor(b.colorHex));
-      return color.withValues(alpha: 0.25);
+      return color.withOpacity(0.25);
     }
     return null;
   }
