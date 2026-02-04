@@ -74,7 +74,8 @@ Future<AudioRecitation?> showReciterPickerSheet(
                       style.contains(query);
                 }).toList();
 
-                return SingleChildScrollView(
+                return SizedBox(
+                  height: maxHeight,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -95,7 +96,7 @@ Future<AudioRecitation?> showReciterPickerSheet(
                             AppLocalizations.of(context)
                                     ?.translate('select_recitation') ??
                                 'Select Recitation',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 18,
                             ),
@@ -167,12 +168,10 @@ Future<AudioRecitation?> showReciterPickerSheet(
                         ),
                       ),
                       const SizedBox(height: 8),
-                      SizedBox(
-                        height: maxHeight * 0.5,
+                      Expanded(
                         child: ListView.separated(
                           padding: EdgeInsets.zero,
                           itemCount: filtered.length,
-                          shrinkWrap: true,
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: 10),
                           itemBuilder: (context, index) {

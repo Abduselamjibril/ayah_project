@@ -9,6 +9,7 @@ import 'package:quran_app/core/services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
 import 'package:quran_app/core/utils/localization_helper.dart';
+import 'package:quran_app/app/app.dart';
 
 class AudioSurahListPage extends StatefulWidget {
   final AudioRecitation recitation;
@@ -206,12 +207,30 @@ class _AudioSurahListPageState extends State<AudioSurahListPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isLight = theme.brightness == Brightness.light;
+    final accent = BrandColors.accent;
+    final screenBackground =
+        isLight ? colorScheme.surface : theme.scaffoldBackgroundColor;
+    final cardBackground =
+        isLight ? theme.scaffoldBackgroundColor : colorScheme.surface;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text((AppLocalizations.of(context)?.translate('surahs_title') ??
-                'Surahs - {reciter}')
-            .replaceAll('{reciter}', widget.recitation.reciterName)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        title: Text(
+          (AppLocalizations.of(context)?.translate('surahs_title') ??
+                  'Surahs - {reciter}')
+              .replaceAll('{reciter}', widget.recitation.reciterName),
+          style: theme.textTheme.titleMedium
+              ?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        iconTheme: IconThemeData(color: accent),
       ),
+      backgroundColor: screenBackground,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView.builder(
@@ -224,21 +243,41 @@ class _AudioSurahListPageState extends State<AudioSurahListPage> {
                   return Padding(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: FilledButton.icon(
-                      onPressed: pendingCount == 0 || _isBulkDownloading
-                          ? null
-                          : _downloadAll,
-                      icon: _isBulkDownloading
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.download),
-                      label: Text(
-                        AppLocalizations.of(context)
-                                ?.translate('download_all') ??
-                            'Download all',
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: accent,
+                          foregroundColor: colorScheme.onPrimary,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: pendingCount == 0 || _isBulkDownloading
+                            ? null
+                            : _downloadAll,
+                        icon: _isBulkDownloading
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
+                                ),
+                              )
+                            : Icon(Icons.ios_share,
+                                color: colorScheme.onPrimary),
+                        label: Text(
+                          AppLocalizations.of(context)
+                                  ?.translate('download_all') ??
+                              'Download all',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: colorScheme.onPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ),
                   );
@@ -250,35 +289,50 @@ class _AudioSurahListPageState extends State<AudioSurahListPage> {
                 final progress = _progress[surahNumber];
                 final isDownloaded = _downloadedSurahs.contains(surahNumber);
                 final surahName = getBilingualSurahName(context, c.id);
-                return ListTile(
-                  title: Text(
-                      '${surahNumber.toString().padLeft(3, '0')} - $surahName'),
-                  subtitle: isDownloading
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            LinearProgressIndicator(value: progress),
-                            const SizedBox(height: 4),
-                            Text(
-                                '${((progress ?? 0) * 100).toStringAsFixed(0)}%'),
-                          ],
-                        )
-                      : Text(isDownloaded
-                          ? (AppLocalizations.of(context)
-                                  ?.translate('downloaded') ??
-                              'Downloaded')
-                          : (AppLocalizations.of(context)
-                                      ?.translate('verses_count') ??
-                                  '{count} verses')
-                              .replaceAll('{count}', '${c.versesCount}')),
-                  trailing: isDownloading
-                      ? const SizedBox.shrink()
-                      : isDownloaded
-                          ? const Icon(Icons.check_circle, color: Colors.green)
-                          : IconButton(
-                              icon: const Icon(Icons.download),
-                              onPressed: () => _download(surahNumber),
-                            ),
+                return Card(
+                  color: cardBackground,
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  elevation: 2,
+                  child: ListTile(
+                    title: Text(
+                      '${surahNumber.toString().padLeft(3, '0')} - $surahName',
+                      style: theme.textTheme.bodyLarge
+                          ?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: isDownloading
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              LinearProgressIndicator(
+                                  value: progress, color: accent),
+                              const SizedBox(height: 4),
+                              Text(
+                                  '${((progress ?? 0) * 100).toStringAsFixed(0)}%'),
+                            ],
+                          )
+                        : Text(isDownloaded
+                            ? (AppLocalizations.of(context)
+                                    ?.translate('downloaded') ??
+                                'Downloaded')
+                            : (AppLocalizations.of(context)
+                                        ?.translate('verses_count') ??
+                                    '{count} verses')
+                                .replaceAll('{count}', '${c.versesCount}')),
+                    trailing: isDownloading
+                        ? const SizedBox.shrink()
+                        : isDownloaded
+                            ? Icon(Icons.check_circle, color: accent)
+                            : IconButton(
+                                icon: Icon(Icons.ios_share, color: accent),
+                                tooltip: AppLocalizations.of(context)
+                                        ?.translate('download') ??
+                                    'Download',
+                                onPressed: () => _download(surahNumber),
+                              ),
+                  ),
                 );
               },
             ),

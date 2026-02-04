@@ -40,6 +40,7 @@ dependencies:
   just_audio: ^0.10.5
   just_audio_background: ^0.0.1-beta.17
   app_settings: ^5.1.1
+  flutter_svg: ^2.2.3
 
 dev_dependencies:
   flutter_test:
@@ -55,6 +56,7 @@ flutter:
     - assets/translations/
     - assets/fonts/qcf/
     - assets/fonts/QCF2BSMLfonts/
+    - assets/flags/
 
   fonts:
     # Surah number font
