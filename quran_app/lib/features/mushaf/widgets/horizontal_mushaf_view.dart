@@ -124,12 +124,6 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   void _onControllerChanged() {
     final controllerPage = widget.controller.currentPage;
     if (controllerPage == _lastControllerPage) return;
-    final isAudioActive = _audioPlayer.isPlaying.value ||
-        _audioPlayer.hasSourceNotifier.value ||
-        _audioPlayer.isDownloading.value;
-    if (isAudioActive) {
-      unawaited(_audioPlayer.stop());
-    }
     _lastControllerPage = controllerPage;
   }
 
@@ -536,7 +530,10 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
           constraints: const BoxConstraints(maxWidth: 520),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: AudioPlayerCard(controller: widget.controller),
+            child: AudioPlayerCard(
+              controller: widget.controller,
+              overrideCurrentPage: _getDisplayPage().round(),
+            ),
           ),
         ),
       ),
