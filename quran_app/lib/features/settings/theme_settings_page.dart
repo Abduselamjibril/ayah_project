@@ -21,7 +21,6 @@ class ThemeSettingsPage extends StatelessWidget {
     final sectionGap = ResponsiveLayout.scaled(context, 12, min: 8, max: 16);
     final headerGap = ResponsiveLayout.scaled(context, 24, min: 18, max: 28);
     final titleSpacing = ResponsiveLayout.scaled(context, 16, min: 12, max: 20);
-    final cardHeight = ResponsiveLayout.scaled(context, 80, min: 68, max: 96);
 
     return Scaffold(
       backgroundColor:
@@ -133,31 +132,10 @@ class ThemeSettingsPage extends StatelessWidget {
                             min: 16, max: 20)),
                   ),
                 ),
-                // Vertical List Layout
-                _buildSurahStyleCard(
+                _buildSurahHeaderStyleSelector(
                   context,
-                  style: SurahHeaderStyle.golden,
-                  label:
-                      AppLocalizations.of(context)?.translate('style_golden') ??
-                          'Golden',
-                  assetPath: 'assets/images/mainframe.png',
-                  isSelected:
-                      themeService.surahHeaderStyle == SurahHeaderStyle.golden,
-                  onTap: () =>
-                      themeService.setSurahHeaderStyle(SurahHeaderStyle.golden),
-                ),
-                SizedBox(height: sectionGap),
-                _buildSurahStyleCard(
-                  context,
-                  style: SurahHeaderStyle.green,
-                  label:
-                      AppLocalizations.of(context)?.translate('style_green') ??
-                          'Green',
-                  assetPath: 'assets/images/green_mainframe.png',
-                  isSelected:
-                      themeService.surahHeaderStyle == SurahHeaderStyle.green,
-                  onTap: () =>
-                      themeService.setSurahHeaderStyle(SurahHeaderStyle.green),
+                  selectedStyle: themeService.surahHeaderStyle,
+                  onSelect: themeService.setSurahHeaderStyle,
                 ),
               ],
 
@@ -257,117 +235,117 @@ class ThemeSettingsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSurahStyleCard(
+  Widget _buildSurahHeaderStyleSelector(
     BuildContext context, {
-    required SurahHeaderStyle style,
-    required String label,
-    required String assetPath,
-    required bool isSelected,
-    required VoidCallback onTap,
+    required SurahHeaderStyle selectedStyle,
+    required ValueChanged<SurahHeaderStyle> onSelect,
   }) {
-    final height = ResponsiveLayout.scaled(context, 80, min: 68, max: 96);
-    final primary = Theme.of(context).primaryColor;
     final theme = Theme.of(context);
     final isLight = theme.brightness == Brightness.light;
     final cardBg = isLight ? theme.scaffoldBackgroundColor : theme.cardColor;
+    final divider = theme.dividerColor.withOpacity(isLight ? 0.22 : 0.28);
+    final radius = BorderRadius.circular(20);
+    final selectedBg = theme.colorScheme.primary.withOpacity(isLight ? 0.06 : 0.12);
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: height,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? primary : Colors.grey.withOpacity(0.3),
-            width: isSelected ? 3 : 1, // Thicker border for selection
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: primary.withOpacity(0.2),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  )
-                ]
-              : null,
-          color: cardBg,
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Stack(
-            children: [
-              // 1. Image on the Right
-              Positioned.fill(
-                child: ClipRect(
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    widthFactor: 0.5, // Show right half of the image space
-                    child: Image.asset(
-                      assetPath,
-                      fit: BoxFit.cover,
-                      alignment: Alignment
-                          .centerRight, // Effectively show the right side of the source image
-                      height: double.infinity,
-                      width: double.infinity,
-                    ),
-                  ),
-                ),
-              ),
+    final rowHeight = ResponsiveLayout.scaled(context, 72, min: 62, max: 80);
+    final previewHeight =
+        ResponsiveLayout.scaled(context, 40, min: 34, max: 46);
+    final previewWidth =
+        ResponsiveLayout.scaled(context, 160, min: 130, max: 190);
 
-              // 2. Gradient Overlay (Left to Right) for text readability
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [
-                        theme.scaffoldBackgroundColor,
-                        theme.scaffoldBackgroundColor.withOpacity(0.95),
-                        theme.scaffoldBackgroundColor.withOpacity(0.7),
-                        theme.scaffoldBackgroundColor.withOpacity(0.4),
-                        Colors.transparent,
-                      ],
-                      stops: const [0.0, 0.4, 0.6, 0.75, 1.0],
-                    ),
-                  ),
-                ),
-              ),
+    Widget row({
+      required SurahHeaderStyle style,
+      required String label,
+      required String assetPath,
+      required bool isTop,
+      required bool isBottom,
+    }) {
+      final isSelected = selectedStyle == style;
+      final rowRadius = BorderRadius.vertical(
+        top: isTop ? const Radius.circular(20) : Radius.zero,
+        bottom: isBottom ? const Radius.circular(20) : Radius.zero,
+      );
 
-              // 3. Text & Selection Indicator on the Left
-              Padding(
-                padding: EdgeInsets.symmetric(
-                    horizontal:
-                        ResponsiveLayout.scaled(context, 16, min: 12, max: 20)),
+      return Semantics(
+        button: true,
+        selected: isSelected,
+        label: label,
+        child: Material(
+          color: isSelected ? selectedBg : Colors.transparent,
+          child: InkWell(
+            borderRadius: rowRadius,
+            onTap: () => onSelect(style),
+            child: SizedBox(
+              height: rowHeight,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Row(
                   children: [
-                    Expanded(
-                      child: Text(
-                        label,
-                        style: TextStyle(
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.w600,
-                          fontSize: ResponsiveLayout.scaled(context, 16,
-                              min: 14, max: 18),
-                          color: isSelected
-                              ? primary
-                              : theme.textTheme.bodyLarge?.color,
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: previewWidth,
+                        height: previewHeight,
+                        color: theme.colorScheme.surfaceContainerHighest
+                            .withOpacity(isLight ? 0.6 : 0.25),
+                        child: Image.asset(
+                          assetPath,
+                          fit: BoxFit.cover,
+                          alignment: Alignment.centerLeft,
+                          filterQuality: FilterQuality.medium,
                         ),
                       ),
                     ),
-                    if (isSelected)
-                      Icon(
-                        Icons.check_circle,
-                        color: primary,
-                        size: ResponsiveLayout.scaled(context, 24,
-                            min: 20, max: 28),
-                      ),
+                    const Spacer(),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 160),
+                      child: isSelected
+                          ? Icon(
+                              Icons.check_rounded,
+                              key: ValueKey(style),
+                              size: 30,
+                              color: BrandColors.accent,
+                            )
+                          : const SizedBox(width: 30, height: 30),
+                    ),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: radius,
+        border: Border.all(
+          color: theme.colorScheme.onSurface.withOpacity(0.08),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          row(
+            style: SurahHeaderStyle.golden,
+            label: AppLocalizations.of(context)?.translate('style_golden') ??
+                'Golden',
+            assetPath: 'assets/images/mainframe.png',
+            isTop: true,
+            isBottom: false,
+          ),
+          Divider(height: 1, thickness: 1, color: divider),
+          row(
+            style: SurahHeaderStyle.green,
+            label: AppLocalizations.of(context)?.translate('style_green') ??
+                'Green',
+            assetPath: 'assets/images/green_mainframe.png',
+            isTop: false,
+            isBottom: true,
+          ),
+        ],
       ),
     );
   }

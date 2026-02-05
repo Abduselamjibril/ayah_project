@@ -479,7 +479,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
             backgroundColor: Colors.transparent,
             elevation: 0,
             centerTitle: true,
-            leadingWidth: 100,
+            leadingWidth: 120,
             leading: TextButton.icon(
               onPressed: () => Navigator.of(context).pop(),
               icon: Icon(Icons.arrow_back_ios_new_rounded,

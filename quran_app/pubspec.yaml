@@ -56,7 +56,6 @@ flutter:
     - assets/translations/
     - assets/fonts/qcf/
     - assets/fonts/QCF2BSMLfonts/
-    - assets/flags/
 
   fonts:
     # Surah number font

@@ -1,5 +1,7 @@
+import 'dart:ui' as ui;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:quran_app/core/quran/qcf_quran.dart';
 import 'package:quran_app/core/services/theme_service.dart';
 import 'package:quran_app/core/utils/localization_helper.dart';
@@ -609,6 +611,8 @@ class _QuranPageContentState extends State<QuranPageContent>
   @override
   bool get wantKeepAlive => true;
 
+  final GlobalKey _paragraphKey = GlobalKey();
+
   @override
   Widget build(BuildContext context) {
     super.build(
@@ -622,12 +626,15 @@ class _QuranPageContentState extends State<QuranPageContent>
     final bsmlFontSize = 18.0 / widget.sp;
 
     final verseSpans = <InlineSpan>[];
+    final highlightRanges = <_HighlightRange>[];
+    var textOffset = 0;
     if (widget.pageNumber == 2 || widget.pageNumber == 1) {
       verseSpans.add(
         const WidgetSpan(
           child: SizedBox(height: 1),
         ),
       );
+      textOffset += 1; // WidgetSpan placeholder
     }
     const lineHeight = 2.1; // consistent line spacing across all lines
 
@@ -644,32 +651,36 @@ class _QuranPageContentState extends State<QuranPageContent>
               onLongPress: () => widget.onSurahHeaderLongPress?.call(surah),
             ),
           ));
+          textOffset += 1; // WidgetSpan placeholder
 
           verseSpans.add(const TextSpan(text: "\n"));
+          textOffset += 1;
 
           if (widget.pageNumber != 1 && widget.pageNumber != 187) {
             if (surah != 97) {
+              const t = " ﱁ  ﱂﱃﱄ\n";
               verseSpans.add(
                 TextSpan(
-                  text: " ﱁ  ﱂﱃﱄ\n",
+                  text: t,
                   style: TextStyle(
                     fontFamily: "QCF_P001",
                     fontSize: headerFontSize,
-                    color: widget.textColor,
                   ),
                 ),
               );
+              textOffset += t.length;
             } else {
+              const t = "齃𧻓𥳐龎\n";
               verseSpans.add(
                 TextSpan(
-                  text: "齃𧻓𥳐龎\n",
+                  text: t,
                   style: TextStyle(
                     fontFamily: "QCF_BSML",
                     fontSize: bsmlFontSize,
-                    color: widget.textColor,
                   ),
                 ),
               );
+              textOffset += t.length;
             }
           }
         }
@@ -687,22 +698,32 @@ class _QuranPageContentState extends State<QuranPageContent>
         final text = v == ranges[0]['start']
             ? "${verseText.substring(0, 1)}\u200A${verseText.substring(1)}"
             : verseText;
+        final verseStart = textOffset;
+        textOffset += text.length;
+        final verseNumberText = getVerseNumberQCF(surah, v);
+        textOffset += verseNumberText.length;
+        final verseEnd = textOffset;
+        if (verseBgColor != null) {
+          highlightRanges.add(
+            _HighlightRange(
+              start: verseStart,
+              end: verseEnd,
+              color: verseBgColor,
+            ),
+          );
+        }
 
         verseSpans.add(
           TextSpan(
             text: text,
             recognizer: spanRecognizer,
-            style: verseBgColor != null
-                ? TextStyle(backgroundColor: verseBgColor)
-                : null,
             children: [
               TextSpan(
-                text: getVerseNumberQCF(surah, v),
+                text: verseNumberText,
                 style: TextStyle(
                   fontFamily: pageFont,
                   color: widget.textColor,
                   height: lineHeight,
-                  backgroundColor: verseBgColor,
                 ),
               ),
               if (widget.verseTrailingBuilder != null)
@@ -717,6 +738,9 @@ class _QuranPageContentState extends State<QuranPageContent>
             ],
           ),
         );
+        if (widget.verseTrailingBuilder != null) {
+          textOffset += 1; // WidgetSpan placeholder
+        }
       }
     }
 
@@ -737,23 +761,37 @@ class _QuranPageContentState extends State<QuranPageContent>
                 maxWidth: constraints.maxWidth,
                 maxHeight: constraints.maxHeight,
               ),
-              child: Text.rich(
-                TextSpan(children: verseSpans),
-                locale: const Locale("ar"),
-                textAlign: TextAlign.center,
-                textDirection: TextDirection.rtl,
-                softWrap: true,
-                textWidthBasis: TextWidthBasis.longestLine,
-                textHeightBehavior: const TextHeightBehavior(
-                  applyHeightToFirstAscent: true,
-                  applyHeightToLastDescent: true,
-                  leadingDistribution: TextLeadingDistribution.even,
+              child: CustomPaint(
+                painter: _RoundedVerseHighlightPainter(
+                  paragraphKey: _paragraphKey,
+                  ranges: highlightRanges,
+                  radius: 8,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 0,
+                    vertical: 4,
+                  ),
                 ),
-                style: TextStyle(
-                  fontFamily: pageFont,
-                  fontSize: baseFontSize,
-                  color: widget.textColor,
-                  height: lineHeight,
+                child: Text.rich(
+                  TextSpan(
+                    children: verseSpans,
+                    style: TextStyle(
+                      fontFamily: pageFont,
+                      fontSize: baseFontSize,
+                      color: widget.textColor,
+                      height: lineHeight,
+                    ),
+                  ),
+                  key: _paragraphKey,
+                  locale: const Locale("ar"),
+                  textAlign: TextAlign.center,
+                  textDirection: TextDirection.rtl,
+                  softWrap: true,
+                  textWidthBasis: TextWidthBasis.longestLine,
+                  textHeightBehavior: const TextHeightBehavior(
+                    applyHeightToFirstAscent: true,
+                    applyHeightToLastDescent: true,
+                    leadingDistribution: TextLeadingDistribution.even,
+                  ),
                 ),
               ),
             ),
@@ -761,5 +799,97 @@ class _QuranPageContentState extends State<QuranPageContent>
         );
       },
     );
+  }
+}
+
+class _HighlightRange {
+  final int start;
+  final int end;
+  final Color color;
+
+  const _HighlightRange({
+    required this.start,
+    required this.end,
+    required this.color,
+  });
+}
+
+class _RoundedVerseHighlightPainter extends CustomPainter {
+  final GlobalKey paragraphKey;
+  final List<_HighlightRange> ranges;
+  final double radius;
+  final EdgeInsets padding;
+  final double tightenFactor;
+
+  const _RoundedVerseHighlightPainter({
+    required this.paragraphKey,
+    required this.ranges,
+    required this.radius,
+    required this.padding,
+    this.tightenFactor = 0.26,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (ranges.isEmpty) return;
+    final renderObject = paragraphKey.currentContext?.findRenderObject();
+    if (renderObject is! RenderParagraph) return;
+
+    final paint = Paint()..isAntiAlias = true;
+    for (final r in ranges) {
+      final boxes = renderObject.getBoxesForSelection(
+        TextSelection(baseOffset: r.start, extentOffset: r.end),
+        boxHeightStyle: ui.BoxHeightStyle.tight,
+        boxWidthStyle: ui.BoxWidthStyle.tight,
+      );
+
+      paint.color = r.color;
+      for (final b in boxes) {
+        final rect = Rect.fromLTRB(b.left, b.top, b.right, b.bottom);
+        // The mushaf text uses a large line height for readability; the raw
+        // selection boxes include that leading, which makes highlights too tall.
+        // Tighten the box vertically so the highlight hugs the script.
+        final tighten = rect.height * tightenFactor;
+        final tightenedTop = rect.top + tighten;
+        final tightenedBottom = rect.bottom - tighten;
+        final tightened = tightenedBottom > tightenedTop
+            ? Rect.fromLTRB(rect.left, tightenedTop, rect.right, tightenedBottom)
+            : rect;
+
+        final padded = Rect.fromLTRB(
+          tightened.left - padding.left,
+          tightened.top - padding.top,
+          tightened.right + padding.right,
+          tightened.bottom + padding.bottom,
+        );
+
+        final maxRadius = padded.shortestSide / 2;
+        final rRadius = Radius.circular(radius < maxRadius ? radius : maxRadius);
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(padded, rRadius),
+          paint,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _RoundedVerseHighlightPainter oldDelegate) {
+    return oldDelegate.paragraphKey != paragraphKey ||
+        oldDelegate.radius != radius ||
+        oldDelegate.padding != padding ||
+        oldDelegate.ranges.length != ranges.length ||
+        !_sameRanges(oldDelegate.ranges, ranges);
+  }
+
+  bool _sameRanges(List<_HighlightRange> a, List<_HighlightRange> b) {
+    for (var i = 0; i < a.length; i++) {
+      final ar = a[i];
+      final br = b[i];
+      if (ar.start != br.start || ar.end != br.end || ar.color != br.color) {
+        return false;
+      }
+    }
+    return true;
   }
 }

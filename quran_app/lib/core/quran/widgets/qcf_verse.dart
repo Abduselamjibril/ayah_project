@@ -43,6 +43,13 @@ class _QcfVerseState extends State<QcfVerse> {
   Widget build(BuildContext context) {
     var pageNumber = getPageNumber(widget.surahNumber, widget.verseNumber);
     var pageFontSize = getFontSize(pageNumber, context);
+    final bg = widget.backgroundColor;
+    final bgPaint = bg.alpha == 0
+        ? null
+        : (Paint()
+          ..color = bg
+          ..isAntiAlias = true
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.6));
     return RichText(
       textDirection: TextDirection.rtl,
       textAlign: TextAlign.center,
@@ -63,7 +70,7 @@ class _QcfVerseState extends State<QcfVerse> {
             text: getVerseNumberQCF(widget.surahNumber, widget.verseNumber),
             style: TextStyle(
               fontFamily: "QCF_P${pageNumber.toString().padLeft(3, '0')}",
-              height: 1.35 / widget.h,
+              height: 0.9 / widget.h,
             ),
           ),
         ],
@@ -74,7 +81,7 @@ class _QcfVerseState extends State<QcfVerse> {
           wordSpacing: 0,
           fontFamily: "QCF_P${pageNumber.toString().padLeft(3, '0')}",
           fontSize: widget.fontSize ?? pageFontSize / widget.sp,
-          backgroundColor: widget.backgroundColor,
+          background: bgPaint,
         ),
       ),
     );
