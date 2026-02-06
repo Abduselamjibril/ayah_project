@@ -56,6 +56,10 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   static const Duration _fadeDuration = Duration(milliseconds: 220);
   bool _isFading = false;
 
+  // Audio-page synchronization tracking
+  int? _previousAudioPage;
+  DateTime? _lastManualPageChange;
+
   StreamSubscription<int>? _navSubscription;
 
   @override
@@ -71,10 +75,36 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
       if (!mounted) return;
       final s = _audioPlayer.currentSurah.value;
       final a = _audioPlayer.currentAyah.value;
+
       if (s != null && a != null) {
         widget.controller.setHighlightedVerse(s, a);
+
+        // Calculate which page this ayah is on
+        final audioPage = getPageNumber(s, a);
+        final displayedPage = _getBasePage().round();
+
+        // Detect page transition: did audio move to a different page?
+        if (_previousAudioPage != null && _previousAudioPage != audioPage) {
+          // Page changed! Check if we were synced on the PREVIOUS page
+          // We need to check if displayedPage matches the OLD audio page, not the new one
+          final wasSyncedOnPreviousPage = (displayedPage == _previousAudioPage);
+
+          // Check if user recently manually navigated (within last 500ms)
+          final timeSinceManualNav = _lastManualPageChange != null
+              ? DateTime.now().difference(_lastManualPageChange!)
+              : Duration.zero;
+          final isRecentManualNav = timeSinceManualNav.inMilliseconds < 500;
+
+          if (wasSyncedOnPreviousPage && !isRecentManualNav) {
+            // We were following along and user hasn't manually navigated recently
+            widget.controller.navigateToPage(audioPage);
+          }
+        }
+
+        _previousAudioPage = audioPage;
       } else {
         widget.controller.clearHighlight();
+        _previousAudioPage = null;
       }
     };
     _audioPlayer.currentSurah.addListener(_ayahListener);
@@ -216,6 +246,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                               initialPageNumber: widget.controller.currentPage,
                               scrollMode: ScrollMode.horizontal,
                               onPageChanged: (page) {
+                                _lastManualPageChange = DateTime.now();
                                 widget.controller.setPage(page);
                               },
                               textColor:

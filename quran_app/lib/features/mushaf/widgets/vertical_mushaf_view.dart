@@ -69,6 +69,10 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   // Track if audio player is expanded
   bool _audioPlayerExpanded = false;
 
+  // Audio-page synchronization tracking
+  int? _previousAudioPage;
+  DateTime? _lastManualPageChange;
+
   StreamSubscription<int>? _navSubscription;
 
   @override
@@ -83,10 +87,30 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
       if (!mounted) return;
       final s = _audioPlayer.currentSurah.value;
       final a = _audioPlayer.currentAyah.value;
+
       if (s != null && a != null) {
         widget.controller.setHighlightedVerse(s, a);
+
+        // Calculate which page this ayah is on
+        final audioPage = getPageNumber(s, a);
+        final displayedPage = _getDisplayPage().round();
+
+        // Detect page transition: did audio move to a different page?
+        if (_previousAudioPage != null && _previousAudioPage != audioPage) {
+          // Page changed! Check if we were synced on the PREVIOUS page
+          // We need to check if displayedPage matches the OLD audio page, not the new one
+          final wasSyncedOnPreviousPage = (displayedPage == _previousAudioPage);
+
+          if (wasSyncedOnPreviousPage) {
+            // We were following along on the previous page, so follow to the new page
+            widget.controller.navigateToPage(audioPage);
+          }
+        }
+
+        _previousAudioPage = audioPage;
       } else {
         widget.controller.clearHighlight();
+        _previousAudioPage = null;
       }
     };
 
@@ -136,6 +160,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     final page = live.round().clamp(1, 604);
     if (page != _lastPage) {
       _lastPage = page;
+      _lastManualPageChange = DateTime.now(); // Track manual scroll
       widget.controller.setPage(page);
     }
   }
