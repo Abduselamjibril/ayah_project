@@ -11,6 +11,7 @@ class MushafController extends ChangeNotifier {
   int _currentSurah = 1;
   int? _highlightedSurah;
   int? _highlightedVerse;
+  bool _isAudioHighlight = false;
 
   static const int _totalPages = 604;
 
@@ -31,6 +32,7 @@ class MushafController extends ChangeNotifier {
   int get currentSurah => _currentSurah;
   int? get highlightedSurah => _highlightedSurah;
   int? get highlightedVerse => _highlightedVerse;
+  bool get isAudioHighlight => _isAudioHighlight;
 
   void toggleScrollMode() {
     _settings.toggleScrollMode();
@@ -54,15 +56,21 @@ class MushafController extends ChangeNotifier {
     }
   }
 
-  void setHighlightedVerse(int? surah, int? verse) {
+  void setHighlightedVerse(int? surah, int? verse, {bool isAudio = false}) {
     _highlightedSurah = surah;
     _highlightedVerse = verse;
+    _isAudioHighlight = isAudio;
     notifyListeners();
   }
 
-  void clearHighlight() {
+  void clearHighlight({bool onlyManual = false}) {
+    // If onlyManual is true, only clear if it's not an audio highlight
+    if (onlyManual && _isAudioHighlight) {
+      return; // Don't clear audio highlights
+    }
     _highlightedSurah = null;
     _highlightedVerse = null;
+    _isAudioHighlight = false;
     notifyListeners();
   }
 

@@ -46,6 +46,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   int _lastControllerPage = 1;
   late final AudioPlayerService _audioPlayer;
   late final VoidCallback _ayahListener;
+  late final VoidCallback _audioStateListener;
   final Map<int, String> _surahNameCache = {};
 
   bool _overlayVisible = true;
@@ -71,13 +72,23 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     _lastControllerPage = widget.controller.currentPage;
 
     _audioPlayer = AudioPlayerService.instance;
+    _audioStateListener = () {
+      if (!mounted) return;
+      if (_audioPlayer.isPlaying.value || _audioPlayer.isDownloading.value) {
+        _cancelHighlightClear();
+      }
+    };
+    _audioPlayer.isPlaying.addListener(_audioStateListener);
+    _audioPlayer.isDownloading.addListener(_audioStateListener);
+
     _ayahListener = () {
       if (!mounted) return;
       final s = _audioPlayer.currentSurah.value;
       final a = _audioPlayer.currentAyah.value;
 
       if (s != null && a != null) {
-        widget.controller.setHighlightedVerse(s, a);
+        _cancelHighlightClear();
+        widget.controller.setHighlightedVerse(s, a, isAudio: true);
 
         // Calculate which page this ayah is on
         final audioPage = getPageNumber(s, a);
@@ -124,10 +135,34 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   }
 
   @override
+  void didUpdateWidget(HorizontalMushafView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Check if we need to sync with the controller's page when becoming visible
+    // This happens when switching from vertical to horizontal mode
+    if (_pageController.hasClients) {
+      final controllerPage = widget.controller.currentPage;
+      final currentDisplayedPage = _getBasePage().round();
+
+      // If there's a mismatch, navigate to the controller's page
+      if (controllerPage != currentDisplayedPage &&
+          (controllerPage - currentDisplayedPage).abs() > 1) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_pageController.hasClients && mounted) {
+            _pageController.jumpToPage(controllerPage - 1);
+            _lastControllerPage = controllerPage;
+          }
+        });
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _navSubscription?.cancel();
     _audioPlayer.currentSurah.removeListener(_ayahListener);
     _audioPlayer.currentAyah.removeListener(_ayahListener);
+    _audioPlayer.isPlaying.removeListener(_audioStateListener);
+    _audioPlayer.isDownloading.removeListener(_audioStateListener);
     widget.controller.removeListener(_onControllerChanged);
     _pageController.dispose();
     _autoHideTimer?.cancel();
@@ -145,7 +180,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     _highlightClearTimer?.cancel();
     _highlightClearTimer = Timer(const Duration(seconds: 3), () {
       if (!mounted) return;
-      widget.controller.clearHighlight();
+      widget.controller.clearHighlight(onlyManual: true);
     });
   }
 

@@ -52,6 +52,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   bool _isSliderActive = false;
   late final AudioPlayerService _audioPlayer;
   late final VoidCallback _ayahListener;
+  late final VoidCallback _audioStateListener;
   final Map<int, String> _surahNameCache = {};
   bool _overlayVisible = true;
   Timer? _autoHideTimer;
@@ -83,13 +84,23 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     _livePageNotifier.value = _lastPage.toDouble();
     _audioPlayer = AudioPlayerService.instance;
 
+    _audioStateListener = () {
+      if (!mounted) return;
+      if (_audioPlayer.isPlaying.value || _audioPlayer.isDownloading.value) {
+        _cancelHighlightClear();
+      }
+    };
+    _audioPlayer.isPlaying.addListener(_audioStateListener);
+    _audioPlayer.isDownloading.addListener(_audioStateListener);
+
     _ayahListener = () {
       if (!mounted) return;
       final s = _audioPlayer.currentSurah.value;
       final a = _audioPlayer.currentAyah.value;
 
       if (s != null && a != null) {
-        widget.controller.setHighlightedVerse(s, a);
+        _cancelHighlightClear();
+        widget.controller.setHighlightedVerse(s, a, isAudio: true);
 
         // Calculate which page this ayah is on
         final audioPage = getPageNumber(s, a);
@@ -139,6 +150,29 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     });
   }
 
+  @override
+  void didUpdateWidget(VerticalMushafView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Check if we need to sync with the controller's page when becoming visible
+    // This happens when switching from horizontal to vertical mode
+    if (_itemScrollController.isAttached) {
+      final controllerPage = widget.controller.currentPage;
+      final currentDisplayedPage = _getDisplayPage().round();
+
+      // If there's a mismatch, navigate to the controller's page
+      if (controllerPage != currentDisplayedPage &&
+          (controllerPage - currentDisplayedPage).abs() > 1) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_itemScrollController.isAttached && mounted) {
+            _itemScrollController.jumpTo(index: controllerPage - 1);
+            _livePageNotifier.value = controllerPage.toDouble();
+            _lastPage = controllerPage;
+          }
+        });
+      }
+    }
+  }
+
   void _onVisibleItemsChanged() {
     if (_isSliderActive) return;
 
@@ -171,6 +205,8 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     _itemPositionsListener.itemPositions.removeListener(_onVisibleItemsChanged);
     _audioPlayer.currentSurah.removeListener(_ayahListener);
     _audioPlayer.currentAyah.removeListener(_ayahListener);
+    _audioPlayer.isPlaying.removeListener(_audioStateListener);
+    _audioPlayer.isDownloading.removeListener(_audioStateListener);
     widget.controller.removeListener(_onControllerChanged);
     _stopAutoScroll();
     _autoHideTimer?.cancel();
@@ -188,7 +224,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     _highlightClearTimer?.cancel();
     _highlightClearTimer = Timer(const Duration(seconds: 3), () {
       if (!mounted) return;
-      widget.controller.clearHighlight();
+      widget.controller.clearHighlight(onlyManual: true);
     });
   }
 
