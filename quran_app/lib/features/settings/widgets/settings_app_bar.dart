@@ -5,8 +5,9 @@ import 'package:quran_app/core/ui/responsive.dart';
 
 class SettingsAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
+  final String? leadingLabel;
 
-  const SettingsAppBar({super.key, required this.title});
+  const SettingsAppBar({super.key, required this.title, this.leadingLabel});
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
@@ -36,8 +37,9 @@ class SettingsAppBar extends StatelessWidget implements PreferredSizeWidget {
           icon: Icon(Icons.arrow_back_ios_new_rounded,
               color: accent, size: backIconSize),
           label: Text(
-            AppLocalizations.of(context)?.translate('settings_title') ??
-                'Settings',
+            leadingLabel ??
+              (AppLocalizations.of(context)?.translate('settings_title') ??
+                'Settings'),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             softWrap: false,

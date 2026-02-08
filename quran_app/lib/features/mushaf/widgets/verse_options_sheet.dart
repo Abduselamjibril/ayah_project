@@ -7,17 +7,28 @@ import 'package:quran_app/app/app.dart';
 import 'package:quran_app/core/ui/snackbar_utils.dart';
 import 'package:quran_app/core/quran/qcf_quran.dart';
 import 'package:quran_app/core/services/audio_player_service.dart';
+import 'package:quran_app/core/services/translation_service.dart';
+import 'package:quran_app/data/models/translation_model.dart';
 import 'package:quran_app/features/bookmarks/bookmark_screen.dart';
 import 'package:quran_app/features/bookmarks/state/bookmark_notes_notifier.dart';
 import 'package:quran_app/features/highlights/state/highlight_notifier.dart';
 import 'package:quran_app/features/highlights/data/models/highlight.dart';
-import 'package:quran_app/features/downloads/downloads_screen.dart';
 import 'package:quran_app/features/share/presentation/dialogs/share_preview_dialog.dart';
 import 'package:quran_app/features/mushaf/screens/verse_details_screen.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
 import 'package:quran_app/core/utils/localization_helper.dart';
 import 'play_range_dialog.dart';
 import 'share_options_sheet.dart';
+
+class _TranslationItem {
+  final TranslationEdition edition;
+  final bool isDownloaded;
+
+  const _TranslationItem({
+    required this.edition,
+    required this.isDownloaded,
+  });
+}
 
 class _MenuEditResult {
   _MenuEditResult({required this.order, required this.hidden});
@@ -42,6 +53,16 @@ class VerseOptionsSheet extends StatefulWidget {
 }
 
 class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
+  final TranslationService _translationService = TranslationService.instance;
+  TranslationEdition? _selectedTranslation;
+  String? _translationText;
+  bool _translationExpanded = false;
+  bool _translationLoading = false;
+  final Map<String, double> _translationDownloadProgress = {};
+  final Set<String> _translationDownloading = {};
+  StateSetter? _translationSheetSetState;
+  static const String _translationDownloadPrefix =
+      'translation_download_progress_';
   static const List<String> _bookmarkColors = [
     '#EF5350', // Red
     '#FFB300', // Yellow
@@ -68,6 +89,116 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
   void initState() {
     super.initState();
     _loadSectionOrder();
+    _loadPersistedTranslationProgress();
+    _loadSelectedTranslation();
+  }
+
+  Future<void> _loadPersistedTranslationProgress() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys();
+    for (final key in keys) {
+      if (!key.startsWith(_translationDownloadPrefix)) continue;
+      final id = key.substring(_translationDownloadPrefix.length);
+      final value = prefs.getDouble(key);
+      if (value != null) {
+        _translationDownloading.add(id);
+        _translationDownloadProgress[id] = value.clamp(0.0, 1.0);
+      }
+    }
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _loadSelectedTranslation() async {
+    if (mounted) {
+      setState(() {
+        _translationLoading = true;
+      });
+    }
+    final selectedId = await _translationService.getSelectedTranslationId();
+    TranslationEdition? edition;
+    String? text;
+
+    if (selectedId == null) {
+      final allEditions =
+          await _translationService.getAllTranslationEditions();
+      final downloaded = await _translationService.getDownloadedTranslations();
+      final englishDownloaded = allEditions
+          .where((e) =>
+              e.languageName.toLowerCase() == 'english' &&
+              downloaded.contains(e.id.toString()))
+          .toList()
+        ..sort((a, b) => a.name.compareTo(b.name));
+
+      if (englishDownloaded.isNotEmpty) {
+        edition = englishDownloaded.first;
+        await _translationService.setSelectedTranslationId(edition.id);
+      }
+    }
+
+    edition ??= await _translationService.getSelectedTranslation();
+    if (edition != null) {
+      final cached = _translationService.getCachedTranslation(
+        surahNumber: widget.surah,
+        ayahNumber: widget.verse,
+        editionIdentifier: edition.id.toString(),
+      );
+      if (cached != null && mounted) {
+        setState(() {
+          _selectedTranslation = edition;
+          _translationText = cached;
+        });
+      }
+      text = await _translationService.getTranslationByEdition(
+        surahNumber: widget.surah,
+        ayahNumber: widget.verse,
+        editionIdentifier: edition.id.toString(),
+      );
+    }
+
+    if (mounted) {
+      setState(() {
+        _selectedTranslation = edition;
+        _translationText = text;
+        _translationExpanded = false;
+        _translationLoading = false;
+      });
+    }
+  }
+
+  Future<void> _setSelectedTranslation(TranslationEdition? edition) async {
+    if (edition == null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('selected_translation_id');
+      if (mounted) {
+        setState(() {
+          _selectedTranslation = null;
+          _translationText = null;
+          _translationExpanded = false;
+          _translationLoading = false;
+        });
+      }
+      return;
+    }
+
+    await _translationService.setSelectedTranslationId(edition.id);
+    if (mounted) {
+      setState(() {
+        _translationLoading = true;
+      });
+    }
+    final text = await _translationService.getTranslationByEdition(
+      surahNumber: widget.surah,
+      ayahNumber: widget.verse,
+      editionIdentifier: edition.id.toString(),
+    );
+    if (mounted) {
+      setState(() {
+        _selectedTranslation = edition;
+        _translationText = text;
+        _translationExpanded = false;
+        _translationLoading = false;
+      });
+    }
   }
 
   Future<void> _loadSectionOrder() async {
@@ -299,21 +430,24 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
         case 'downloads':
           widgets
             ..add(_buildSectionLabel(
-                AppLocalizations.of(context)?.translate('downloads_title') ??
-                    'Downloads',
+                AppLocalizations.of(context)?.translate('translation') ??
+                    'Translation',
                 context))
             ..add(const SizedBox(height: 8))
-            ..add(_buildActionCard(context,
-                width: double.infinity,
-                icon: Icons.download_rounded,
-                label: AppLocalizations.of(context)
-                        ?.translate('downloads_title') ??
-                    'Downloads',
-                trailing: Icons.chevron_right, onTap: () {
-              Navigator.pop(context);
-              Navigator.push(rootContext,
-                  MaterialPageRoute(builder: (_) => const DownloadsScreen()));
-            }));
+            ..add(_buildTranslationCard(context))
+            ..add(const SizedBox(height: 10))
+            ..add(_buildActionCard(
+              context,
+              width: double.infinity,
+                icon: Icons.local_library_outlined,
+                label: AppLocalizations.of(context)?.translate('tab_tafsir') ??
+                  'Tafsir',
+              trailing: Icons.chevron_right,
+              onTap: () {
+                Navigator.pop(context);
+                _viewTafsir(rootContext, surah, verse);
+              },
+            ));
           addSpacer();
           break;
 
@@ -425,6 +559,586 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
                 Icon(trailing,
                     size: 18,
                     color: theme.colorScheme.onSurface.withOpacity(0.7)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTranslationCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+    final cardBg = isLight
+        ? theme.scaffoldBackgroundColor
+        : theme.colorScheme.onSurface.withOpacity(0.08);
+    final borderColor = isLight
+        ? theme.colorScheme.surface
+        : theme.colorScheme.onSurface.withOpacity(0.08);
+    final accent = BrandColors.accent;
+
+    final translationText = _translationText?.trim();
+    final hasTranslation =
+        translationText != null && translationText.isNotEmpty;
+    final isLoading = _translationLoading;
+    final translatorName = _selectedTranslation?.name;
+    return SizedBox(
+      width: double.infinity,
+      child: InkWell(
+        onTap: () => _openTranslationPicker(context),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: borderColor, width: 1),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+            if (!hasTranslation && isLoading)
+              Row(
+                children: [
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: accent,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      AppLocalizations.of(context)
+                              ?.translate('loading') ??
+                          'Loading translation...',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            else if (!hasTranslation)
+              Row(
+                children: [
+                  Icon(Icons.menu_book_outlined, color: accent),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      AppLocalizations.of(context)
+                              ?.translate('select_translation') ??
+                          'Select Translation...',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: accent,
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            else
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final textStyle = theme.textTheme.bodyMedium?.copyWith(
+                    height: 1.5,
+                    color: theme.colorScheme.onSurface,
+                  );
+                  final isOverflowing = _isTextOverflowing(
+                    translationText,
+                    textStyle ?? const TextStyle(),
+                    constraints.maxWidth,
+                  );
+                  final maxLines = _translationExpanded ? null : 3;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        translationText,
+                        maxLines: maxLines,
+                        overflow: _translationExpanded
+                            ? TextOverflow.visible
+                            : TextOverflow.ellipsis,
+                        style: textStyle,
+                      ),
+                      if (isOverflowing || _translationExpanded)
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _translationExpanded = !_translationExpanded;
+                            });
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              _translationExpanded
+                                  ? (AppLocalizations.of(context)
+                                          ?.translate('show_less') ??
+                                      'Show less')
+                                  : (AppLocalizations.of(context)
+                                          ?.translate('continue_reading') ??
+                                      'Continue reading'),
+                              style: TextStyle(
+                                color: accent,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            if (translatorName != null && translatorName.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                translatorName,
+                style: TextStyle(
+                  color: accent,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool _isTextOverflowing(String text, TextStyle style, double maxWidth) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      maxLines: 3,
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: maxWidth);
+    return painter.didExceedMaxLines;
+  }
+
+  Future<void> _openTranslationPicker(BuildContext context) async {
+    final translations = await _translationService.getAllTranslationEditions();
+    final downloaded = await _translationService.getDownloadedTranslations();
+    final selectedId = await _translationService.getSelectedTranslationId();
+
+    if (!mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            _translationSheetSetState = setSheetState;
+            final theme = Theme.of(context);
+            final isLight = theme.brightness == Brightness.light;
+            final cardBg = isLight
+                ? theme.scaffoldBackgroundColor
+                : theme.colorScheme.onSurface.withOpacity(0.08);
+
+            final grouped = <String, List<_TranslationItem>>{};
+            for (final t in translations) {
+              grouped.putIfAbsent(t.languageName, () => []);
+              grouped[t.languageName]!.add(
+                _TranslationItem(
+                  edition: t,
+                  isDownloaded: downloaded.contains(t.id.toString()),
+                ),
+              );
+            }
+
+            const preferred = ['english', 'arabic', 'amharic'];
+            final preferredLangs = <String>[];
+            for (final p in preferred) {
+              final match = grouped.keys.firstWhere(
+                (k) => k.toLowerCase() == p,
+                orElse: () => '',
+              );
+              if (match.isNotEmpty) preferredLangs.add(match);
+            }
+
+            final otherLangs = grouped.keys
+                .where((l) => !preferred.contains(l.toLowerCase()))
+                .toList()
+              ..sort((a, b) {
+                final aHas = grouped[a]!.any((e) => e.isDownloaded);
+                final bHas = grouped[b]!.any((e) => e.isDownloaded);
+                if (aHas != bHas) return aHas ? -1 : 1;
+                return a.compareTo(b);
+              });
+
+            final orderedLangs = [...preferredLangs, ...otherLangs];
+
+            return FractionallySizedBox(
+              heightFactor: 0.9,
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 10),
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: theme.dividerColor.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 32),
+                          Expanded(
+                            child: Center(
+                              child: Text(
+                                AppLocalizations.of(context)
+                                        ?.translate('select_translation') ??
+                                    'Select Translation',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(sheetContext),
+                            icon: const Icon(Icons.close),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                        children: [
+                          _buildTranslationPickerItem(
+                            context: sheetContext,
+                            title: AppLocalizations.of(context)
+                                    ?.translate('none_selected') ??
+                                'None',
+                            subtitle: null,
+                            cardBg: cardBg,
+                            isSelected: selectedId == null,
+                            trailing: selectedId == null
+                                ? Icon(Icons.check, color: BrandColors.accent)
+                                : null,
+                            onTap: () async {
+                              await _setSelectedTranslation(null);
+                              if (sheetContext.mounted) {
+                                Navigator.pop(sheetContext);
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          for (final lang in orderedLangs) ...[
+                            Text(
+                              lang,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ..._buildLanguageItems(
+                              context: sheetContext,
+                              items: grouped[lang]!,
+                              cardBg: cardBg,
+                              selectedId: selectedId?.toString(),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+    _translationSheetSetState = null;
+  }
+
+  Future<void> _downloadTranslationFromPicker(
+    TranslationEdition edition,
+    BuildContext sheetContext,
+  ) async {
+    final id = edition.id.toString();
+    if (_translationDownloading.contains(id)) return;
+
+    setState(() {
+      _translationDownloading.add(id);
+      _translationDownloadProgress[id] = 0.0;
+    });
+    _translationSheetSetState?.call(() {});
+    final prefsFuture = SharedPreferences.getInstance();
+    (await prefsFuture)
+        .setDouble('${_translationDownloadPrefix}$id', 0.0);
+
+    _showSnack(
+      (AppLocalizations.of(context)?.translate('downloading_item') ??
+              'Downloading {name}')
+          .replaceAll('{name}', edition.name),
+    );
+    bool ok = false;
+    try {
+      ok = await _translationService.downloadTranslation(
+        edition,
+        onProgress: (progress) {
+          if (!mounted) return;
+          prefsFuture.then((prefs) {
+            prefs.setDouble('${_translationDownloadPrefix}$id',
+                progress.clamp(0.0, 1.0));
+          });
+          setState(() {
+            _translationDownloadProgress[id] =
+                progress.clamp(0.0, 1.0);
+          });
+          _translationSheetSetState?.call(() {});
+        },
+      );
+
+      if (ok) {
+        await _setSelectedTranslation(edition);
+        if (sheetContext.mounted) {
+          Navigator.pop(sheetContext);
+        }
+      } else {
+        _showSnack(
+          AppLocalizations.of(context)
+                  ?.translate('download_failed_try_again') ??
+              'Download failed. Please try again.',
+        );
+      }
+    } finally {
+      (await prefsFuture).remove('${_translationDownloadPrefix}$id');
+      if (mounted) {
+        setState(() {
+          _translationDownloading.remove(id);
+          _translationDownloadProgress.remove(id);
+        });
+      }
+      _translationSheetSetState?.call(() {});
+    }
+  }
+
+  List<Widget> _buildLanguageItems({
+    required BuildContext context,
+    required List<_TranslationItem> items,
+    required Color cardBg,
+    required String? selectedId,
+  }) {
+    final sorted = List<_TranslationItem>.from(items)
+      ..sort((a, b) {
+        if (a.isDownloaded != b.isDownloaded) {
+          return a.isDownloaded ? -1 : 1;
+        }
+        return a.edition.name.compareTo(b.edition.name);
+      });
+
+    return [
+      _buildTranslationGroupCard(
+        context: context,
+        items: sorted,
+        cardBg: cardBg,
+        selectedId: selectedId,
+      ),
+    ];
+  }
+
+  Widget _buildTranslationGroupCard({
+    required BuildContext context,
+    required List<_TranslationItem> items,
+    required Color cardBg,
+    required String? selectedId,
+  }) {
+    final theme = Theme.of(context);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: theme.dividerColor.withOpacity(0.15),
+          ),
+        ),
+        child: Column(
+          children: [
+            for (var i = 0; i < items.length; i++) ...[
+              _buildTranslationRow(
+                context: context,
+                item: items[i],
+                selectedId: selectedId,
+              ),
+              if (i != items.length - 1)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: theme.dividerColor.withOpacity(0.15),
+                  ),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTranslationRow({
+    required BuildContext context,
+    required _TranslationItem item,
+    required String? selectedId,
+  }) {
+    final theme = Theme.of(context);
+    final edition = item.edition;
+    final id = edition.id.toString();
+    final isSelected = selectedId == id;
+    final isDownloading = _translationDownloading.contains(id);
+    final progress = _translationDownloadProgress[id] ?? 0.0;
+    final trailing = item.isDownloaded
+        ? (isSelected ? Icon(Icons.check, color: BrandColors.accent) : null)
+        : (isDownloading
+            ? _buildDownloadProgressIndicator(progress)
+            : IconButton(
+                icon: Icon(Icons.download_for_offline,
+                    color: BrandColors.accent),
+                onPressed: () => _downloadTranslationFromPicker(edition, context),
+              ));
+
+    return InkWell(
+      onTap: item.isDownloaded
+          ? () async {
+              await _setSelectedTranslation(edition);
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
+            }
+          : (isDownloading
+              ? null
+              : () => _downloadTranslationFromPicker(edition, context)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    edition.name,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    edition.languageName,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (trailing != null) trailing,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDownloadProgressIndicator(double progress) {
+    final percent = (progress * 100).round();
+    return SizedBox(
+      width: 32,
+      height: 32,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          CircularProgressIndicator(
+            value: progress,
+            strokeWidth: 2.5,
+            color: BrandColors.accent,
+            backgroundColor: Colors.black.withOpacity(0.08),
+          ),
+          Text(
+            '$percent%',
+            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTranslationPickerItem({
+    required BuildContext context,
+    required String title,
+    required String? subtitle,
+    required Color cardBg,
+    required bool isSelected,
+    required Widget? trailing,
+    required VoidCallback? onTap,
+  }) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected
+                  ? BrandColors.accent.withOpacity(0.4)
+                  : theme.dividerColor.withOpacity(0.15),
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: theme.colorScheme.onSurface)),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (trailing != null) trailing,
             ],
           ),
         ),
@@ -896,11 +1610,15 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
   }
 
   void _viewTafsir(BuildContext context, int surah, int verse) {
-    Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (context) =>
-                VerseDetailsScreen(surahNumber: surah, ayahNumber: verse)));
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => VerseDetailsScreen(
+        surahNumber: surah,
+        ayahNumber: verse,
+      ),
+    );
   }
 
   Future<void> _showPlayToDialog(
@@ -943,8 +1661,8 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
         return AppLocalizations.of(context)?.translate('recitation') ??
             'Recitation';
       case 'downloads':
-        return AppLocalizations.of(context)?.translate('downloads_title') ??
-            'Downloads';
+        return AppLocalizations.of(context)?.translate('translation') ??
+            'Translation';
       case 'sharing':
         return AppLocalizations.of(context)?.translate('sharing') ?? 'Sharing';
       case 'highlight':

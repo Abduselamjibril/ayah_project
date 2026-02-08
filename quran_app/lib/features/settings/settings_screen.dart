@@ -140,11 +140,11 @@ class SettingsScreen extends StatelessWidget {
                 _settingsTile(
                   context: context,
                   iconColor: iconColor,
-                  icon: Icons.download_rounded,
+                  icon: Icons.storage_rounded,
                   label: AppLocalizations.of(
                         context,
-                      )?.translate('downloads_title') ??
-                      'Downloads',
+                      )?.translate('storage_title') ??
+                      'Storage',
                   onTap: () => Navigator.push(
                     context,
                     _createRoute(const DownloadsScreen()),
