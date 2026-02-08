@@ -95,58 +95,120 @@ class PermanentAppBar extends StatelessWidget {
               if (selectedTabIndex == 0)
                 Padding(
                   padding: EdgeInsets.only(left: leftPad, right: rightPad),
-                  child: SizedBox(
-                    width: toggleWidth,
-                    child: _SurahJuzToggle(
-                      navigationMode: navigationMode,
-                      onChanged: onNavigationModeChanged,
-                    ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      if (constraints.maxWidth < toggleWidth + 24) {
+                        return SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(minWidth: toggleWidth),
+                            child: SizedBox(
+                              width: toggleWidth,
+                              child: _SurahJuzToggle(
+                                navigationMode: navigationMode,
+                                onChanged: onNavigationModeChanged,
+                              ),
+                            ),
+                          ),
+                        );
+                      } else {
+                        return SizedBox(
+                          width: toggleWidth,
+                          child: _SurahJuzToggle(
+                            navigationMode: navigationMode,
+                            onChanged: onNavigationModeChanged,
+                          ),
+                        );
+                      }
+                    },
                   ),
                 )
               else if (selectedTabIndex == 3)
                 Padding(
                   padding: EdgeInsets.only(left: leftPad, right: rightPad),
-                  child: SizedBox(
-                    width: toggleWidth,
-                    child: Center(
-                      child: SizedBox(
-                        width: toggleWidth,
-                        child: Container(
-                          height: 34,
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color:
-                                Theme.of(context).brightness == Brightness.light
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      // If not enough space, allow horizontal scroll
+                      if (constraints.maxWidth < toggleWidth + 24) {
+                        return SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(minWidth: toggleWidth),
+                            child: Container(
+                              width: toggleWidth,
+                              height: 34,
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).brightness == Brightness.light
                                     ? const Color(0xFFE3E3E3)
                                     : const Color(0xFF2C2C2E),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            children: [
-                              Expanded(
-                                child: _ToggleButton(
-                                  label: AppLocalizations.of(context)
-                                          ?.translate('tab_contents') ??
-                                      'Sūrahs',
-                                  isSelected: highlightsMode == 0,
-                                  onTap: () => onHighlightsModeChanged?.call(0),
-                                ),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              Expanded(
-                                child: _ToggleButton(
-                                  label: AppLocalizations.of(context)
-                                          ?.translate('colors') ??
-                                      'Colors',
-                                  isSelected: highlightsMode == 1,
-                                  onTap: () => onHighlightsModeChanged?.call(1),
-                                ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.max,
+                                children: [
+                                  Expanded(
+                                    child: _ToggleButton(
+                                      label: AppLocalizations.of(context)
+                                              ?.translate('tab_contents') ??
+                                          'Sūrahs',
+                                      isSelected: highlightsMode == 0,
+                                      onTap: () => onHighlightsModeChanged?.call(0),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: _ToggleButton(
+                                      label: AppLocalizations.of(context)
+                                              ?.translate('colors') ??
+                                          'Colors',
+                                      isSelected: highlightsMode == 1,
+                                      onTap: () => onHighlightsModeChanged?.call(1),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ),
-                    ),
+                        );
+                      } else {
+                        return SizedBox(
+                          width: toggleWidth,
+                          child: Container(
+                            height: 34,
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).brightness == Brightness.light
+                                  ? const Color(0xFFE3E3E3)
+                                  : const Color(0xFF2C2C2E),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.max,
+                              children: [
+                                Expanded(
+                                  child: _ToggleButton(
+                                    label: AppLocalizations.of(context)
+                                            ?.translate('tab_contents') ??
+                                        'Sūrahs',
+                                    isSelected: highlightsMode == 0,
+                                    onTap: () => onHighlightsModeChanged?.call(0),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: _ToggleButton(
+                                    label: AppLocalizations.of(context)
+                                            ?.translate('colors') ??
+                                        'Colors',
+                                    isSelected: highlightsMode == 1,
+                                    onTap: () => onHighlightsModeChanged?.call(1),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                    },
                   ),
                 )
               else

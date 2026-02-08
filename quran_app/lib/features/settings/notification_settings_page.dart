@@ -360,12 +360,13 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   }
 
   Widget _buildSectionHeader(ThemeData theme, String title) {
+    final isLight = theme.brightness == Brightness.light;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Text(
         title,
         style: theme.textTheme.titleMedium?.copyWith(
-          color: theme.primaryColor,
+          color: isLight ? Colors.black : theme.primaryColor,
           fontWeight: FontWeight.bold,
         ),
       ),
