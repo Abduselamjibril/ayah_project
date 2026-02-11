@@ -27,11 +27,13 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 class VerticalMushafView extends StatefulWidget {
   final MushafController controller;
   final ValueChanged<bool>? onOverlayVisibilityChanged;
+  final bool isVisible;
 
   const VerticalMushafView({
     super.key,
     required this.controller,
     this.onOverlayVisibilityChanged,
+    this.isVisible = true,
   });
 
   @override
@@ -155,13 +157,9 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     super.didUpdateWidget(oldWidget);
     // Check if we need to sync with the controller's page when becoming visible
     // This happens when switching from horizontal to vertical mode
-    if (_itemScrollController.isAttached) {
-      final controllerPage = widget.controller.currentPage;
-      final currentDisplayedPage = _getDisplayPage().round();
-
-      // If there's a mismatch, navigate to the controller's page
-      if (controllerPage != currentDisplayedPage &&
-          (controllerPage - currentDisplayedPage).abs() > 1) {
+    if (widget.isVisible && !oldWidget.isVisible) {
+      if (_itemScrollController.isAttached) {
+        final controllerPage = widget.controller.currentPage;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_itemScrollController.isAttached && mounted) {
             _itemScrollController.jumpTo(index: controllerPage - 1);

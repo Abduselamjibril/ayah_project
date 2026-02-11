@@ -26,12 +26,14 @@ class HorizontalMushafView extends StatefulWidget {
   final MushafController controller;
   final ValueChanged<bool>? onOverlayVisibilityChanged;
   final VoidCallback? onDragDown;
+  final bool isVisible;
 
   const HorizontalMushafView({
     super.key,
     required this.controller,
     this.onOverlayVisibilityChanged,
     this.onDragDown,
+    this.isVisible = true,
   });
 
   @override
@@ -137,15 +139,10 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   @override
   void didUpdateWidget(HorizontalMushafView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Check if we need to sync with the controller's page when becoming visible
-    // This happens when switching from vertical to horizontal mode
-    if (_pageController.hasClients) {
-      final controllerPage = widget.controller.currentPage;
-      final currentDisplayedPage = _getBasePage().round();
-
-      // If there's a mismatch, navigate to the controller's page
-      if (controllerPage != currentDisplayedPage &&
-          (controllerPage - currentDisplayedPage).abs() > 1) {
+    // Sync only when becoming visible (e.g. switching from vertical -> horizontal)
+    if (widget.isVisible && !oldWidget.isVisible) {
+      if (_pageController.hasClients) {
+        final controllerPage = widget.controller.currentPage;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_pageController.hasClients && mounted) {
             _pageController.jumpToPage(controllerPage - 1);
