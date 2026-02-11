@@ -8,7 +8,7 @@ import 'package:quran_app/core/ui/responsive.dart';
 // Assuming these pages exist in your project structure
 import 'daily_verse_settings_page.dart';
 import 'about_screen.dart';
-import '../downloads/downloads_screen.dart';
+import '../downloads/download_settings_page.dart';
 import 'notification_settings_page.dart';
 import 'theme_settings_page.dart';
 import 'language_settings_page.dart';
@@ -147,7 +147,7 @@ class SettingsScreen extends StatelessWidget {
                       'Storage',
                   onTap: () => Navigator.push(
                     context,
-                    _createRoute(const DownloadsScreen()),
+                    _createRoute(const DownloadSettingsPage()),
                   ),
                 ),
               ],

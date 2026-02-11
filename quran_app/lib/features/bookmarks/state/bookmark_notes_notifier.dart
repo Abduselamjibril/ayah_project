@@ -127,6 +127,7 @@ class BookmarkNotesNotifier extends ChangeNotifier {
       await _repository.deleteBookmarkForVerse(surahId, ayahId);
       _bookmarksByKey.remove(key);
     } else {
+      _removeBookmarksByColor(colorHex, excludeKey: key);
       final saved = await _repository.upsertBookmark(
         surahId: surahId,
         ayahId: ayahId,
@@ -144,13 +145,15 @@ class BookmarkNotesNotifier extends ChangeNotifier {
     String colorHex = '#FFD54F',
     String? category,
   }) async {
+    final key = _verseKey(surahId, ayahId);
+    _removeBookmarksByColor(colorHex, excludeKey: key);
     final saved = await _repository.upsertBookmark(
       surahId: surahId,
       ayahId: ayahId,
       colorHex: colorHex,
       categoryName: category,
     );
-    _bookmarksByKey[_verseKey(surahId, ayahId)] = saved;
+    _bookmarksByKey[key] = saved;
     notifyListeners();
     return saved;
   }
@@ -250,4 +253,19 @@ class BookmarkNotesNotifier extends ChangeNotifier {
   }
 
   String _verseKey(int surahId, int ayahId) => '$surahId:$ayahId';
+
+  void _removeBookmarksByColor(String colorHex, {String? excludeKey}) {
+    final target = colorHex.toLowerCase();
+    final keysToRemove = <String>[];
+    _bookmarksByKey.forEach((key, bookmark) {
+      if (bookmark.isKhatmahPin) return;
+      if (excludeKey != null && key == excludeKey) return;
+      if (bookmark.colorHex.toLowerCase() == target) {
+        keysToRemove.add(key);
+      }
+    });
+    for (final key in keysToRemove) {
+      _bookmarksByKey.remove(key);
+    }
+  }
 }

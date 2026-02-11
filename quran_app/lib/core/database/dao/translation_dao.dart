@@ -210,4 +210,20 @@ class TranslationDao {
       return [];
     }
   }
+
+  /// Get approximate text size in bytes for a specific edition.
+  Future<int> getEditionTextBytes(String editionIdentifier) async {
+    try {
+      final results = await database.rawQuery(
+        'SELECT SUM(LENGTH(CAST(text AS BLOB))) AS total FROM translations WHERE edition_identifier = ?',
+        [editionIdentifier],
+      );
+      if (results.isEmpty) return 0;
+      final total = results.first['total'];
+      return total is int ? total : (total as num?)?.toInt() ?? 0;
+    } catch (e) {
+      print('Error getting translation size bytes: $e');
+      return 0;
+    }
+  }
 }

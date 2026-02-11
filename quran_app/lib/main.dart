@@ -20,35 +20,57 @@ Future<void> main() async {
   // Ensure Flutter widgets are initialized
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize database and seed initial data
+  // CRITICAL: Initialize database and seed initial data
+  // Must be done before UI to ensure data availability
   await DatabaseInitializer.initializeDatabase();
 
-  // Initialize theme service and load saved theme
+  // CRITICAL: Initialize theme service and load saved theme
+  // Prevents theme flicker on startup
   await ThemeService().initialize();
 
-  // Initialize language service and load saved language
+  // CRITICAL: Initialize language service and load saved language
+  // Prevents language flicker on startup
   await LanguageService().initialize();
 
-  // Initialize mushaf settings (scroll mode, etc.)
+  // CRITICAL: Initialize mushaf settings (scroll mode, etc.)
+  // Affects initial layout logic
   await MushafSettingsService().initialize();
 
-  // Initialize Notification Service (important for timezones)
-  await AppNotificationService.instance.initialize();
-
-  // Request notification permissions immediately
-  await AppNotificationService.instance.requestPermissionsIfNeeded();
-
-  // Initialize Verse of the Day service
-  await VerseOfTheDayService.instance.initialize();
-
-  // Keep home widget in sync with local database
-  await HomeWidgetService.instance.initializeBackgroundSync();
-
-  // Keep the screen awake while the app is open
-  await WakelockPlus.enable();
-
-  // Run the app
+  // Run the app immediately after critical services are ready
   runApp(const AppBootstrap());
+
+  // NON-CRITICAL: Initialize other services in the background
+  // We use a slight delay to allow the first frame to render smoothly
+  Future.delayed(const Duration(milliseconds: 500), () {
+    _initBackgroundServices();
+  });
+}
+
+/// Initialize services that are not required for the immediate first frame
+Future<void> _initBackgroundServices() async {
+  try {
+    debugPrint('Starting background service initialization...');
+
+    // Initialize Notification Service (important for timezones)
+    await AppNotificationService.instance.initialize();
+
+    // Request notification permissions immediately
+    // Note: This might show a dialog, so ensuring it happens after UI is ready is good
+    await AppNotificationService.instance.requestPermissionsIfNeeded();
+
+    // Initialize Verse of the Day service
+    await VerseOfTheDayService.instance.initialize();
+
+    // Keep home widget in sync with local database
+    await HomeWidgetService.instance.initializeBackgroundSync();
+
+    // Keep the screen awake while the app is open
+    await WakelockPlus.enable();
+
+    debugPrint('Background service initialization completed.');
+  } catch (e) {
+    debugPrint('Error in background service initialization: $e');
+  }
 }
 
 class AppBootstrap extends StatelessWidget {
