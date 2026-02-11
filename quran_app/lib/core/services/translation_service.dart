@@ -209,6 +209,10 @@ class TranslationService {
     return _translationCache[cacheKey];
   }
 
+  void clearMemoryCache() {
+    _translationCache.clear();
+  }
+
   /// Get all translations for a specific verse
   Future<List<Map<String, dynamic>>> getAllTranslations({
     required int surahNumber,
@@ -228,6 +232,12 @@ class TranslationService {
   Future<List<String>> getDownloadedTranslations() async {
     if (!_isInitialized) await initialize();
     return await _translationDao.getDownloadedEditions();
+  }
+
+  /// Get approximate size in bytes for a downloaded translation edition.
+  Future<int> getTranslationSizeBytes(String editionIdentifier) async {
+    if (!_isInitialized) await initialize();
+    return await _translationDao.getEditionTextBytes(editionIdentifier);
   }
 
   /// Delete a downloaded translation edition

@@ -64,6 +64,12 @@ class BookmarkNotesRepository {
           where: 'is_khatmah_pin = 1 OR category_name = ?',
           whereArgs: ['Last read'],
         );
+      } else {
+        await txn.delete(
+          'bookmarks',
+          where: 'color_hex = ? AND is_khatmah_pin = 0',
+          whereArgs: [colorHex],
+        );
       }
 
       await txn.insert(
