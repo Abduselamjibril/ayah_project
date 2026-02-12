@@ -76,7 +76,7 @@ class PermanentAppBar extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           // 80 (edit) + 38 (back) + 16*2 (padding) = 150, so available for toggle is constraints.maxWidth - 80 - 38
-          const double toggleWidth = 180;
+          const double toggleWidth = 195;
           final double leftSpace = constraints.maxWidth - 80 - 38 - toggleWidth;
           // Move the toggle a bit to the left of center (e.g., 24px)
           const double leftShift = 24;

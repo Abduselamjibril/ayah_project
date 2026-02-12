@@ -678,103 +678,120 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                           final Color notPassedColor =
                               Theme.of(context).colorScheme.surface;
 
-                          return GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onPanDown: (details) =>
-                                handleDrag(details.localPosition.dy),
-                            onPanUpdate: (details) =>
-                                handleDrag(details.localPosition.dy),
-                            onPanEnd: (_) => handleEnd(),
-                            onTapDown: (details) =>
-                                handleDrag(details.localPosition.dy),
-                            onTapUp: (_) => handleEnd(),
-                            child: SizedBox(
-                              width: 48 + 120,
-                              child: Stack(
-                                clipBehavior: Clip.none,
-                                children: [
-                                  Container(
-                                    width: 48,
+                          const barWidth = 48.0;
+                          const tooltipAreaWidth = 120.0;
+
+                          final bar = Container(
+                            width: barWidth,
+                            decoration: BoxDecoration(
+                              color: notPassedColor,
+                              borderRadius:
+                                  BorderRadius.circular(14), // More rounded
+                              // Removed boxShadow for no shadow
+                              border: Border.all(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outline
+                                    .withOpacity(0.18),
+                                width: 1.2,
+                              ),
+                            ),
+                            child: Stack(
+                              children: [
+                                // Passed area (darker area)
+                                Positioned(
+                                  left: 0,
+                                  right: 0,
+                                  top: 0,
+                                  height: pillTop + pillHeight / 2,
+                                  child: Container(
                                     decoration: BoxDecoration(
-                                      color: notPassedColor,
-                                      borderRadius: BorderRadius.circular(
-                                          14), // More rounded
-                                      // Removed boxShadow for no shadow
-                                      border: Border.all(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .outline
-                                            .withOpacity(0.18),
-                                        width: 1.2,
+                                      color: passedColor,
+                                      borderRadius: BorderRadius.vertical(
+                                        top: Radius.circular(14),
+                                        bottom: Radius.circular(0),
                                       ),
                                     ),
-                                    child: Stack(
-                                      children: [
-                                        // Passed area (darker area)
-                                        Positioned(
-                                          left: 0,
-                                          right: 0,
-                                          top: 0,
-                                          height: pillTop + pillHeight / 2,
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              color: passedColor,
-                                              borderRadius:
-                                                  BorderRadius.vertical(
-                                                top: Radius.circular(14),
-                                                bottom: Radius.circular(0),
-                                              ),
+                                  ),
+                                ),
+                                // The pill
+                                Positioned(
+                                  left: 0,
+                                  right: 0,
+                                  top: pillTop.toDouble(),
+                                  height: pillHeight,
+                                  child: Center(
+                                    child: Container(
+                                      width: 44,
+                                      height: pillHeight,
+                                      decoration: BoxDecoration(
+                                        color:
+                                            Theme.of(context).colorScheme.primary,
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .outline
+                                              .withOpacity(0.18),
+                                          width: 1.2,
+                                        ),
+                                        // No shadow
+                                      ),
+                                      child: Center(
+                                        child: Opacity(
+                                          opacity: _isSliderActive ? 0 : 1,
+                                          child: Text(
+                                            currentPage.toString(),
+                                            textScaler:
+                                                const TextScaler.linear(1.0),
+                                            style: TextStyle(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onPrimary,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: fontSize,
                                             ),
                                           ),
                                         ),
-                                        // The pill
-                                        Positioned(
-                                          left: 0,
-                                          right: 0,
-                                          top: pillTop.toDouble(),
-                                          height: pillHeight,
-                                          child: Center(
-                                            child: Container(
-                                              width: 44,
-                                              height: pillHeight,
-                                              decoration: BoxDecoration(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .primary,
-                                                borderRadius:
-                                                    BorderRadius.circular(20),
-                                                border: Border.all(
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .outline
-                                                      .withOpacity(0.18),
-                                                  width: 1.2,
-                                                ),
-                                                // No shadow
-                                              ),
-                                              child: Center(
-                                                child: Text(
-                                                  currentPage.toString(),
-                                                  style: TextStyle(
-                                                    color: Theme.of(context)
-                                                        .colorScheme
-                                                        .onPrimary,
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: fontSize,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
+                                      ),
                                     ),
                                   ),
-                                  if (_isSliderActive)
-                                    Positioned(
-                                      left: 56,
-                                      top: ((pillTop - 6).clamp(0, trackHeight))
-                                          .toDouble(),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          return SizedBox(
+                            width: barWidth + tooltipAreaWidth,
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Positioned(
+                                  left: 0,
+                                  top: 0,
+                                  bottom: 0,
+                                  child: GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onPanDown: (details) =>
+                                        handleDrag(details.localPosition.dy),
+                                    onPanUpdate: (details) =>
+                                        handleDrag(details.localPosition.dy),
+                                    onPanEnd: (_) => handleEnd(),
+                                    onTapDown: (details) =>
+                                        handleDrag(details.localPosition.dy),
+                                    onTapUp: (_) => handleEnd(),
+                                    child: SizedBox(
+                                      width: barWidth,
+                                      child: bar,
+                                    ),
+                                  ),
+                                ),
+                                if (_isSliderActive)
+                                  Positioned(
+                                    left: barWidth + 8,
+                                    top: ((pillTop - 6).clamp(0, trackHeight))
+                                        .toDouble(),
+                                    child: IgnorePointer(
                                       child: Container(
                                         decoration: BoxDecoration(
                                           color: Theme.of(context)
@@ -820,8 +837,8 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                                         ),
                                       ),
                                     ),
-                                ],
-                              ),
+                                  ),
+                              ],
                             ),
                           );
                         },
@@ -864,81 +881,101 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
               final Color notPassedColor =
                   Theme.of(context).colorScheme.surface;
 
-              return GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onPanDown: (details) => handleDrag(details.localPosition.dy),
-                onPanUpdate: (details) => handleDrag(details.localPosition.dy),
-                onPanEnd: (_) => handleEnd(),
-                onTapDown: (details) => handleDrag(details.localPosition.dy),
-                onTapUp: (_) => handleEnd(),
-                child: SizedBox(
-                  width: normalBarWidth + 120,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Container(
-                        width: normalBarWidth,
+              const tooltipAreaWidth = 120.0;
+
+              final bar = Container(
+                width: normalBarWidth,
+                decoration: BoxDecoration(
+                  color: notPassedColor,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .outline
+                        .withOpacity(0.18),
+                    width: 1.2,
+                  ),
+                ),
+                child: Stack(
+                  children: [
+                    // Passed area (darker area)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      top: 0,
+                      height: pillTop + normalPillHeight / 2,
+                      child: Container(
                         decoration: BoxDecoration(
-                          color: notPassedColor,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .outline
-                                .withOpacity(0.18),
-                            width: 1.2,
+                          color: passedColor,
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(10),
+                            bottom: Radius.circular(0),
                           ),
                         ),
-                        child: Stack(
-                          children: [
-                            // Passed area (darker area)
-                            Positioned(
-                              left: 0,
-                              right: 0,
-                              top: 0,
-                              height: pillTop + normalPillHeight / 2,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: passedColor,
-                                  borderRadius: BorderRadius.vertical(
-                                    top: Radius.circular(10),
-                                    bottom: Radius.circular(0),
-                                  ),
-                                ),
-                              ),
+                      ),
+                    ),
+                    // The pill (expanded to fit bar width)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      top: pillTop.toDouble(),
+                      child: Container(
+                        height: normalPillHeight,
+                        decoration: BoxDecoration(
+                          color: BrandColors.accent,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        alignment: Alignment.center,
+                        child: Opacity(
+                          opacity: _isSliderActive ? 0 : 1,
+                          child: Text(
+                            '$currentPage',
+                            textScaler: const TextScaler.linear(1.0),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: fontSize,
+                              height: 1.05,
                             ),
-                            // The pill (expanded to fit bar width)
-                            Positioned(
-                              left: 0,
-                              right: 0,
-                              top: pillTop.toDouble(),
-                              child: Container(
-                                height: normalPillHeight,
-                                decoration: BoxDecoration(
-                                  color: BrandColors.accent,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  '$currentPage',
-                                  textScaler: const TextScaler.linear(1.0),
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: fontSize,
-                                    height: 1.05,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
-                      if (_isSliderActive)
-                        Positioned(
-                          left: normalBarWidth + 8,
-                          top: ((pillTop - 6).clamp(0, trackHeight)).toDouble(),
+                    ),
+                  ],
+                ),
+              );
+
+              return SizedBox(
+                width: normalBarWidth + tooltipAreaWidth,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onPanDown: (details) =>
+                            handleDrag(details.localPosition.dy),
+                        onPanUpdate: (details) =>
+                            handleDrag(details.localPosition.dy),
+                        onPanEnd: (_) => handleEnd(),
+                        onTapDown: (details) =>
+                            handleDrag(details.localPosition.dy),
+                        onTapUp: (_) => handleEnd(),
+                        child: SizedBox(
+                          width: normalBarWidth,
+                          child: bar,
+                        ),
+                      ),
+                    ),
+                    if (_isSliderActive)
+                      Positioned(
+                        left: normalBarWidth + 8,
+                        top: ((pillTop - 6).clamp(0, trackHeight)).toDouble(),
+                        child: IgnorePointer(
                           child: Container(
                             decoration: BoxDecoration(
                               color: Theme.of(context)
@@ -981,8 +1018,8 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                             ),
                           ),
                         ),
-                    ],
-                  ),
+                      ),
+                  ],
                 ),
               );
             },
