@@ -22,7 +22,8 @@ class DownloadsScreen extends StatelessWidget {
           ? theme.colorScheme.surface
           : theme.scaffoldBackgroundColor,
       appBar: SettingsAppBar(
-        title: AppLocalizations.of(context)?.translate('storage_title') ?? 'Storage',
+        title: AppLocalizations.of(context)?.translate('storage_title') ??
+            'Storage',
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -30,8 +31,12 @@ class DownloadsScreen extends StatelessWidget {
           _downloadsTile(
             context: context,
             icon: Icons.translate,
-            label: AppLocalizations.of(context)?.translate('tab_translations') ?? 'Translations',
-            subtitle: AppLocalizations.of(context)?.translate('select_translation') ?? 'Select Translation',
+            label:
+                AppLocalizations.of(context)?.translate('tab_translations') ??
+                    'Translations',
+            subtitle:
+                AppLocalizations.of(context)?.translate('select_translation') ??
+                    'Select Translation',
             onTap: () {
               Navigator.push(
                 context,
@@ -46,8 +51,10 @@ class DownloadsScreen extends StatelessWidget {
           _downloadsTile(
             context: context,
             icon: Icons.menu_book_outlined,
-            label: AppLocalizations.of(context)?.translate('tab_tafsir') ?? 'Tafsir',
-            subtitle: AppLocalizations.of(context)?.translate('tab_tafsir') ?? 'Tafsir',
+            label: AppLocalizations.of(context)?.translate('tab_tafsir') ??
+                'Tafsir',
+            subtitle: AppLocalizations.of(context)?.translate('tab_tafsir') ??
+                'Tafsir',
             onTap: () {
               Navigator.push(
                 context,
@@ -62,8 +69,10 @@ class DownloadsScreen extends StatelessWidget {
           _downloadsTile(
             context: context,
             icon: Icons.volume_up,
-            label: AppLocalizations.of(context)?.translate('tab_audio') ?? 'Audio',
-            subtitle: AppLocalizations.of(context)?.translate('tab_audio') ?? 'Audio',
+            label:
+                AppLocalizations.of(context)?.translate('tab_audio') ?? 'Audio',
+            subtitle:
+                AppLocalizations.of(context)?.translate('tab_audio') ?? 'Audio',
             onTap: () {
               Navigator.push(
                 context,
@@ -80,7 +89,6 @@ class DownloadsScreen extends StatelessWidget {
   }
 }
 
-
 Widget _downloadsTile({
   required BuildContext context,
   required IconData icon,
@@ -92,8 +100,8 @@ Widget _downloadsTile({
   final theme = Theme.of(context);
   final isLight = theme.brightness == Brightness.light;
   final iconColor = theme.colorScheme.onSurface.withOpacity(0.85);
-  final iconSize =  ResponsiveLayout.scaled(context, 26, min: 22, max: 30);
-  final textSize =  ResponsiveLayout.scaled(context, 16.5, min: 15, max: 18);
+  final iconSize = ResponsiveLayout.scaled(context, 26, min: 22, max: 30);
+  final textSize = ResponsiveLayout.scaled(context, 16.5, min: 15, max: 18);
   final trailingSize = ResponsiveLayout.scaled(context, 18, min: 16, max: 22);
   final hPad = ResponsiveLayout.scaled(context, 18, min: 14, max: 22);
   return Card(
