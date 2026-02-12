@@ -193,6 +193,12 @@ class TafsirService {
     return await _tafsirDao.getDownloadedEditions();
   }
 
+  /// Get approximate size in bytes for a downloaded tafsir edition.
+  Future<int> getTafsirSizeBytes(String editionIdentifier) async {
+    if (!_isInitialized) await initialize();
+    return await _tafsirDao.getEditionTextBytes(editionIdentifier);
+  }
+
   /// Delete a downloaded tafsir edition
   Future<bool> deleteTafsir(String editionIdentifier) async {
     if (!_isInitialized) await initialize();

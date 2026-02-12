@@ -27,6 +27,7 @@ class AboutScreen extends StatelessWidget {
     final sectionGap = ResponsiveLayout.scaled(context, 18, min: 14, max: 24);
     final titleGap = ResponsiveLayout.scaled(context, 6, min: 4, max: 10);
     final headerGap = ResponsiveLayout.scaled(context, 16, min: 12, max: 22);
+    final logoAsset = 'assets/images/Icon.jpg';
 
     return Scaffold(
       backgroundColor:
@@ -43,15 +44,13 @@ class AboutScreen extends StatelessWidget {
             child: Container(
               width: logoSize,
               height: logoSize,
-              decoration: BoxDecoration(
-                color: accent,
+              child: ClipRRect(
                 borderRadius: BorderRadius.circular(logoRadius),
-              ),
-              child: Padding(
-                padding: EdgeInsets.all(logoPadding),
                 child: Image.asset(
-                  'assets/images/ayah.png',
-                  fit: BoxFit.contain,
+                  logoAsset,
+                  fit: BoxFit.cover,
+                  width: logoSize,
+                  height: logoSize,
                 ),
               ),
             ),
@@ -115,7 +114,10 @@ class AboutScreen extends StatelessWidget {
             padding: EdgeInsets.all(
                 ResponsiveLayout.scaled(context, 16, min: 12, max: 20)),
             child: Text(
-              AppLocalizations.of(context)!.translate('app_name_description'),
+              'Quran App is a focused, distraction-free Mushaf experience with'
+              ' clear Arabic text, tafsir, translations, and audio recitation. '
+              'Save your progress, bookmark verses, and explore daily inspiration '
+              'with a clean, modern interface built for reflection and reading.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface,
                 height: 1.5,

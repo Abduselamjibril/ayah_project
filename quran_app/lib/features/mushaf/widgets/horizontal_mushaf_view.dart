@@ -26,12 +26,14 @@ class HorizontalMushafView extends StatefulWidget {
   final MushafController controller;
   final ValueChanged<bool>? onOverlayVisibilityChanged;
   final VoidCallback? onDragDown;
+  final bool isVisible;
 
   const HorizontalMushafView({
     super.key,
     required this.controller,
     this.onOverlayVisibilityChanged,
     this.onDragDown,
+    this.isVisible = true,
   });
 
   @override
@@ -46,6 +48,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   int _lastControllerPage = 1;
   late final AudioPlayerService _audioPlayer;
   late final VoidCallback _ayahListener;
+  late final VoidCallback _audioStateListener;
   final Map<int, String> _surahNameCache = {};
 
   bool _overlayVisible = true;
@@ -55,6 +58,10 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   double _contentOpacity = 1.0;
   static const Duration _fadeDuration = Duration(milliseconds: 220);
   bool _isFading = false;
+
+  // Audio-page synchronization tracking
+  int? _previousAudioPage;
+  DateTime? _lastManualPageChange;
 
   StreamSubscription<int>? _navSubscription;
 
@@ -67,14 +74,50 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     _lastControllerPage = widget.controller.currentPage;
 
     _audioPlayer = AudioPlayerService.instance;
+    _audioStateListener = () {
+      if (!mounted) return;
+      if (_audioPlayer.isPlaying.value || _audioPlayer.isDownloading.value) {
+        _cancelHighlightClear();
+      }
+    };
+    _audioPlayer.isPlaying.addListener(_audioStateListener);
+    _audioPlayer.isDownloading.addListener(_audioStateListener);
+
     _ayahListener = () {
       if (!mounted) return;
       final s = _audioPlayer.currentSurah.value;
       final a = _audioPlayer.currentAyah.value;
+
       if (s != null && a != null) {
-        widget.controller.setHighlightedVerse(s, a);
+        _cancelHighlightClear();
+        widget.controller.setHighlightedVerse(s, a, isAudio: true);
+
+        // Calculate which page this ayah is on
+        final audioPage = getPageNumber(s, a);
+        final displayedPage = _getBasePage().round();
+
+        // Detect page transition: did audio move to a different page?
+        if (_previousAudioPage != null && _previousAudioPage != audioPage) {
+          // Page changed! Check if we were synced on the PREVIOUS page
+          // We need to check if displayedPage matches the OLD audio page, not the new one
+          final wasSyncedOnPreviousPage = (displayedPage == _previousAudioPage);
+
+          // Check if user recently manually navigated (within last 500ms)
+          final timeSinceManualNav = _lastManualPageChange != null
+              ? DateTime.now().difference(_lastManualPageChange!)
+              : Duration.zero;
+          final isRecentManualNav = timeSinceManualNav.inMilliseconds < 500;
+
+          if (wasSyncedOnPreviousPage && !isRecentManualNav) {
+            // We were following along and user hasn't manually navigated recently
+            widget.controller.navigateToPage(audioPage);
+          }
+        }
+
+        _previousAudioPage = audioPage;
       } else {
         widget.controller.clearHighlight();
+        _previousAudioPage = null;
       }
     };
     _audioPlayer.currentSurah.addListener(_ayahListener);
@@ -94,10 +137,29 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   }
 
   @override
+  void didUpdateWidget(HorizontalMushafView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Sync only when becoming visible (e.g. switching from vertical -> horizontal)
+    if (widget.isVisible && !oldWidget.isVisible) {
+      if (_pageController.hasClients) {
+        final controllerPage = widget.controller.currentPage;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_pageController.hasClients && mounted) {
+            _pageController.jumpToPage(controllerPage - 1);
+            _lastControllerPage = controllerPage;
+          }
+        });
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _navSubscription?.cancel();
     _audioPlayer.currentSurah.removeListener(_ayahListener);
     _audioPlayer.currentAyah.removeListener(_ayahListener);
+    _audioPlayer.isPlaying.removeListener(_audioStateListener);
+    _audioPlayer.isDownloading.removeListener(_audioStateListener);
     widget.controller.removeListener(_onControllerChanged);
     _pageController.dispose();
     _autoHideTimer?.cancel();
@@ -115,7 +177,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     _highlightClearTimer?.cancel();
     _highlightClearTimer = Timer(const Duration(seconds: 3), () {
       if (!mounted) return;
-      widget.controller.clearHighlight();
+      widget.controller.clearHighlight(onlyManual: true);
     });
   }
 
@@ -216,6 +278,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                               initialPageNumber: widget.controller.currentPage,
                               scrollMode: ScrollMode.horizontal,
                               onPageChanged: (page) {
+                                _lastManualPageChange = DateTime.now();
                                 widget.controller.setPage(page);
                               },
                               textColor:

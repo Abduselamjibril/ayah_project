@@ -2,10 +2,11 @@
 import 'package:flutter/material.dart';
 import '../../core/i18n/app_localizations.dart';
 import '../../core/services/translation_service.dart';
-
 import '../../core/services/tafsir_service.dart';
 import '../../core/services/audio_service.dart';
 import '../../core/ui/snackbar_utils.dart';
+import '../../core/ui/responsive.dart';
+import '../settings/widgets/settings_app_bar.dart';
 
 class StorageManagementPage extends StatefulWidget {
   const StorageManagementPage({super.key});
@@ -55,15 +56,18 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       for (final r in recitations) r.id.toString(): r.reciterName
     };
 
-    setState(() {
-      _downloadedTranslations = translations;
-      _downloadedTafsirs = tafsirs;
-      _downloadedRecitations = recitationIds.map((e) => e.toString()).toList();
-      _translationNames = translationNames;
-      _tafsirNames = tafsirNames;
-      _recitationNames = recitationNames;
-      _loading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _downloadedTranslations = translations;
+        _downloadedTafsirs = tafsirs;
+        _downloadedRecitations =
+            recitationIds.map((e) => e.toString()).toList();
+        _translationNames = translationNames;
+        _tafsirNames = tafsirNames;
+        _recitationNames = recitationNames;
+        _loading = false;
+      });
+    }
   }
 
   Future<void> _bulkDeleteTranslations() async {
@@ -177,15 +181,14 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     );
   }
 
-  // Placeholder size getters. Implement real size calculation in services if available.
   Future<String> _getTranslationSize(String id) async {
-    // TODO: Return actual size on disk per translation id
-    return '—';
+    final bytes = await _translationService.getTranslationSizeBytes(id);
+    return _formatBytes(bytes);
   }
 
   Future<String> _getTafsirSize(String id) async {
-    // TODO: Return actual size on disk per tafsir id
-    return '—';
+    final bytes = await _tafsirService.getTafsirSizeBytes(id);
+    return _formatBytes(bytes);
   }
 
   Future<String> _getAudioSize(String id) async {
@@ -207,59 +210,114 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+
+    // Use matching colors to DownloadSettingsPage
+    final cardBg = isLight
+        ? theme.scaffoldBackgroundColor
+        : theme.cardColor.withOpacity(0.5);
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(AppLocalizations.of(context)?.translate('storage_title') ??
-            'Storage'),
+      backgroundColor:
+          isLight ? theme.colorScheme.surface : theme.scaffoldBackgroundColor,
+      appBar: SettingsAppBar(
+        title: AppLocalizations.of(context)?.translate('storage_title') ??
+            'Storage',
+        leadingLabel:
+            AppLocalizations.of(context)?.translate('storage_title') ??
+                'Storage', // Back button says "Storage"
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              children: [
-                _buildCategory(
-                  title: AppLocalizations.of(context)
-                          ?.translate('tab_translations') ??
-                      'Translations',
-                  items: _downloadedTranslations,
-                  nameForId: (id) => _translationNames[id] ?? 'ID: $id',
-                  onBulkDelete: _bulkDeleteTranslations,
-                  itemSizeGetter: _getTranslationSize,
-                  onDeleteItem: (id) async {
-                    await _translationService.deleteTranslation(id);
-                    await _load();
-                  },
-                ),
-                _buildCategory(
-                  title:
-                      AppLocalizations.of(context)?.translate('tab_tafsir') ??
+          : (_downloadedTranslations.isEmpty &&
+                  _downloadedTafsirs.isEmpty &&
+                  _downloadedRecitations.isEmpty)
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.folder_open_rounded,
+                        size: 80,
+                        color: theme.colorScheme.onSurface.withOpacity(0.3),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        AppLocalizations.of(context)
+                                ?.translate('no_downloads_yet') ??
+                            'Nothing downloaded yet',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView(
+                  padding: EdgeInsets.all(
+                      ResponsiveLayout.scaled(context, 16, min: 12, max: 20)),
+                  children: [
+                    _buildCategorySection(
+                      context: context,
+                      theme: theme,
+                      cardBg: cardBg,
+                      title: AppLocalizations.of(context)
+                              ?.translate('tab_translations') ??
+                          'Translations',
+                      items: _downloadedTranslations,
+                      nameForId: (id) => _translationNames[id] ?? 'ID: $id',
+                      onBulkDelete: _bulkDeleteTranslations,
+                      itemSizeGetter: _getTranslationSize,
+                      onDeleteItem: (id) async {
+                        await _translationService.deleteTranslation(id);
+                        await _load();
+                      },
+                    ),
+                    _buildCategorySection(
+                      context: context,
+                      theme: theme,
+                      cardBg: cardBg,
+                      title: AppLocalizations.of(context)
+                              ?.translate('tab_tafsir') ??
                           'Tafsir',
-                  items: _downloadedTafsirs,
-                  nameForId: (id) => _tafsirNames[id] ?? 'ID: $id',
-                  onBulkDelete: _bulkDeleteTafsirs,
-                  itemSizeGetter: _getTafsirSize,
-                  onDeleteItem: (id) async {
-                    await _tafsirService.deleteTafsir(id);
-                    await _load();
-                  },
+                      items: _downloadedTafsirs,
+                      nameForId: (id) => _tafsirNames[id] ?? 'ID: $id',
+                      onBulkDelete: _bulkDeleteTafsirs,
+                      itemSizeGetter: _getTafsirSize,
+                      onDeleteItem: (id) async {
+                        await _tafsirService.deleteTafsir(id);
+                        await _load();
+                      },
+                    ),
+                    _buildCategorySection(
+                      context: context,
+                      theme: theme,
+                      cardBg: cardBg,
+                      title: AppLocalizations.of(context)
+                              ?.translate('tab_audio') ??
+                          'Audio',
+                      items: _downloadedRecitations,
+                      nameForId: (id) =>
+                          _recitationNames[id] ?? 'Recitation $id',
+                      onBulkDelete: _bulkDeleteAudios,
+                      itemSizeGetter: _getAudioSize,
+                      onDeleteItem: (id) async {
+                        await _audioService.deleteRecitation(int.parse(id));
+                        await _load();
+                      },
+                    ),
+                  ],
                 ),
-                _buildCategory(
-                  title: AppLocalizations.of(context)?.translate('tab_audio') ??
-                      'Audio',
-                  items: _downloadedRecitations,
-                  nameForId: (id) => _recitationNames[id] ?? 'Recitation $id',
-                  onBulkDelete: _bulkDeleteAudios,
-                  itemSizeGetter: _getAudioSize,
-                  onDeleteItem: (id) async {
-                    await _audioService.deleteRecitation(int.parse(id));
-                    await _load();
-                  },
-                ),
-              ],
-            ),
     );
   }
 
-  Widget _buildCategory({
+  Widget _buildCategorySection({
+    required BuildContext context,
+    required ThemeData theme,
+    required Color cardBg,
     required String title,
     required List<String> items,
     required String Function(String id) nameForId,
@@ -267,68 +325,105 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     required Future<String> Function(String id) itemSizeGetter,
     required Future<void> Function(String id) onDeleteItem,
   }) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    final isLight = theme.brightness == Brightness.light;
+
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section Header
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 title,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: isLight ? Colors.black : theme.primaryColor,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               if (items.isNotEmpty)
-                TextButton.icon(
-                  onPressed: onBulkDelete,
-                  icon: const Icon(Icons.delete_outline),
-                  label: Text(
-                      AppLocalizations.of(context)?.translate('delete_all') ??
-                          'Delete All'),
+                GestureDetector(
+                  onTap: onBulkDelete,
+                  child: Text(
+                    AppLocalizations.of(context)?.translate('delete_all') ??
+                        'Delete All',
+                    style: TextStyle(
+                      color: theme.colorScheme.error,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
                 ),
             ],
           ),
-          const SizedBox(height: 8),
-          if (items.isEmpty)
-            Text(
-                AppLocalizations.of(context)
-                        ?.translate('no_downloads_category') ??
-                    'No downloads in this category',
-                style: const TextStyle(color: Colors.grey))
-          else
-            Card(
-              child: ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: items.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  final id = items[index];
-                  final displayName = nameForId(id);
-                  return FutureBuilder<String>(
-                    future: itemSizeGetter(id),
-                    builder: (context, snapshot) {
-                      final size = snapshot.data ?? '…';
-                      return ListTile(
-                        title: Text(displayName),
-                        subtitle: Text((AppLocalizations.of(context)
-                                    ?.translate('size_label') ??
-                                'Size: {size}')
-                            .replaceAll('{size}', size)),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () => onDeleteItem(id),
-                        ),
-                      );
-                    },
+        ),
+
+        // Rounded Card for List
+        Card(
+          color: cardBg,
+          margin: const EdgeInsets.only(bottom: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: items.length,
+            separatorBuilder: (_, __) => Divider(
+              height: 1,
+              thickness: 0.5,
+              indent: 16,
+              endIndent: 16,
+              color: theme.dividerColor.withOpacity(0.3),
+            ),
+            itemBuilder: (context, index) {
+              final id = items[index];
+              final displayName = nameForId(id);
+              final isLast = index == items.length - 1;
+
+              return FutureBuilder<String>(
+                future: itemSizeGetter(id),
+                builder: (context, snapshot) {
+                  final size = snapshot.data ?? '…';
+                  return ListTile(
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                    dense: true,
+                    title: Text(
+                      displayName,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    subtitle: Text(
+                      (AppLocalizations.of(context)?.translate('size_label') ??
+                              'Size: {size}')
+                          .replaceAll('{size}', size),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                    trailing: IconButton(
+                      icon: Icon(Icons.delete_outline,
+                          size: 20,
+                          color: theme.colorScheme.onSurface.withOpacity(0.5)),
+                      onPressed: () => onDeleteItem(id),
+                    ),
+                    shape: isLast
+                        ? const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                                bottom: Radius.circular(16)))
+                        : null,
                   );
                 },
-              ),
-            ),
-        ],
-      ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

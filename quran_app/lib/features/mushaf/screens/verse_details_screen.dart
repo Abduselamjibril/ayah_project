@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:quran_app/core/services/translation_service.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:quran_app/core/services/tafsir_service.dart';
 import 'package:quran_app/core/quran/data/suwar.dart';
-import 'package:quran_app/core/quran/data/quran_text.dart';
+import 'package:quran_app/core/quran/qcf_quran.dart';
 import 'package:quran_app/features/downloads/downloads_screen.dart';
 import 'package:quran_app/core/i18n/app_localizations.dart';
-import 'package:quran_app/features/share/presentation/dialogs/share_preview_dialog.dart';
 import 'package:quran_app/core/utils/localization_helper.dart';
+import 'package:quran_app/features/mushaf/widgets/share_options_sheet.dart';
+import 'package:quran_app/app/app.dart';
+import 'package:quran_app/features/share/services/share_service.dart';
+import 'package:quran_app/features/mushaf/widgets/verse_options_sheet.dart';
+import 'package:quran_app/data/models/tafsir_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class VerseDetailsScreen extends StatefulWidget {
   final int surahNumber;
@@ -24,28 +29,53 @@ class VerseDetailsScreen extends StatefulWidget {
 
 class _VerseDetailsScreenState extends State<VerseDetailsScreen>
     with SingleTickerProviderStateMixin {
-  final TranslationService _translationService = TranslationService.instance;
   final TafsirService _tafsirService = TafsirService.instance;
 
-  List<Map<String, dynamic>> _allTranslations = [];
   List<Map<String, dynamic>> _allTafsirs = [];
-  String? _selectedTranslationId;
-  String? _selectedTafsirId;
+  List<TafsirEdition> _availableTafsirs = [];
+  List<String> _downloadedTafsirIds = [];
+  List<String> _addedTafsirOrder = [];
+  final Map<String, GlobalKey> _tafsirCardKeys = {};
+  final Map<String, double> _tafsirDownloadProgress = {};
+  final Set<String> _tafsirDownloading = {};
+  StateSetter? _librarySheetSetState;
   bool _isLoading = true;
+  int _currentSurah = 0;
+  int _currentVerse = 0;
+
+  static const String _textFontFamilyKey = 'tafsir_text_font_family';
+  static const String _textFontLabelKey = 'tafsir_text_font_label';
+  static const String _textSizeIndexKey = 'tafsir_text_size_index';
+  static const String _tafsirLibraryKey = 'tafsir_library_order';
+
+  static const int _textSizeDefaultIndex = 3;
+  static const List<double> _arabicTextSizes = [20, 21, 22, 24, 26, 28, 30];
+  static const List<double> _tafsirTextSizes = [11, 12, 13, 14, 15, 16, 17];
+
+  String _selectedFontLabel = 'Default';
+  String _selectedFontFamily = 'Amiri';
+  int _textSizeIndex = _textSizeDefaultIndex;
+
+  static const List<_FontOption> _fontOptions = [
+    _FontOption(label: 'Default', family: 'Amiri'),
+    _FontOption(label: 'Default Rounded', family: 'Arial Rounded MT Bold'),
+    _FontOption(label: 'النسخ', family: 'Amiri'),
+    _FontOption(label: 'كتاب', family: 'Times New Roman'),
+    _FontOption(label: 'New York', family: 'Georgia'),
+  ];
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _slideUpAnimation;
   late Animation<Color?> _backgroundColorAnimation;
 
-  final PageController _pageController = PageController();
-  final int _currentPage = 0;
-  bool _showArabicOnly = false;
-  bool _isExpanded = true;
 
   @override
   void initState() {
     super.initState();
+
+    _currentSurah = widget.surahNumber;
+    _currentVerse = widget.ayahNumber;
 
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -71,12 +101,15 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
     // `context` is safe to use.
 
     _loadData();
+    _loadTextSettings();
+    _loadLibraryData().then((_) {
+      if (mounted) _maybeOpenAddBooks();
+    });
   }
 
   @override
   void dispose() {
     _animationController.dispose();
-    _pageController.dispose();
     super.dispose();
   }
 
@@ -100,221 +133,362 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
     setState(() => _isLoading = true);
 
     try {
-      final [translations, tafsirs] = await Future.wait([
-        _translationService.getAllTranslations(
-          surahNumber: widget.surahNumber,
-          ayahNumber: widget.ayahNumber,
-        ),
-        _tafsirService.getAllTafsirs(
-          surahNumber: widget.surahNumber,
-          ayahNumber: widget.ayahNumber,
-        ),
-      ]);
-
-      // Load persisted selections and validate against current lists
-      final savedTranslationInt =
-          await _translationService.getSelectedTranslationId();
-      final savedTafsirInt = await _tafsirService.getSelectedTafsirId();
-
-      String? savedTranslationId = savedTranslationInt?.toString();
-      String? savedTafsirId = savedTafsirInt?.toString();
-
-      final hasSavedTranslation = savedTranslationId != null &&
-          translations
-              .any((t) => t['edition_identifier'] == savedTranslationId);
-      final hasSavedTafsir = savedTafsirId != null &&
-          tafsirs.any((t) => t['edition_identifier'] == savedTafsirId);
+      final tafsirs = await _tafsirService.getAllTafsirs(
+        surahNumber: _currentSurah,
+        ayahNumber: _currentVerse,
+      );
 
       setState(() {
-        _allTranslations = translations;
         _allTafsirs = tafsirs;
-
-        _selectedTranslationId = hasSavedTranslation
-            ? savedTranslationId
-            : (translations.isNotEmpty
-                ? translations.first['edition_identifier']
-                : null);
-        _selectedTafsirId = hasSavedTafsir
-            ? savedTafsirId
-            : (tafsirs.isNotEmpty ? tafsirs.first['edition_identifier'] : null);
-
         _isLoading = false;
       });
 
-      _animationController.forward();
+      _animationController.forward(from: 0);
     } catch (e) {
       setState(() => _isLoading = false);
       print('Error loading data: $e');
     }
   }
 
+  Future<void> _maybeOpenAddBooks() async {
+    if (_addedTafsirOrder.isNotEmpty) return;
+    await _ensureLibraryData();
+    if (!mounted) return;
+    _openAddBooksSheet();
+  }
+
+  Future<void> _loadLibraryData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedOrder = prefs.getStringList(_tafsirLibraryKey) ?? [];
+
+    final available = await _tafsirService.getAvailableTafsirs();
+    final downloaded = await _tafsirService.getDownloadedTafsirs();
+
+    setState(() {
+      _availableTafsirs = available;
+      _downloadedTafsirIds = downloaded;
+      _addedTafsirOrder = savedOrder;
+    });
+  }
+
+  Future<void> _loadTextSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedIndex = prefs.getInt(_textSizeIndexKey) ?? 1;
+    final savedLabel = prefs.getString(_textFontLabelKey);
+    final savedFamily = prefs.getString(_textFontFamilyKey);
+    final fallback = _fontOptions.first;
+
+    final match = savedLabel == null
+        ? null
+        : _fontOptions.where((o) => o.label == savedLabel).toList();
+    final resolved = match != null && match.isNotEmpty ? match.first : fallback;
+
+    setState(() {
+      _textSizeIndex = savedIndex.clamp(0, _arabicTextSizes.length - 1);
+      _selectedFontLabel = savedLabel ?? resolved.label;
+      _selectedFontFamily = savedFamily ?? resolved.family;
+    });
+  }
+
+  Future<void> _saveTextSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_textFontLabelKey, _selectedFontLabel);
+    await prefs.setString(_textFontFamilyKey, _selectedFontFamily);
+    await prefs.setInt(_textSizeIndexKey, _textSizeIndex);
+  }
+
+  double get _arabicFontSize {
+    return _arabicTextSizes[_textSizeIndex];
+  }
+
+  double get _tafsirFontSize {
+    return _tafsirTextSizes[_textSizeIndex];
+  }
+
+  void _decreaseTextSize() {
+    if (_textSizeIndex == 0) return;
+    setState(() => _textSizeIndex -= 1);
+    _saveTextSettings();
+  }
+
+  void _increaseTextSize() {
+    if (_textSizeIndex >= _arabicTextSizes.length - 1) return;
+    setState(() => _textSizeIndex += 1);
+    _saveTextSettings();
+  }
+
+  Future<void> _saveAddedTafsirs() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_tafsirLibraryKey, _addedTafsirOrder);
+  }
+
   String _getArabicText() {
     try {
-      final verse = quranText.firstWhere(
-        (v) =>
-            v['surah_number'] == widget.surahNumber &&
-            v['verse_number'] == widget.ayahNumber,
-        orElse: () => {'content': ''},
+      return getVerse(
+        _currentSurah,
+        _currentVerse,
+        verseEndSymbol: true,
       );
-      return verse['content'] as String? ?? '';
     } catch (e) {
       return '';
     }
   }
 
   String _getSurahName() {
-    return getBilingualSurahName(context, widget.surahNumber);
+    return getBilingualSurahName(context, _currentSurah);
   }
 
-  Widget _buildArabicVerseCard() {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 400),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Theme.of(context).primaryColor.withOpacity(0.1),
-            Theme.of(context).primaryColor.withOpacity(0.05),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: -20,
-            right: -20,
-            child: Opacity(
-              opacity: 0.1,
-              child: Icon(
-                Icons.book,
-                size: 120,
-                color: Theme.of(context).primaryColor,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  String _formatLabel(String value, String fallback) {
+    final raw = value.isEmpty ? fallback : value;
+    final normalized = raw.replaceAll('_', ' ').trim();
+    if (normalized.isEmpty) return fallback;
+    return normalized
+        .split(RegExp(r'\s+'))
+        .map((word) {
+          if (word.isEmpty) return word;
+          return word[0].toUpperCase() + word.substring(1);
+        })
+        .join(' ');
+  }
+
+  int _getAyahCount(int surahId) {
+    if (surahId < 1 || surahId > surah.length) return 0;
+    final data = surah[surahId - 1] as Map<String, dynamic>;
+    return (data['aya'] as num?)?.toInt() ?? 0;
+  }
+
+  TafsirEdition? _findEditionById(String id) {
+    final parsed = int.tryParse(id);
+    if (parsed == null) return null;
+    try {
+      return _availableTafsirs.firstWhere((e) => e.id == parsed);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _getEditionLabel(String id) {
+    final edition = _findEditionById(id);
+    if (edition == null) return id;
+    return edition.name;
+  }
+
+  String _getEditionSubtitle(String id) {
+    final edition = _findEditionById(id);
+    if (edition == null) return '';
+    if (edition.languageName.isEmpty && edition.authorName.isEmpty) return '';
+    final parts = <String>[];
+    if (edition.languageName.isNotEmpty) parts.add(edition.languageName);
+    if (edition.authorName.isNotEmpty) parts.add(edition.authorName);
+    return parts.join(' • ');
+  }
+
+  List<Map<String, dynamic>> _getOrderedTafsirsForDisplay() {
+    if (_addedTafsirOrder.isEmpty) return [];
+    final mapById = <String, Map<String, dynamic>>{};
+    for (final item in _allTafsirs) {
+      final id = item['edition_identifier']?.toString();
+      if (id != null) mapById[id] = item;
+    }
+    final ordered = <Map<String, dynamic>>[];
+    for (final id in _addedTafsirOrder) {
+      final item = mapById[id];
+      if (item != null) ordered.add(item);
+    }
+    if (ordered.isNotEmpty) return ordered;
+    return _allTafsirs;
+  }
+
+  void _goToVerse({required bool next}) {
+    var surahId = _currentSurah;
+    var verseId = _currentVerse;
+
+    if (next) {
+      final ayahCount = _getAyahCount(surahId);
+      if (verseId < ayahCount) {
+        verseId += 1;
+      } else if (surahId < surah.length) {
+        surahId += 1;
+        verseId = 1;
+      } else {
+        return;
+      }
+    } else {
+      if (verseId > 1) {
+        verseId -= 1;
+      } else if (surahId > 1) {
+        surahId -= 1;
+        verseId = _getAyahCount(surahId);
+      } else {
+        return;
+      }
+    }
+
+    setState(() {
+      _currentSurah = surahId;
+      _currentVerse = verseId;
+    });
+
+    _loadData();
+  }
+
+  Future<void> _openVersePicker() async {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+    final cardBg = isLight
+        ? theme.scaffoldBackgroundColor
+        : theme.colorScheme.onSurface.withOpacity(0.08);
+
+    int tempSurah = _currentSurah;
+    int tempVerse = _currentVerse;
+
+    final surahController = FixedExtentScrollController(
+      initialItem: (_currentSurah - 1).clamp(0, surah.length - 1),
+    );
+    final verseController = FixedExtentScrollController(
+      initialItem: (_currentVerse - 1).clamp(0, _getAyahCount(_currentSurah) - 1),
+    );
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final maxVerse = _getAyahCount(tempSurah).clamp(1, 300);
+            if (tempVerse > maxVerse) tempVerse = maxVerse;
+
+            return FractionallySizedBox(
+              heightFactor: 0.45,
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
+                ),
+                child: Column(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Select Verse',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.onSurface,
                       ),
-                      child: Text(
-                        'Verse ${widget.ayahNumber}',
-                        style: TextStyle(
-                          color: Theme.of(context).primaryColor,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: CupertinoPicker(
+                                scrollController: surahController,
+                                itemExtent: 40,
+                                onSelectedItemChanged: (index) {
+                                  setSheetState(() {
+                                    tempSurah = index + 1;
+                                    final newMax = _getAyahCount(tempSurah).clamp(1, 300);
+                                    if (tempVerse > newMax) {
+                                      tempVerse = newMax;
+                                      verseController.jumpToItem(newMax - 1);
+                                    }
+                                  });
+                                },
+                                children: List.generate(surah.length, (index) {
+                                  final surahId = index + 1;
+                                  final name = getBilingualSurahName(context, surahId);
+                                  return Center(
+                                    child: Text(
+                                      name,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: theme.colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              ),
+                            ),
+                            Expanded(
+                              child: CupertinoPicker(
+                                scrollController: verseController,
+                                itemExtent: 40,
+                                onSelectedItemChanged: (index) {
+                                  setSheetState(() {
+                                    tempVerse = index + 1;
+                                  });
+                                },
+                                children: List.generate(maxVerse, (index) {
+                                  return Center(
+                                    child: Text(
+                                      '${index + 1}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: theme.colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    Row(
-                      children: [
-                        IconButton(
-                          onPressed: () => setState(
-                              () => _showArabicOnly = !_showArabicOnly),
-                          icon: Icon(
-                            _showArabicOnly
-                                ? Icons.unfold_less
-                                : Icons.unfold_more,
-                            color: Theme.of(context).primaryColor,
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.pop(sheetContext);
+                          setState(() {
+                            _currentSurah = tempSurah;
+                            _currentVerse = tempVerse;
+                          });
+                          _loadData();
+                        },
+                        child: Text(
+                          'Done',
+                          style: TextStyle(
+                            color: BrandColors.accent,
+                            fontWeight: FontWeight.w700,
                           ),
-                          tooltip: _showArabicOnly ? 'Show less' : 'Show more',
                         ),
-                        IconButton(
-                          onPressed: () {
-                            // Share functionality
-
-                            // showSharePreviewDialog(
-                            //   context: context,
-                            //   surahNumber: widget.surahNumber,
-                            //   ayahNumber: widget.ayahNumber,
-                            // );
-                          },
-                          icon: Icon(
-                            Icons.share,
-                            color: Theme.of(context).primaryColor,
-                          ),
-                          tooltip: 'Share verse',
-                        ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
-                Text(
-                  _getArabicText(),
-                  textAlign: TextAlign.center,
-                  textDirection: TextDirection.rtl,
-                  style: TextStyle(
-                    fontSize: _showArabicOnly ? 32 : 28,
-                    height: 2.0,
-                    fontFamily: 'Amiri',
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                if (!_showArabicOnly) ...[
-                  const SizedBox(height: 16),
-                  Divider(
-                    color: Theme.of(context).dividerColor.withOpacity(0.3),
-                    height: 1,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.import_contacts,
-                        size: 16,
-                        color: Theme.of(context).primaryColor.withOpacity(0.6),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _getSurahName(),
-                        style: TextStyle(
-                          fontSize: 14,
-                          color:
-                              Theme.of(context).primaryColor.withOpacity(0.8),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Icon(
-                        Icons.library_books,
-                        size: 16,
-                        color: Theme.of(context).primaryColor.withOpacity(0.6),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Surah ${widget.surahNumber}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color:
-                              Theme.of(context).primaryColor.withOpacity(0.8),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildArabicVerseCard() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      child: Column(
+        children: [
+          Text(
+            _getArabicText(),
+            textAlign: TextAlign.center,
+            textDirection: TextDirection.rtl,
+            style: TextStyle(
+              fontSize: _arabicFontSize,
+              height: 1.9,
+              fontFamily: _selectedFontFamily,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ],
@@ -322,483 +496,1382 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
     );
   }
 
-  Widget _buildContentSection({
-    required String title,
-    required IconData icon,
-    required Color color,
-    required List<Map<String, dynamic>> items,
-    required String? selectedId,
-    required Function(String?) onSelected,
-    required Widget contentBuilder,
-  }) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 400),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+  Widget _buildTafsirCard(Map<String, dynamic> item) {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+    final accent = BrandColors.accent;
+    final editionId = item['edition_identifier']?.toString();
+    final cardKey = editionId == null
+      ? null
+      : _tafsirCardKeys.putIfAbsent(editionId, () => GlobalKey());
+    final title = (item['scholar'] ?? item['translator'] ?? 'Unknown')
+        .toString()
+        .toUpperCase();
+    final language = (item['language'] ?? '').toString();
+    final text = (item['text'] ?? '').toString();
+    final cardBg = isLight
+        ? theme.scaffoldBackgroundColor
+        : theme.colorScheme.onSurface.withOpacity(0.08);
+
+    return Container(
+      key: cardKey,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
+        color: cardBg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: theme.dividerColor.withOpacity(0.12)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(icon, color: color, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                      ),
-                    ),
-                    if (items.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '${items.length} available',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: color,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                if (items.isNotEmpty)
-                  _buildEnhancedDropdown(
-                    items: items,
-                    selectedId: selectedId,
-                    onSelected: onSelected,
-                    color: color,
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontFamily: _selectedFontFamily,
+                    fontSize: _tafsirFontSize,
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
                   ),
-              ],
+                ),
+              ),
+              Builder(
+                builder: (iconContext) {
+                  return IconButton(
+                    onPressed: () => _showShareMenu(iconContext),
+                    icon: const Icon(Icons.more_horiz),
+                    color: accent,
+                  );
+                },
+              ),
+            ],
+          ),
+          if (language.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              language,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.45),
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Text(
+            text,
+            maxLines: 5,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              height: 1.5,
+              fontFamily: _selectedFontFamily,
+              fontSize: _tafsirFontSize,
+              color: theme.colorScheme.onSurface,
             ),
           ),
-          if (selectedId != null || items.isEmpty)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(20),
-                  bottomRight: Radius.circular(20),
-                ),
-              ),
-              // Constrain the content height relative to screen size so the
-              // section becomes scrollable on small devices instead of
-              // overflowing.
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height,
-                ),
-                child: SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  child: contentBuilder,
-                ),
-              ),
-            ),
         ],
       ),
     );
   }
 
-  Widget _buildEnhancedDropdown({
-    required List<Map<String, dynamic>> items,
-    required String? selectedId,
-    required Function(String?) onSelected,
-    required Color color,
-  }) {
-    final dropdownItems = items.map((item) {
-      final editionId = item['edition_identifier'] as String?;
-      final language = (item['language'] as String? ?? '').trim();
-      final displayName =
-          (item['translator'] ?? item['scholar'] ?? 'Unknown').toString();
-      final label = [
-        if (language.isNotEmpty) language,
-        displayName,
-      ].join(' — ');
+  Future<void> _openTextSettingsSheet() async {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+    final cardBg = isLight
+        ? theme.scaffoldBackgroundColor
+        : theme.colorScheme.onSurface.withOpacity(0.08);
+    final dividerColor = theme.dividerColor.withOpacity(0.12);
 
-      final isSelected = editionId == selectedId;
-
-      return DropdownMenuItem<String>(
-        value: editionId,
-        child: SizedBox(
-          height: 48,
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return FractionallySizedBox(
+          heightFactor: 0.55,
+          alignment: Alignment.bottomCenter,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: Theme.of(context).dividerColor.withOpacity(0.1),
-                ),
+              color: theme.colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
               ),
             ),
-            child: Row(
+            child: Column(
               children: [
+                const SizedBox(height: 10),
                 Container(
-                  width: 6,
-                  height: 6,
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
-                    color: isSelected ? color : Colors.grey.shade400,
-                    shape: BoxShape.circle,
+                    color: theme.dividerColor.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(4),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(
-                        child: Text(
-                          label,
-                          style: TextStyle(
-                            fontWeight: isSelected
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                            color: isSelected
-                                ? Theme.of(context).colorScheme.onSurface
-                                : Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withOpacity(0.8),
-                            fontSize: 14,
+                      const SizedBox(width: 32),
+                      const Expanded(
+                        child: Center(
+                          child: Text(
+                            'Text Settings',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 18,
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (isSelected)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 8.0),
-                          child: Icon(
-                            Icons.check_circle,
-                            size: 16,
-                            color: color,
-                          ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(sheetContext),
+                        icon: const Icon(Icons.close),
+                        color: BrandColors.accent,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    children: [
+                      _buildSettingsRow(
+                        label: 'Font',
+                        value: _selectedFontLabel,
+                        cardBg: cardBg,
+                        dividerColor: dividerColor,
+                        onTap: _openFontSettingsSheet,
+                      ),
+                      const SizedBox(height: 18),
+                      Text(
+                        'Text Size',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                          fontSize: 13,
                         ),
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: dividerColor),
+                        ),
+                        child: Row(
+                          children: [
+                            _buildTextSizeOption(
+                              label: 'A',
+                              size: 16,
+                              selected: _textSizeIndex < _textSizeDefaultIndex,
+                              onTap: _decreaseTextSize,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Center(
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(
+                                        () => _textSizeIndex = _textSizeDefaultIndex);
+                                    _saveTextSettings();
+                                  },
+                                  borderRadius: BorderRadius.circular(18),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 6),
+                                    child: Text(
+                                      'Default',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildTextSizeOption(
+                              label: 'A',
+                              size: 22,
+                              selected: _textSizeIndex > _textSizeDefaultIndex,
+                              onTap: _increaseTextSize,
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ],
             ),
           ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSettingsRow({
+    required String label,
+    required String value,
+    required Color cardBg,
+    required Color dividerColor,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: dividerColor),
         ),
-      );
-    }).toList();
-
-    final screenHeight = MediaQuery.of(context).size.height;
-    final useModal = screenHeight < 680;
-
-    if (useModal) {
-      return InkWell(
-        onTap: () async {
-          final chosen = await showModalBottomSheet<String>(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
             ),
-            builder: (ctx) {
-              return DraggableScrollableSheet(
-                initialChildSize: 0.5,
-                minChildSize: 0.3,
-                maxChildSize: 0.9,
-                expand: false,
-                builder: (c, scrollController) {
-                  return ListView.builder(
-                    controller: scrollController,
-                    itemCount: items.length,
-                    itemBuilder: (context, index) {
-                      final item = items[index];
-                      final editionId = item['edition_identifier'] as String?;
-                      final language =
-                          (item['language'] as String? ?? '').trim();
-                      final displayName =
-                          (item['translator'] ?? item['scholar'] ?? 'Unknown')
-                              .toString();
-                      final label = [
-                        if (language.isNotEmpty) language,
-                        displayName
-                      ].join(' — ');
-                      final isSelected = editionId == selectedId;
+            Text(
+              value,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Icon(
+              Icons.chevron_right,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-                      return ListTile(
-                        title: Text(label,
-                            maxLines: 1, overflow: TextOverflow.ellipsis),
-                        subtitle: item['language'] != null
-                            ? Text(item['language'].toString())
-                            : null,
-                        trailing: isSelected
-                            ? Icon(Icons.check_circle, color: color)
-                            : null,
-                        onTap: () => Navigator.of(context).pop(editionId),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                      );
-                    },
-                  );
-                },
-              );
-            },
-          );
+  Future<void> _openFontSettingsSheet() async {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+    final cardBg = isLight
+        ? theme.scaffoldBackgroundColor
+        : theme.colorScheme.onSurface.withOpacity(0.08);
 
-          if (chosen != null) onSelected(chosen);
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-                color: Theme.of(context).dividerColor.withOpacity(0.2)),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  selectedId != null
-                      ? (items.firstWhere(
-                                  (i) => i['edition_identifier'] == selectedId,
-                                  orElse: () => {})['translator'] ??
-                              items.firstWhere(
-                                  (i) => i['edition_identifier'] == selectedId,
-                                  orElse: () => {})['scholar'] ??
-                              'Selected')
-                          .toString()
-                      : 'Select ${items.isNotEmpty && items.first.containsKey('translator') ? 'translation' : 'tafsir'}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style:
-                      TextStyle(color: Theme.of(context).colorScheme.onSurface),
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return FractionallySizedBox(
+              heightFactor: 0.65,
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 10),
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: theme.dividerColor.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            onPressed: () => Navigator.pop(sheetContext),
+                            icon: const Icon(Icons.arrow_back_ios_new),
+                            color: BrandColors.accent,
+                          ),
+                          const Expanded(
+                            child: Center(
+                              child: Text(
+                                'Font',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(sheetContext),
+                            icon: const Icon(Icons.close),
+                            color: BrandColors.accent,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                        itemBuilder: (context, index) {
+                          final option = _fontOptions[index];
+                          final selected = option.label == _selectedFontLabel;
+                          return InkWell(
+                            onTap: () {
+                              setState(() {
+                                _selectedFontLabel = option.label;
+                                _selectedFontFamily = option.family;
+                              });
+                              setSheetState(() {});
+                              _saveTextSettings();
+                            },
+                            borderRadius: BorderRadius.circular(14),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: cardBg,
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      option.label,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontFamily: option.family,
+                                      ),
+                                    ),
+                                  ),
+                                  if (selected)
+                                    Icon(
+                                      Icons.check,
+                                      color: BrandColors.accent,
+                                    ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 10),
+                        itemCount: _fontOptions.length,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              Icon(Icons.arrow_drop_up_rounded, color: color),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildTextSizeOption({
+    required String label,
+    required double size,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: 40,
+        height: 40,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected
+              ? BrandColors.accent.withOpacity(0.15)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: size,
+            color: selected
+                ? BrandColors.accent
+                : theme.colorScheme.onSurface.withOpacity(0.7),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showShareMenu(BuildContext iconContext) async {
+    final renderBox = iconContext.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    final overlay = Overlay.of(iconContext).context.findRenderObject() as RenderBox?;
+    if (overlay == null) return;
+    final accent = BrandColors.accent;
+
+    final position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        renderBox.localToGlobal(Offset.zero, ancestor: overlay),
+        renderBox.localToGlobal(renderBox.size.bottomRight(Offset.zero),
+            ancestor: overlay),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    final selected = await showMenu<String>(
+      context: context,
+      position: position,
+      color: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      items: [
+        PopupMenuItem<String>(
+          value: 'image',
+          child: Row(
+            children: [
+              Icon(Icons.image_outlined, color: accent, size: 18),
+              const SizedBox(width: 10),
+              Text(
+                AppLocalizations.of(context)?.translate('share_image') ??
+                    'Share Image',
+              ),
             ],
           ),
+        ),
+        PopupMenuItem<String>(
+          value: 'text',
+          child: Row(
+            children: [
+              Icon(Icons.text_snippet_outlined, color: accent, size: 18),
+              const SizedBox(width: 10),
+              Text(
+                AppLocalizations.of(context)?.translate('share_text') ??
+                    'Share Text',
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    if (selected == 'image') {
+      try {
+        final shareTheme = ShareService.resolveShareCardTheme(context);
+        await ShareService.instance.shareVerseImage(
+          surahNumber: _currentSurah,
+          ayahNumber: _currentVerse,
+          background: shareTheme.background,
+          isDark: shareTheme.isDark,
+          frameAsset: shareTheme.frameAsset,
+          showSurahName: false,
+          showPageNumber: true,
+          showBadge: true,
+          size: 1080,
+          pixelRatio: 2.5,
+        );
+      } catch (e) {
+        debugPrint('Share image failed: $e');
+      }
+    } else if (selected == 'text') {
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (shareContext) => ShareOptionsSheet(
+          surah: _currentSurah,
+          verse: _currentVerse,
+        ),
+      );
+    }
+  }
+
+  List<PopupMenuEntry<String>> _buildLibraryMenuItems() {
+    final accent = BrandColors.accent;
+    final dividerColor = Colors.black.withOpacity(0.12);
+    final items = <PopupMenuEntry<String>>[];
+
+    if (_addedTafsirOrder.isNotEmpty) {
+      for (var i = 0; i < _addedTafsirOrder.length; i++) {
+        final id = _addedTafsirOrder[i];
+        items.add(
+          PopupMenuItem<String>(
+            value: 'book:$id',
+            child: Row(
+              children: [
+                Icon(Icons.menu_book_outlined, color: accent, size: 18),
+                const SizedBox(width: 10),
+                Expanded(child: Text(_getEditionLabel(id))),
+              ],
+            ),
+          ),
+        );
+
+        if (i != _addedTafsirOrder.length - 1) {
+          items.add(
+            PopupMenuItem<String>(
+              enabled: false,
+              height: 8,
+              child: Divider(height: 1, thickness: 1, color: dividerColor),
+            ),
+          );
+        }
+      }
+
+      items.add(
+        PopupMenuItem<String>(
+          enabled: false,
+          height: 14,
+          child: Divider(height: 2, thickness: 2, color: dividerColor),
         ),
       );
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.2),
-        ),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          isExpanded: true,
-          value: selectedId,
-          icon: Icon(
-            Icons.arrow_drop_down_rounded,
-            color: color,
-          ),
-          dropdownColor: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          menuMaxHeight: (() {
-            final screenHeight = MediaQuery.of(context).size.height;
-            final topPadding = MediaQuery.of(context).padding.top;
-            final available = screenHeight - topPadding - kToolbarHeight - 120;
-            final safeHeight = available.clamp(240.0, 520.0);
-            return safeHeight;
-          })(),
-          hint: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'Select ${items.isNotEmpty && items.first.containsKey('translator') ? 'translation' : 'tafsir'}',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+    items.add(
+      PopupMenuItem<String>(
+        value: 'add_books',
+        child: Row(
+          children: [
+            const Icon(Icons.add, color: Colors.green, size: 18),
+            const SizedBox(width: 10),
+            Text(
+              _formatLabel(
+                AppLocalizations.of(context)?.translate('add_books') ?? '',
+                'Add Books',
               ),
             ),
-          ),
-          items: dropdownItems,
-          onChanged: onSelected,
-          selectedItemBuilder: (context) {
-            return items.map((item) {
-              final displayName =
-                  (item['translator'] ?? item['scholar'] ?? '').toString();
-              return Container(
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  displayName,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: 14,
+          ],
+        ),
+      ),
+    );
+
+    return items;
+  }
+
+  Future<void> _showLibraryMenuAtPosition(RelativeRect position) async {
+    final selected = await showMenu<String>(
+      context: context,
+      position: position,
+      color: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      items: _buildLibraryMenuItems(),
+    );
+
+    if (selected == 'add_books') {
+      _openAddBooksSheet();
+    } else if (selected != null && selected.startsWith('book:')) {
+      final id = selected.replaceFirst('book:', '');
+      final key = _tafsirCardKeys[id];
+      final cardContext = key?.currentContext;
+      if (cardContext != null) {
+        await Scrollable.ensureVisible(
+          cardContext,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      }
+    }
+  }
+
+  Future<void> _openLibraryMenu(BuildContext iconContext) async {
+    if (_addedTafsirOrder.isEmpty) {
+      await _ensureLibraryData();
+      _openAddBooksSheet();
+      return;
+    }
+    final renderBox = iconContext.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    final overlay = Overlay.of(iconContext).context.findRenderObject() as RenderBox?;
+    if (overlay == null) return;
+    final rect = Rect.fromPoints(
+      renderBox.localToGlobal(Offset.zero, ancestor: overlay),
+      renderBox.localToGlobal(
+        renderBox.size.bottomRight(Offset.zero),
+        ancestor: overlay,
+      ),
+    );
+    final top = rect.top - 6;
+    final position = RelativeRect.fromLTRB(
+      rect.left,
+      top < 0 ? 0 : top,
+      overlay.size.width - rect.right,
+      overlay.size.height - rect.top,
+    );
+
+    await _showLibraryMenuAtPosition(position);
+  }
+
+  Future<void> _ensureLibraryData() async {
+    if (_availableTafsirs.isNotEmpty) return;
+    await _loadLibraryData();
+  }
+
+  void _openLibraryMenuFromTopRight() {
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (overlay == null) return;
+    final right = 16.0;
+    final top = 56.0;
+    final position = RelativeRect.fromLTRB(
+      overlay.size.width - right,
+      top,
+      right,
+      overlay.size.height - top,
+    );
+    _showLibraryMenuAtPosition(position);
+  }
+
+  void _openAddBooksSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            _librarySheetSetState = setSheetState;
+            final theme = Theme.of(context);
+            final isLight = theme.brightness == Brightness.light;
+            final cardBg = isLight
+                ? theme.scaffoldBackgroundColor
+                : theme.colorScheme.onSurface.withOpacity(0.08);
+            final dividerColor = theme.dividerColor.withOpacity(0.15);
+
+            if (_availableTafsirs.isEmpty) {
+              return FractionallySizedBox(
+                heightFactor: 0.9,
+                alignment: Alignment.bottomCenter,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(24),
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  child: const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
                 ),
               );
-            }).toList();
+            }
+
+            final addedIds = _addedTafsirOrder
+                .where((id) => _downloadedTafsirIds.contains(id))
+                .toList();
+            final downloadedNotAdded = _downloadedTafsirIds
+                .where((id) => !_addedTafsirOrder.contains(id))
+                .toList();
+            final availableNotDownloaded = _availableTafsirs
+                .where((e) => !_downloadedTafsirIds.contains(e.id.toString()))
+                .toList();
+
+            final downloadedByLang = <String, List<TafsirEdition>>{};
+            for (final id in downloadedNotAdded) {
+              final edition = _findEditionById(id);
+              if (edition == null) continue;
+              downloadedByLang.putIfAbsent(edition.languageName, () => []);
+              downloadedByLang[edition.languageName]!.add(edition);
+            }
+
+            final availableByLang = <String, List<TafsirEdition>>{};
+            for (final edition in availableNotDownloaded) {
+              availableByLang.putIfAbsent(edition.languageName, () => []);
+              availableByLang[edition.languageName]!.add(edition);
+            }
+
+            List<String> sortedKeys(Map<String, List<TafsirEdition>> map) {
+              final keys = map.keys.toList()..sort();
+              return keys;
+            }
+
+            return FractionallySizedBox(
+              heightFactor: 0.9,
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 10),
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: theme.dividerColor.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 32),
+                          Expanded(
+                            child: Center(
+                              child: Text(
+                                _formatLabel(
+                                  AppLocalizations.of(context)
+                                          ?.translate('add_books') ??
+                                      '',
+                                  'Add Books',
+                                ),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(sheetContext),
+                            icon: const Icon(Icons.arrow_back_ios_new),
+                            color: BrandColors.accent,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                        children: [
+                          AnimatedSize(
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeOut,
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 200),
+                              switchInCurve: Curves.easeOut,
+                              switchOutCurve: Curves.easeIn,
+                              transitionBuilder: (child, animation) =>
+                                  SizeTransition(sizeFactor: animation, child: child),
+                              child: addedIds.isEmpty
+                                  ? const SizedBox.shrink()
+                                  : Column(
+                                      key: const ValueKey('added_section'),
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        _buildLibrarySectionTitle(
+                                          _formatLabel(
+                                            AppLocalizations.of(context)
+                                                    ?.translate('added') ??
+                                                '',
+                                            'Added',
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        _buildAddedListCard(
+                                          ids: addedIds,
+                                          cardBg: cardBg,
+                                          dividerColor: dividerColor,
+                                        ),
+                                        const SizedBox(height: 16),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                          AnimatedSize(
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeOut,
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 200),
+                              switchInCurve: Curves.easeOut,
+                              switchOutCurve: Curves.easeIn,
+                              transitionBuilder: (child, animation) =>
+                                  SizeTransition(sizeFactor: animation, child: child),
+                              child: downloadedNotAdded.isEmpty
+                                  ? const SizedBox.shrink()
+                                  : Column(
+                                      key: const ValueKey('downloaded_section'),
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        _buildLibrarySectionTitle(
+                                          _formatLabel(
+                                            AppLocalizations.of(context)
+                                                    ?.translate('downloaded') ??
+                                                '',
+                                            'Downloaded',
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        for (final lang in sortedKeys(downloadedByLang)) ...[
+                                          Text(
+                                            lang,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              color: theme.colorScheme.onSurface,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          _buildLibraryGroupCard(
+                                            cardBg: cardBg,
+                                            dividerColor: dividerColor,
+                                            children: downloadedByLang[lang]!
+                                                .map((edition) => _buildTafsirAddRow(
+                                                      edition: edition,
+                                                      added: false,
+                                                      onTap: () => _addTafsir(edition.id.toString()),
+                                                    ))
+                                                .toList(),
+                                          ),
+                                          const SizedBox(height: 16),
+                                        ],
+                                      ],
+                                    ),
+                            ),
+                          ),
+                          AnimatedSize(
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeOut,
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 200),
+                              switchInCurve: Curves.easeOut,
+                              switchOutCurve: Curves.easeIn,
+                              transitionBuilder: (child, animation) =>
+                                  SizeTransition(sizeFactor: animation, child: child),
+                              child: availableNotDownloaded.isEmpty
+                                  ? const SizedBox.shrink()
+                                  : Column(
+                                      key: const ValueKey('available_section'),
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        _buildLibrarySectionTitle(
+                                          _formatLabel(
+                                            AppLocalizations.of(context)
+                                                    ?.translate('available') ??
+                                                '',
+                                            'Available',
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        for (final lang in sortedKeys(availableByLang)) ...[
+                                          Text(
+                                            lang,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              color: theme.colorScheme.onSurface,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          _buildLibraryGroupCard(
+                                            cardBg: cardBg,
+                                            dividerColor: dividerColor,
+                                            children: availableByLang[lang]!
+                                                .map((edition) => _buildTafsirDownloadRow(
+                                                      edition: edition,
+                                                    ))
+                                                .toList(),
+                                          ),
+                                          const SizedBox(height: 16),
+                                        ],
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    ).whenComplete(() => _librarySheetSetState = null);
+  }
+
+  Widget _buildLibrarySectionTitle(String text) {
+    return Text(
+      text,
+      style: TextStyle(
+        fontWeight: FontWeight.w700,
+        fontSize: 13,
+        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+      ),
+    );
+  }
+
+  Widget _buildLibraryGroupCard({
+    required Color cardBg,
+    required Color dividerColor,
+    required List<Widget> children,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: dividerColor),
+        ),
+        child: Column(
+          children: [
+            for (var i = 0; i < children.length; i++) ...[
+              children[i],
+              if (i != children.length - 1)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: Divider(height: 1, thickness: 1, color: dividerColor),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTafsirAddRow({
+    required TafsirEdition edition,
+    required bool added,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            _buildCircleIcon(
+              icon: added ? Icons.remove : Icons.add,
+              color: added ? Colors.redAccent : Colors.green,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    edition.name,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    edition.authorName,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTafsirDownloadRow({required TafsirEdition edition}) {
+    final theme = Theme.of(context);
+    final id = edition.id.toString();
+    final isDownloading = _tafsirDownloading.contains(id);
+    final progress = _tafsirDownloadProgress[id] ?? 0.0;
+
+    return InkWell(
+      onTap: isDownloading ? null : () => _downloadTafsirEdition(edition),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            if (isDownloading)
+              _buildProgressIndicator(progress)
+            else
+              _buildCircleIcon(
+                icon: Icons.download_for_offline,
+                color: BrandColors.accent,
+              ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    edition.name,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    edition.authorName,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCircleIcon({required IconData icon, required Color color}) {
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(color: color.withOpacity(0.15), shape: BoxShape.circle),
+      child: Icon(icon, size: 16, color: color),
+    );
+  }
+
+  Widget _buildProgressIndicator(double progress) {
+    final percent = (progress * 100).round();
+    return SizedBox(
+      width: 28,
+      height: 28,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          CircularProgressIndicator(
+            value: progress,
+            strokeWidth: 2.5,
+            color: BrandColors.accent,
+            backgroundColor: Colors.black.withOpacity(0.08),
+          ),
+          Text(
+            '$percent%',
+            style: const TextStyle(fontSize: 7, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAddedListCard({
+    required List<String> ids,
+    required Color cardBg,
+    required Color dividerColor,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: dividerColor),
+        ),
+        child: ReorderableListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          buildDefaultDragHandles: false,
+          itemCount: ids.length,
+          onReorder: (oldIndex, newIndex) {
+            _reorderAddedTafsirs(oldIndex, newIndex);
+          },
+          itemBuilder: (context, index) {
+            final id = ids[index];
+            return Container(
+              key: ValueKey('added_$id'),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                border: index == ids.length - 1
+                    ? null
+                    : Border(
+                        bottom: BorderSide(color: dividerColor, width: 1),
+                      ),
+              ),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => _removeTafsir(id),
+                    child: _buildCircleIcon(
+                      icon: Icons.remove,
+                      color: Colors.redAccent,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _getEditionLabel(id),
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                        if (_getEditionSubtitle(id).isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            _getEditionSubtitle(id),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withOpacity(0.6),
+                                ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  ReorderableDragStartListener(
+                    index: index,
+                    child: Icon(
+                      Icons.drag_handle,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.5),
+                    ),
+                  ),
+                ],
+              ),
+            );
           },
         ),
       ),
     );
   }
 
-  Widget _buildContentDisplay({
-    required Map<String, dynamic> item,
-    required bool isArabic,
-  }) {
-    final text = item['text'] as String? ?? 'No content available';
-    final author = item['translator'] ?? item['scholar'] ?? 'Unknown';
-    final language = item['language'] as String? ?? '';
+  void _reorderAddedTafsirs(int oldIndex, int newIndex) {
+    if (newIndex > oldIndex) newIndex -= 1;
+    setState(() {
+      final item = _addedTafsirOrder.removeAt(oldIndex);
+      _addedTafsirOrder.insert(newIndex, item);
+    });
+    _librarySheetSetState?.call(() {});
+    _saveAddedTafsirs();
+  }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: Theme.of(context).dividerColor.withOpacity(0.1),
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.person,
-                  size: 14,
-                  color: Theme.of(context).primaryColor,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      author.toString(),
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    if (language.isNotEmpty)
-                      Text(
-                        language,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withOpacity(0.5),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              IconButton(
-                onPressed: () => setState(() => _isExpanded = !_isExpanded),
-                icon: Icon(
-                  _isExpanded ? Icons.unfold_less : Icons.unfold_more,
-                  size: 20,
-                  color:
-                      Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                ),
-                tooltip: _isExpanded ? 'Collapse' : 'Expand',
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        AnimatedCrossFade(
-          duration: const Duration(milliseconds: 300),
-          crossFadeState: _isExpanded
-              ? CrossFadeState.showFirst
-              : CrossFadeState.showSecond,
-          firstChild: Text(
-            text,
-            style: TextStyle(
-              fontSize: 16,
-              height: 1.8,
-              fontFamily: isArabic ? 'Amiri' : null,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-            textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
-            textAlign: TextAlign.justify,
-          ),
-          secondChild: Container(
-            height: 100,
-            alignment: Alignment.center,
-            child: Text(
-              'Content collapsed. Tap to expand.',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        if (_isExpanded)
+  void _addTafsir(String id) {
+    if (_addedTafsirOrder.contains(id)) return;
+    setState(() {
+      _addedTafsirOrder.add(id);
+    });
+    _librarySheetSetState?.call(() {});
+    _saveAddedTafsirs();
+  }
+
+  void _removeTafsir(String id) {
+    setState(() {
+      _addedTafsirOrder.remove(id);
+    });
+    _librarySheetSetState?.call(() {});
+    _saveAddedTafsirs();
+  }
+
+  Future<void> _downloadTafsirEdition(TafsirEdition edition) async {
+    final id = edition.id.toString();
+    if (_tafsirDownloading.contains(id)) return;
+
+    setState(() {
+      _tafsirDownloading.add(id);
+      _tafsirDownloadProgress[id] = 0.0;
+    });
+    _librarySheetSetState?.call(() {});
+
+    bool ok = false;
+    try {
+      ok = await _tafsirService.downloadTafsir(
+        edition,
+        onProgress: (progress) {
+          if (!mounted) return;
+          setState(() {
+            _tafsirDownloadProgress[id] = progress.clamp(0.0, 1.0);
+          });
+          _librarySheetSetState?.call(() {});
+        },
+      );
+
+      if (ok) {
+        setState(() {
+          if (!_downloadedTafsirIds.contains(id)) {
+            _downloadedTafsirIds.add(id);
+          }
+        });
+      }
+    } finally {
+      setState(() {
+        _tafsirDownloading.remove(id);
+        _tafsirDownloadProgress.remove(id);
+      });
+      _librarySheetSetState?.call(() {});
+    }
+  }
+
+  Widget _buildSheetHeader(String title) {
+    final accent = BrandColors.accent;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 6, 4, 4),
+      child: Column(
+        children: [
           Row(
             children: [
-              const Spacer(),
-              TextButton.icon(
-                onPressed: () {},
-                icon: Icon(
-                  Icons.copy,
-                  size: 14,
-                  color:
-                      Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                ),
-                label: Text(
-                  'Copy',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withOpacity(0.6),
+              IconButton(
+                onPressed: _backToVerseOptions,
+                icon: const Icon(Icons.arrow_back_ios_new),
+                color: accent,
+              ),
+              Expanded(
+                child: Center(
+                  child: Text(
+                    'Tafsir',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
               ),
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close),
+                color: accent,
+              ),
             ],
           ),
-      ],
+          Padding(
+            padding: const EdgeInsets.only(left: 12, right: 12, bottom: 6),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _backToVerseOptions() {
+    Navigator.pop(context);
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => VerseOptionsSheet(
+        surah: _currentSurah,
+        verse: _currentVerse,
+      ),
+    );
+  }
+
+  Widget _buildSheetHandle() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Container(
+        width: 40,
+        height: 4,
+        decoration: BoxDecoration(
+          color: Theme.of(context).dividerColor.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomBar(String title) {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+    final accent = BrandColors.accent;
+    final barBg = isLight
+        ? theme.scaffoldBackgroundColor
+        : theme.colorScheme.onSurface.withOpacity(0.08);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: barBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: theme.dividerColor.withOpacity(0.12)),
+        ),
+        child: Row(
+          children: [
+            Builder(
+              builder: (iconContext) {
+                return IconButton(
+                  onPressed: () => _openLibraryMenu(iconContext),
+                  icon: const Icon(Icons.library_books_outlined),
+                  color: accent,
+                );
+              },
+            ),
+            const SizedBox(width: 6),
+            IconButton(
+              onPressed: () => _goToVerse(next: true),
+              icon: const Icon(Icons.chevron_left_rounded),
+              color: accent,
+            ),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.onSurface.withOpacity(0.04),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: InkWell(
+                  onTap: _openVersePicker,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            ),
+            IconButton(
+              onPressed: () => _goToVerse(next: false),
+              icon: const Icon(Icons.chevron_right_rounded),
+              color: accent,
+            ),
+            const SizedBox(width: 6),
+            InkWell(
+              onTap: _openTextSettingsSheet,
+              borderRadius: BorderRadius.circular(17),
+              child: Container(
+                width: 34,
+                height: 34,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.onSurface.withOpacity(0.06),
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  'Aa',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: accent,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -872,81 +1945,14 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
   }
 
   Widget _buildLoadingState() {
-    return AnimatedBuilder(
-      animation: _animationController,
-      builder: (context, child) {
-        return Container(
-          color: _backgroundColorAnimation.value,
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Transform.translate(
-                  offset: Offset(0, _slideUpAnimation.value),
-                  child: Opacity(
-                    opacity: _fadeAnimation.value,
-                    child: child,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                CircularProgressIndicator(
-                  strokeWidth: 3,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    Theme.of(context).primaryColor,
-                  ),
-                ),
-                Icon(
-                  Icons.book,
-                  size: 40,
-                  color: Theme.of(context).primaryColor.withOpacity(0.7),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Loading Verse Details',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Surah ${widget.surahNumber}, Verse ${widget.ayahNumber}',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: 200,
-            child: LinearProgressIndicator(
-              backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Theme.of(context).primaryColor,
-              ),
-              minHeight: 2,
-            ),
-          ),
-        ],
+    return Center(
+      child: SizedBox(
+        width: 28,
+        height: 28,
+        child: CircularProgressIndicator(
+          strokeWidth: 2.5,
+          valueColor: AlwaysStoppedAnimation<Color>(BrandColors.accent),
+        ),
       ),
     );
   }
@@ -954,186 +1960,54 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
   @override
   Widget build(BuildContext context) {
     final screenTitle =
-        '${_getSurahName()} ${widget.surahNumber}:${widget.ayahNumber}';
+        '${_getSurahName()} ${_currentSurah}:${_currentVerse}';
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 120,
-            collapsedHeight: 60,
-            floating: true,
-            pinned: true,
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            elevation: 0,
-            title: AnimatedOpacity(
-              duration: const Duration(milliseconds: 200),
-              opacity: _isLoading ? 0 : 1,
-              child: Text(
-                screenTitle,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+    return SafeArea(
+      top: false,
+      bottom: false,
+      child: FractionallySizedBox(
+        heightFactor: 0.9,
+        alignment: Alignment.bottomCenter,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(24),
             ),
-            centerTitle: true,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(
-                bottom: Radius.circular(20),
+          ),
+          child: Column(
+            children: [
+              _buildSheetHandle(),
+              _buildSheetHeader(screenTitle),
+              Expanded(
+                child: _addedTafsirOrder.isEmpty
+                    ? const SizedBox.shrink()
+                    : _isLoading
+                        ? _buildLoadingState()
+                        : SingleChildScrollView(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                            child: Column(
+                              children: [
+                                _buildArabicVerseCard(),
+                                const SizedBox(height: 16),
+                                for (final item
+                                    in _getOrderedTafsirsForDisplay())
+                                  _buildTafsirCard(item),
+                              ],
+                            ),
+                          ),
               ),
-            ),
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).primaryColor.withOpacity(0.1),
-                      Theme.of(context).primaryColor.withOpacity(0.05),
-                    ],
-                  ),
-                  borderRadius: const BorderRadius.vertical(
-                    bottom: Radius.circular(20),
-                  ),
-                ),
-                child: Center(
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 300),
-                    opacity: _isLoading ? 0 : 1,
-                    child: Text(
-                      'Verse ${widget.ayahNumber}',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w700,
-                        color: Theme.of(context).primaryColor.withOpacity(0.8),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            actions: [
-              IconButton(
-                onPressed: _loadData,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Refresh',
-              ),
+              _buildBottomBar(screenTitle),
             ],
           ),
-          if (_isLoading)
-            SliverFillRemaining(
-              child: _buildLoadingState(),
-            )
-          else
-            SliverList(
-              delegate: SliverChildListDelegate([
-                const SizedBox(height: 16),
-                AnimatedBuilder(
-                  animation: _animationController,
-                  builder: (context, child) {
-                    return Transform.translate(
-                      offset: Offset(0, _slideUpAnimation.value),
-                      child: Opacity(
-                        opacity: _fadeAnimation.value,
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: Column(
-                    children: [
-                      _buildArabicVerseCard(),
-                      const SizedBox(height: 8),
-                      _buildContentSection(
-                        title: 'Translation',
-                        icon: Icons.translate,
-                        color: Colors.green,
-                        items: _allTranslations,
-                        selectedId: _selectedTranslationId,
-                        onSelected: (id) async {
-                          setState(() => _selectedTranslationId = id);
-                          if (id != null) {
-                            final intId = int.tryParse(id);
-                            if (intId != null) {
-                              await _translationService
-                                  .setSelectedTranslationId(intId);
-                            }
-                          }
-                        },
-                        contentBuilder: _selectedTranslationId != null &&
-                                _allTranslations.isNotEmpty
-                            ? _buildContentDisplay(
-                                item: _allTranslations.firstWhere(
-                                  (t) =>
-                                      t['edition_identifier'] ==
-                                      _selectedTranslationId,
-                                  orElse: () => {},
-                                ),
-                                isArabic: false,
-                              )
-                            : _buildEmptyState('translation'),
-                      ),
-                      _buildContentSection(
-                        title: 'Tafsir (Interpretation)',
-                        icon: Icons.menu_book,
-                        color: Colors.blue,
-                        items: _allTafsirs,
-                        selectedId: _selectedTafsirId,
-                        onSelected: (id) async {
-                          setState(() => _selectedTafsirId = id);
-                          if (id != null) {
-                            final intId = int.tryParse(id);
-                            if (intId != null) {
-                              await _tafsirService.setSelectedTafsirId(intId);
-                            }
-                          }
-                        },
-                        contentBuilder:
-                            _selectedTafsirId != null && _allTafsirs.isNotEmpty
-                                ? _buildContentDisplay(
-                                    item: _allTafsirs.firstWhere(
-                                      (t) =>
-                                          t['edition_identifier'] ==
-                                          _selectedTafsirId,
-                                      orElse: () => {},
-                                    ),
-                                    isArabic: (_allTafsirs.firstWhere(
-                                      (t) =>
-                                          t['edition_identifier'] ==
-                                          _selectedTafsirId,
-                                      orElse: () => {'language': ''},
-                                    )['language'] as String)
-                                        .toLowerCase()
-                                        .contains('arabic'),
-                                  )
-                                : _buildEmptyState('tafsir'),
-                      ),
-                      const SizedBox(height: 40),
-                    ],
-                  ),
-                ),
-              ]),
-            ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.pop(context, {
-            'surah': widget.surahNumber,
-            'verse': widget.ayahNumber,
-          });
-        },
-        icon: const Icon(Icons.menu_book_rounded),
-        label: Text(
-          AppLocalizations.of(context)?.translate('read_in_mushaf') ??
-              'Read in Mushaf',
         ),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
       ),
     );
   }
+}
+
+class _FontOption {
+  final String label;
+  final String family;
+  const _FontOption({required this.label, required this.family});
 }

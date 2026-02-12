@@ -225,6 +225,7 @@ class _MushafScreenState extends State<MushafScreen> {
           child: RepaintBoundary(
             child: HorizontalMushafView(
               controller: _controller,
+              isVisible: isHorizontal,
               onOverlayVisibilityChanged: _onOverlayVisibilityChanged,
               onDragDown: () async {
                 final prefs = await SharedPreferences.getInstance();
@@ -242,6 +243,7 @@ class _MushafScreenState extends State<MushafScreen> {
           child: RepaintBoundary(
             child: VerticalMushafView(
               controller: _controller,
+              isVisible: !isHorizontal,
               onOverlayVisibilityChanged: _onOverlayVisibilityChanged,
             ),
           ),

@@ -2,6 +2,7 @@
 import 'package:quran_app/core/database/dao/translation_dao.dart';
 import 'package:quran_app/core/database/app_database.dart';
 import 'package:quran_app/data/sources/remote/translation_api.dart';
+import 'package:quran_app/core/quran/qcf_quran.dart';
 
 import 'package:quran_app/data/models/translation_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,6 +14,8 @@ class TranslationService {
   late TranslationDao _translationDao;
   final TranslationApi _api = TranslationApi();
   bool _isInitialized = false;
+  int? _totalAyahs;
+  final Map<String, String> _translationCache = {};
 
   static const String _selectedTranslationKey = 'selected_translation_id';
 
@@ -92,12 +95,16 @@ class TranslationService {
 
       // Download complete Quran data
       // New API returns a list of TranslatedAyah directly
+      _totalAyahs ??= _calculateTotalAyahs();
       final ayahs = await _api.downloadTranslation(
         edition.id,
         onProgress: (current, total) {
-          // Calculate progress based on surahs downloaded
-          // We allocate 90% of progress to downloading, 10% to inserting
-          final downloadProgress = (current / total) * 0.9;
+          // Weighted progress by ayah count so percent increments are smoother.
+          final completedAyahs = _completedAyahsUntil(current - 1);
+          final fraction = _totalAyahs == 0
+              ? (current / total)
+              : (completedAyahs / _totalAyahs!);
+          final downloadProgress = (fraction * 0.9).clamp(0.0, 0.9);
           onProgress?.call(downloadProgress);
         },
       );
@@ -131,6 +138,24 @@ class TranslationService {
     }
   }
 
+  int _calculateTotalAyahs() {
+    var total = 0;
+    for (var s = 1; s <= 114; s++) {
+      total += getVerseCount(s);
+    }
+    return total;
+  }
+
+  int _completedAyahsUntil(int surahNumber) {
+    if (surahNumber <= 0) return 0;
+    var total = 0;
+    final maxSurah = surahNumber.clamp(1, 114);
+    for (var s = 1; s <= maxSurah; s++) {
+      total += getVerseCount(s);
+    }
+    return total;
+  }
+
   /// Get translation for a specific verse by edition identifier
   Future<String?> getTranslationByEdition({
     required int surahNumber,
@@ -140,6 +165,10 @@ class TranslationService {
     if (!_isInitialized) await initialize();
 
     try {
+      final cacheKey = '$editionIdentifier:$surahNumber:$ayahNumber';
+      final cached = _translationCache[cacheKey];
+      if (cached != null) return cached;
+
       // Check if this edition is downloaded
       final isDownloaded =
           await _translationDao.isEditionDownloaded(editionIdentifier);
@@ -156,7 +185,11 @@ class TranslationService {
                 ));
 
         if (results.isNotEmpty) {
-          return results.first['text'] as String?;
+          final text = results.first['text'] as String?;
+          if (text != null) {
+            _translationCache[cacheKey] = text;
+          }
+          return text;
         }
       }
 
@@ -165,6 +198,19 @@ class TranslationService {
       print('Error getting translation by edition: $e');
       return null;
     }
+  }
+
+  String? getCachedTranslation({
+    required int surahNumber,
+    required int ayahNumber,
+    required String editionIdentifier,
+  }) {
+    final cacheKey = '$editionIdentifier:$surahNumber:$ayahNumber';
+    return _translationCache[cacheKey];
+  }
+
+  void clearMemoryCache() {
+    _translationCache.clear();
   }
 
   /// Get all translations for a specific verse
@@ -186,6 +232,12 @@ class TranslationService {
   Future<List<String>> getDownloadedTranslations() async {
     if (!_isInitialized) await initialize();
     return await _translationDao.getDownloadedEditions();
+  }
+
+  /// Get approximate size in bytes for a downloaded translation edition.
+  Future<int> getTranslationSizeBytes(String editionIdentifier) async {
+    if (!_isInitialized) await initialize();
+    return await _translationDao.getEditionTextBytes(editionIdentifier);
   }
 
   /// Delete a downloaded translation edition
