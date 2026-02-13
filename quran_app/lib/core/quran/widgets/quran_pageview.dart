@@ -356,12 +356,18 @@ class _PageWithNumber extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = pageNumberTextStyle ??
+    final baseStyle = pageNumberTextStyle ??
         TextStyle(
           color: textColorFallback.withOpacity(0.6),
           fontSize: 15.0,
           fontWeight: FontWeight.w500,
         );
+    final double baseFontSize = baseStyle.fontSize ?? 15.0;
+    final surahLabelStyle = baseStyle.copyWith(
+      fontWeight: FontWeight.w700,
+      fontSize: baseFontSize,
+    );
+    final metaLabelStyle = baseStyle.copyWith(fontWeight: FontWeight.w700);
 
     final mediaQuery = MediaQuery.of(context);
     final isLandscape = mediaQuery.orientation == Orientation.landscape;
@@ -401,14 +407,14 @@ class _PageWithNumber extends StatelessWidget {
                     child: Text(
                       leftLabel,
                       overflow: TextOverflow.ellipsis,
-                      style: style,
+                      style: surahLabelStyle,
                       textAlign: TextAlign.left,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Text(
                     rightLabel,
-                    style: style,
+                    style: metaLabelStyle,
                   ),
                 ],
               ),
@@ -426,7 +432,7 @@ class _PageWithNumber extends StatelessWidget {
                 ),
                 child: _PageNumberWithBackground(
                   pageNumber: pageNumber,
-                  textStyle: style,
+                  textStyle: metaLabelStyle,
                 ),
               ),
             ),
@@ -656,6 +662,11 @@ class _QuranPageContentState extends State<QuranPageContent>
           verseSpans.add(const TextSpan(text: "\n"));
           textOffset += 1;
 
+          if (widget.pageNumber == 1 || widget.pageNumber == 2) {
+            verseSpans.add(const TextSpan(text: "\n"));
+            textOffset += 1;
+          }
+
           if (widget.pageNumber != 1 && widget.pageNumber != 187) {
             if (surah != 97) {
               const t = " ﱁ  ﱂﱃﱄ\n";
@@ -853,7 +864,8 @@ class _RoundedVerseHighlightPainter extends CustomPainter {
         final tightenedTop = rect.top + tighten;
         final tightenedBottom = rect.bottom - tighten;
         final tightened = tightenedBottom > tightenedTop
-            ? Rect.fromLTRB(rect.left, tightenedTop, rect.right, tightenedBottom)
+            ? Rect.fromLTRB(
+                rect.left, tightenedTop, rect.right, tightenedBottom)
             : rect;
 
         final padded = Rect.fromLTRB(
@@ -864,7 +876,8 @@ class _RoundedVerseHighlightPainter extends CustomPainter {
         );
 
         final maxRadius = padded.shortestSide / 2;
-        final rRadius = Radius.circular(radius < maxRadius ? radius : maxRadius);
+        final rRadius =
+            Radius.circular(radius < maxRadius ? radius : maxRadius);
         canvas.drawRRect(
           RRect.fromRectAndRadius(padded, rRadius),
           paint,
