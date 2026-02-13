@@ -53,7 +53,8 @@ class HeaderWidget extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: "arsura",
                     fontSize:
-                        29, // Fixed reference font size (scales with fittedbox)
+                        35, // Fixed reference font size (scales with fittedbox)
+                    fontWeight: FontWeight.w500,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
