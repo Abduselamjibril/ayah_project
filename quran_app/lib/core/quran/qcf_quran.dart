@@ -98,6 +98,29 @@ int getHizbNumberForPage(int pageNumber) {
   return -1;
 }
 
+/// Takes [pageNumber] and returns the Hizb quarter details if a quarter starts on this page.
+/// Returns null if no quarter starts on this page.
+/// Result map: {'hizb': int (1-60), 'quarter': int (0-3)}
+/// quarter: 0 = Start, 1 = 1/4, 2 = 1/2, 3 = 3/4
+Map<String, int>? getQuarterDetailsForPage(int pageNumber) {
+  for (int i = 0; i < quarters.length; i++) {
+    final q = quarters[i];
+    final surah = int.parse(q['surah'].toString());
+    final ayah = int.parse(q['ayah'].toString());
+
+    try {
+      final p = getPageNumber(surah, ayah);
+      if (p == pageNumber) {
+        return {
+          'hizb': (i ~/ 4) + 1,
+          'quarter': i % 4,
+        };
+      }
+    } catch (_) {}
+  }
+  return null;
+}
+
 /// Takes [surahNumber] and returns the Surah name.
 String getSurahName(int surahNumber) {
   if (surahNumber > 114 || surahNumber <= 0) {

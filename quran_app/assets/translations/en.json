@@ -278,5 +278,9 @@
   "unknown": "Unknown",
   "unknown_language": "Unknown Language",
   "manage_storage_title": "Manage Storage",
-  "no_downloads_yet": "Nothing downloaded yet"
+  "no_downloads_yet": "Nothing downloaded yet",
+  "hizb_label": "Hizb {number}",
+  "hizb_quarter": "1/4 Hizb",
+  "hizb_half": "1/2 Hizb",
+  "hizb_three_quarters": "3/4 Hizb"
 }

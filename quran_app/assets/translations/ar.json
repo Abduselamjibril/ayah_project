@@ -278,5 +278,9 @@
   "unknown": "غير معروف",
   "unknown_language": "لغة غير معروفة",
   "manage_storage_title": "إدارة التخزين",
-  "no_downloads_yet": "لا توجد تنزيلات حتى الآن"
+  "no_downloads_yet": "لا توجد تنزيلات حتى الآن",
+  "hizb_label": "الحزب {number}",
+  "hizb_quarter": "ربـع الحزب",
+  "hizb_half": "نصـف الحزب",
+  "hizb_three_quarters": "ثلاثة أرباع الحزب"
 }

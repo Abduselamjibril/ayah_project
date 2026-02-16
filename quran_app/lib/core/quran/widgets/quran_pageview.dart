@@ -7,6 +7,8 @@ import 'package:quran_app/core/services/theme_service.dart';
 import 'package:quran_app/core/utils/localization_helper.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
+import 'package:quran_app/core/i18n/app_localizations.dart';
+
 /// Scrolling direction for the mushaf widget.
 enum ScrollMode { horizontal, vertical }
 
@@ -245,10 +247,13 @@ class _PageviewQuranState extends State<PageviewQuran> {
                 pageNumberTextStyle: widget.pageNumberTextStyle,
                 textColorFallback: widget.textColor,
                 leftLabel: header.surahNumber > 0
-                    ? getBilingualSurahName(context, header.surahNumber)
+                    ? getLocalizedSurahName(context, header.surahNumber)
                     : '',
-                rightLabel:
-                    header.juzNumber > 0 ? "Part ${header.juzNumber}" : '',
+                rightLabel: header.juzNumber > 0
+                    ? AppLocalizations.of(context)!
+                        .translate("part_label")
+                        .replaceAll("{number}", header.juzNumber.toString())
+                    : '',
                 child: QuranPageContent(
                   pageNumber: pageNumber,
                   fontSize: widget.fontSize,
@@ -295,10 +300,13 @@ class _PageviewQuranState extends State<PageviewQuran> {
                 pageNumberTextStyle: widget.pageNumberTextStyle,
                 textColorFallback: widget.textColor,
                 leftLabel: header.surahNumber > 0
-                    ? getBilingualSurahName(context, header.surahNumber)
+                    ? getLocalizedSurahName(context, header.surahNumber)
                     : '',
-                rightLabel:
-                    header.juzNumber > 0 ? "Part ${header.juzNumber}" : '',
+                rightLabel: header.juzNumber > 0
+                    ? AppLocalizations.of(context)!
+                        .translate("part_label")
+                        .replaceAll("{number}", header.juzNumber.toString())
+                    : '',
                 child: QuranPageContent(
                   pageNumber: pageNumber,
                   fontSize: widget.fontSize,
@@ -358,16 +366,20 @@ class _PageWithNumber extends StatelessWidget {
   Widget build(BuildContext context) {
     final baseStyle = pageNumberTextStyle ??
         TextStyle(
-          color: textColorFallback.withOpacity(0.6),
+          color: Theme.of(context).primaryColor,
           fontSize: 15.0,
           fontWeight: FontWeight.w500,
         );
     final double baseFontSize = baseStyle.fontSize ?? 15.0;
     final surahLabelStyle = baseStyle.copyWith(
-      fontWeight: FontWeight.w700,
+      fontWeight: FontWeight.bold, // Surah name bold
       fontSize: baseFontSize,
+      color: Theme.of(context).primaryColor, // Uniform theme color
     );
-    final metaLabelStyle = baseStyle.copyWith(fontWeight: FontWeight.w700);
+    final metaLabelStyle = baseStyle.copyWith(
+      fontWeight: FontWeight.w500,
+      color: Theme.of(context).primaryColor, // Uniform theme color
+    );
 
     final mediaQuery = MediaQuery.of(context);
     final isLandscape = mediaQuery.orientation == Orientation.landscape;
@@ -479,8 +491,8 @@ class _PageNumberWithBackground extends StatelessWidget {
     final backgroundImage = themeService.pageBackgroundImagePath;
 
     // Hizb Logic
-    final hizbNumber = getHizbNumberForPage(pageNumber);
-    final hasHizb = hizbNumber != -1;
+    final quarterInfo = getQuarterDetailsForPage(pageNumber);
+    final hasHizb = quarterInfo != null;
     final isEven = pageNumber % 2 == 0;
 
     // Page Number Widget
@@ -496,13 +508,19 @@ class _PageNumberWithBackground extends StatelessWidget {
             height: 60,
             fit: BoxFit.contain,
             errorBuilder: (context, error, stackTrace) {
+              // Fallback if image fails (though it shouldn't if assets are correct)
               return const SizedBox.shrink();
             },
           ),
           Text(
             pageNumber.toString(),
+            // Ensure black color for page number as requested, or adaptable if needed
             style: textStyle.copyWith(
-              fontSize: 15,
+              fontSize: 16,
+              color: Colors.black,
+              fontWeight: FontWeight.bold,
+              fontFamily:
+                  "arsura", // Matching header/ayah marker font if possible
             ),
           ),
         ],
@@ -512,29 +530,32 @@ class _PageNumberWithBackground extends StatelessWidget {
     // Hizb Widget
     Widget hizbWidget;
     if (hasHizb) {
-      final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+      final hizbNum = quarterInfo['hizb'];
+      final quarter = quarterInfo['quarter'];
+      String key;
+      if (quarter == 0) {
+        key = 'hizb_label';
+      } else if (quarter == 1) {
+        key = 'hizb_quarter';
+      } else if (quarter == 2) {
+        key = 'hizb_half';
+      } else {
+        key = 'hizb_three_quarters';
+      }
+
+      final text = AppLocalizations.of(context)!
+          .translate(key)
+          .replaceAll('{number}', hizbNum.toString());
+
       hizbWidget = Container(
-        width: 60,
-        height: 32,
+        // Removed Badge styling (no decoration)
         alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: isDarkMode
-              ? const Color(0xFFFACC15).withOpacity(0.18)
-              : const Color(0xFFB45309).withOpacity(0.09),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: isDarkMode
-                ? const Color(0xFFFACC15).withOpacity(0.4)
-                : const Color(0xFFB45309).withOpacity(0.18),
-          ),
-        ),
         child: Text(
-          "Hizb $hizbNumber",
+          text,
           style: textStyle.copyWith(
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: FontWeight.w600,
-            color:
-                isDarkMode ? const Color(0xFFFACC15) : const Color(0xFFB45309),
+            // Inherits color from textStyle which is set to primaryColor
           ),
         ),
       );
