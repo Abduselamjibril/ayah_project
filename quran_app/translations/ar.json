@@ -2,6 +2,11 @@
   "app_title": "تطبيق القرآن",
   "welcome_message": "مرحبًا بكم في تطبيق القرآن",
   "settings": "الإعدادات",
+  "settings_title": "الإعدادات",
   "language": "اللغة",
+  "language_title": "اللغة",
+  "language_description": "يدعم تطبيق القرآن اللغتين الإنجليزية والعربية. اختر لغتك المفضلة أدناه.",
+  "search_gesture_title": "بحث بإصبعين",
+  "search_gesture_subtitle": "اسحب للأسفل للبحث",
   "download_all": "تنزيل الكل"
 }

@@ -153,7 +153,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
       } else {
         // Only clear if we stopped playback or finished sequence
         if (!_audioPlayer.hasSource) {
-          widget.controller.clearHighlight();
+          widget.controller.clearHighlight(onlyAudio: true);
         }
       }
     };

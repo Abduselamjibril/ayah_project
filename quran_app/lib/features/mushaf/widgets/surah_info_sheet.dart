@@ -55,7 +55,7 @@ class SurahInfoSheet extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Text(
-                  getBilingualSurahName(context, surahNumber),
+                  getLocalizedSurahName(context, surahNumber),
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),

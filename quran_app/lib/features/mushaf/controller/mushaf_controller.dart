@@ -23,6 +23,7 @@ class MushafController extends ChangeNotifier {
 
   MushafController() {
     _scrollMode = _settings.scrollMode;
+    _currentPage = _settings.lastPage;
     scrollModeListenable = ValueNotifier(_scrollMode);
     _settings.addListener(_handleSettingsChanged);
   }
@@ -45,6 +46,7 @@ class MushafController extends ChangeNotifier {
   void setPage(int page) {
     if (page != _currentPage && page >= 1 && page <= _totalPages) {
       _currentPage = page;
+      _settings.setLastPage(page);
       notifyListeners();
     }
   }
@@ -63,10 +65,12 @@ class MushafController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void clearHighlight({bool onlyManual = false}) {
-    // If onlyManual is true, only clear if it's not an audio highlight
+  void clearHighlight({bool onlyManual = false, bool onlyAudio = false}) {
     if (onlyManual && _isAudioHighlight) {
       return; // Don't clear audio highlights
+    }
+    if (onlyAudio && !_isAudioHighlight) {
+      return; // Don't clear manual highlights
     }
     _highlightedSurah = null;
     _highlightedVerse = null;
@@ -81,6 +85,7 @@ class MushafController extends ChangeNotifier {
 
     // Update internal state
     _currentPage = page;
+    _settings.setLastPage(page);
 
     // Notify views to physically scroll/jump
     _navigationController.add(page);

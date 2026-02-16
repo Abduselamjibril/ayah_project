@@ -124,7 +124,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
 
         _previousAudioPage = audioPage;
       } else {
-        widget.controller.clearHighlight();
+        widget.controller.clearHighlight(onlyAudio: true);
         _previousAudioPage = null;
       }
     };
@@ -740,8 +740,9 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                                       width: 44,
                                       height: pillHeight,
                                       decoration: BoxDecoration(
-                                        color:
-                                            Theme.of(context).colorScheme.primary,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
                                         borderRadius: BorderRadius.circular(20),
                                         border: Border.all(
                                           color: Theme.of(context)
@@ -904,10 +905,8 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                   color: notPassedColor,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .outline
-                        .withOpacity(0.18),
+                    color:
+                        Theme.of(context).colorScheme.outline.withOpacity(0.18),
                     width: 1.2,
                   ),
                 ),
@@ -1077,7 +1076,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
       if (pd.isEmpty) return '';
       final first = pd[0];
       final surahNum = int.parse(first['surah'].toString());
-      final name = getBilingualSurahName(context, surahNum);
+      final name = getLocalizedSurahName(context, surahNum);
       _surahNameCache[page] = name;
       return name;
     } catch (e) {
@@ -1321,18 +1320,30 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     }
   }
 
-  void _showVerseOptions(
+  Future<void> _showVerseOptions(
     BuildContext context,
     BookmarkNotesNotifier bookmarkState,
     int surah,
     int verse,
-  ) {
-    showModalBottomSheet(
+  ) async {
+    // 1. Highlight immediately
+    _cancelHighlightClear();
+    widget.controller.setHighlightedVerse(surah, verse);
+
+    // 2. Wait for 500ms to show highlight
+    await Future.delayed(const Duration(milliseconds: 1500));
+    if (!context.mounted) return;
+
+    // 3. Show the bottom sheet and wait for it to close
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) => VerseOptionsSheet(surah: surah, verse: verse),
-    ).whenComplete(_scheduleHighlightClear);
+    );
+
+    // 4. Clear highlight immediately after sheet closes
+    widget.controller.clearHighlight(onlyManual: true);
   }
 }
 

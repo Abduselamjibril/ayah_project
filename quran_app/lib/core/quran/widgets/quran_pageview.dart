@@ -7,6 +7,8 @@ import 'package:quran_app/core/services/theme_service.dart';
 import 'package:quran_app/core/utils/localization_helper.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
+import 'package:quran_app/core/i18n/app_localizations.dart';
+
 /// Scrolling direction for the mushaf widget.
 enum ScrollMode { horizontal, vertical }
 
@@ -198,17 +200,31 @@ class _PageviewQuranState extends State<PageviewQuran> {
     try {
       final pageData = getPageData(pageNumber);
       if (pageData.isEmpty) {
-        return const _PageHeader(surahNumber: 0, juzNumber: 0);
+        return const _PageHeader(surahStarts: [], juzNumber: 0);
       }
       final first = pageData.first;
-      final surah = int.tryParse(first['surah'].toString()) ?? 1;
-      final start = int.tryParse(first['start'].toString()) ?? 1;
-      final juz = getJuzNumber(surah, start);
-      final header = _PageHeader(surahNumber: surah, juzNumber: juz);
+      final firstSurah = int.tryParse(first['surah'].toString()) ?? 1;
+      final firstStart = int.tryParse(first['start'].toString()) ?? 1;
+      final juz = getJuzNumber(firstSurah, firstStart);
+
+      final starts = <int>[];
+      for (final entry in pageData) {
+        final surah = int.tryParse(entry['surah'].toString()) ?? 1;
+        final start = int.tryParse(entry['start'].toString()) ?? 1;
+        if (start == 1 && !starts.contains(surah)) {
+          starts.add(surah);
+        }
+      }
+
+      if (starts.isEmpty) {
+        starts.add(firstSurah);
+      }
+
+      final header = _PageHeader(surahStarts: starts, juzNumber: juz);
       _headerCache[pageNumber] = header;
       return header;
     } catch (_) {
-      return const _PageHeader(surahNumber: 0, juzNumber: 0);
+      return const _PageHeader(surahStarts: [], juzNumber: 0);
     }
   }
 
@@ -249,16 +265,21 @@ class _PageviewQuranState extends State<PageviewQuran> {
               final header = _headerForPage(pageNumber);
 
               return RepaintBoundary(
-                child: _PageWithNumber(
+                child: PageWithNumber(
                   backgroundColor: widget.pageBackgroundColor,
                   pageNumber: pageNumber,
                   pageNumberTextStyle: widget.pageNumberTextStyle,
                   textColorFallback: widget.textColor,
-                  leftLabel: header.surahNumber > 0
-                      ? getBilingualSurahName(context, header.surahNumber)
+                  leftLabel: header.surahStarts.isNotEmpty
+                      ? header.surahStarts
+                          .map((s) => getLocalizedSurahName(context, s))
+                          .join(' • ')
                       : '',
-                  rightLabel:
-                      header.juzNumber > 0 ? "Part ${header.juzNumber}" : '',
+                  rightLabel: header.juzNumber > 0
+                      ? AppLocalizations.of(context)!
+                          .translate("part_label")
+                          .replaceAll("{number}", header.juzNumber.toString())
+                      : '',
                   child: QuranPageContent(
                     pageNumber: pageNumber,
                     fontSize: widget.fontSize,
@@ -306,17 +327,22 @@ class _PageviewQuranState extends State<PageviewQuran> {
             final header = _headerForPage(pageNumber);
 
             return RepaintBoundary(
-              child: _PageWithNumber(
+              child: PageWithNumber(
                 isVertical: true,
                 backgroundColor: widget.pageBackgroundColor,
                 pageNumber: pageNumber,
                 pageNumberTextStyle: widget.pageNumberTextStyle,
                 textColorFallback: widget.textColor,
-                leftLabel: header.surahNumber > 0
-                    ? getBilingualSurahName(context, header.surahNumber)
+                leftLabel: header.surahStarts.isNotEmpty
+                    ? header.surahStarts
+                        .map((s) => getLocalizedSurahName(context, s))
+                        .join(' • ')
                     : '',
-                rightLabel:
-                    header.juzNumber > 0 ? "Part ${header.juzNumber}" : '',
+                rightLabel: header.juzNumber > 0
+                    ? AppLocalizations.of(context)!
+                        .translate("part_label")
+                        .replaceAll("{number}", header.juzNumber.toString())
+                    : '',
                 child: QuranPageContent(
                   pageNumber: pageNumber,
                   fontSize: widget.fontSize,
@@ -342,13 +368,13 @@ class _PageviewQuranState extends State<PageviewQuran> {
 }
 
 class _PageHeader {
-  final int surahNumber;
+  final List<int> surahStarts;
   final int juzNumber;
 
-  const _PageHeader({required this.surahNumber, required this.juzNumber});
+  const _PageHeader({required this.surahStarts, required this.juzNumber});
 }
 
-class _PageWithNumber extends StatelessWidget {
+class PageWithNumber extends StatelessWidget {
   final Widget child;
   final int pageNumber;
   final TextStyle? pageNumberTextStyle;
@@ -361,7 +387,7 @@ class _PageWithNumber extends StatelessWidget {
   static const double _footerPaddingTop = 0.0;
   static const double _footerPaddingBottom = 0.0;
 
-  const _PageWithNumber({
+  const PageWithNumber({
     required this.child,
     required this.pageNumber,
     required this.textColorFallback,
@@ -376,16 +402,20 @@ class _PageWithNumber extends StatelessWidget {
   Widget build(BuildContext context) {
     final baseStyle = pageNumberTextStyle ??
         TextStyle(
-          color: textColorFallback.withOpacity(0.6),
+          color: Theme.of(context).primaryColor,
           fontSize: 15.0,
           fontWeight: FontWeight.w500,
         );
     final double baseFontSize = baseStyle.fontSize ?? 15.0;
     final surahLabelStyle = baseStyle.copyWith(
-      fontWeight: FontWeight.w700,
+      fontWeight: FontWeight.bold, // Surah name bold
       fontSize: baseFontSize,
+      color: Theme.of(context).primaryColor, // Uniform theme color
     );
-    final metaLabelStyle = baseStyle.copyWith(fontWeight: FontWeight.w700);
+    final metaLabelStyle = baseStyle.copyWith(
+      fontWeight: FontWeight.w500,
+      color: Theme.of(context).primaryColor, // Uniform theme color
+    );
 
     final mediaQuery = MediaQuery.of(context);
     final isLandscape = mediaQuery.orientation == Orientation.landscape;
@@ -497,8 +527,8 @@ class _PageNumberWithBackground extends StatelessWidget {
     final backgroundImage = themeService.pageBackgroundImagePath;
 
     // Hizb Logic
-    final hizbNumber = getHizbNumberForPage(pageNumber);
-    final hasHizb = hizbNumber != -1;
+    final quarterInfo = getQuarterDetailsForPage(pageNumber);
+    final hasHizb = quarterInfo != null;
     final isEven = pageNumber % 2 == 0;
 
     // Page Number Widget
@@ -514,13 +544,19 @@ class _PageNumberWithBackground extends StatelessWidget {
             height: 60,
             fit: BoxFit.contain,
             errorBuilder: (context, error, stackTrace) {
+              // Fallback if image fails (though it shouldn't if assets are correct)
               return const SizedBox.shrink();
             },
           ),
           Text(
             pageNumber.toString(),
+            // Ensure black color for page number as requested, or adaptable if needed
             style: textStyle.copyWith(
-              fontSize: 15,
+              fontSize: 16,
+              color: Colors.black,
+              fontWeight: FontWeight.bold,
+              fontFamily:
+                  "arsura", // Matching header/ayah marker font if possible
             ),
           ),
         ],
@@ -530,29 +566,32 @@ class _PageNumberWithBackground extends StatelessWidget {
     // Hizb Widget
     Widget hizbWidget;
     if (hasHizb) {
-      final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+      final hizbNum = quarterInfo['hizb'];
+      final quarter = quarterInfo['quarter'];
+      String key;
+      if (quarter == 0) {
+        key = 'hizb_label';
+      } else if (quarter == 1) {
+        key = 'hizb_quarter';
+      } else if (quarter == 2) {
+        key = 'hizb_half';
+      } else {
+        key = 'hizb_three_quarters';
+      }
+
+      final text = AppLocalizations.of(context)!
+          .translate(key)
+          .replaceAll('{number}', hizbNum.toString());
+
       hizbWidget = Container(
-        width: 60,
-        height: 32,
+        // Removed Badge styling (no decoration)
         alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: isDarkMode
-              ? const Color(0xFFFACC15).withOpacity(0.18)
-              : const Color(0xFFB45309).withOpacity(0.09),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: isDarkMode
-                ? const Color(0xFFFACC15).withOpacity(0.4)
-                : const Color(0xFFB45309).withOpacity(0.18),
-          ),
-        ),
         child: Text(
-          "Hizb $hizbNumber",
+          text,
           style: textStyle.copyWith(
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: FontWeight.w600,
-            color:
-                isDarkMode ? const Color(0xFFFACC15) : const Color(0xFFB45309),
+            // Inherits color from textStyle which is set to primaryColor
           ),
         ),
       );
@@ -719,8 +758,8 @@ class _QuranPageContentState extends State<QuranPageContent>
             widget.onLongPressStart?.call(surah, v, d);
         spanRecognizer.onLongPressUp =
             () => widget.onLongPressUp?.call(surah, v);
-        spanRecognizer.onLongPressEnd =
-            (LongPressEndDetails d) => widget.onLongPressCancel?.call(surah, v);
+        spanRecognizer.onLongPressCancel =
+            () => widget.onLongPressCancel?.call(surah, v);
 
         final verseBgColor = widget.verseBackgroundColor?.call(surah, v);
         final verseText = getVerseQCF(surah, v, verseEndSymbol: false);

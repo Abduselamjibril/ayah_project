@@ -114,7 +114,7 @@ class _ShareOptionsSheetState extends State<ShareOptionsSheet> {
     final verseCount = (toVerse - fromVerse + 1);
     final verseCountLabel = verseCount == 1 ? '1 Verse' : '$verseCount Verses';
 
-    final bilingualName = getBilingualSurahName(context, widget.surah);
+    final bilingualName = getLocalizedSurahName(context, widget.surah);
     final englishSurahName = bilingualName.split(' / ').first;
     // Removed verseReference from top bar
 

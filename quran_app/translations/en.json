@@ -2,6 +2,11 @@
   "app_title": "Quran App",
   "welcome_message": "Welcome to the Quran App",
   "settings": "Settings",
+  "settings_title": "Settings",
   "language": "Language",
+  "language_title": "Language",
+  "language_description": "Quran App supports English and Arabic. Select your preferred language below.",
+  "search_gesture_title": "Two-finger Search",
+  "search_gesture_subtitle": "Drag down to search",
   "download_all": "Download all"
 }
