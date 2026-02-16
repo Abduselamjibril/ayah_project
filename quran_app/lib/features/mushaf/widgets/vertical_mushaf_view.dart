@@ -46,6 +46,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
       ItemPositionsListener.create();
 
   int _lastPage = 1;
+  int _pendingPage = 1;
   double? _sliderValue;
   final ValueNotifier<double> _livePageNotifier = ValueNotifier(1.0);
 
@@ -82,6 +83,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   void initState() {
     super.initState();
     _lastPage = widget.controller.currentPage;
+    _pendingPage = _lastPage;
     _sliderValue = _lastPage.toDouble();
     _livePageNotifier.value = _lastPage.toDouble();
     _audioPlayer = AudioPlayerService.instance;
@@ -134,6 +136,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
       if (_itemScrollController.isAttached) {
         _stopAutoScroll();
         _lastPage = page;
+        _pendingPage = page;
         _livePageNotifier.value = page.toDouble(); // Update notifier
         _itemScrollController.jumpTo(index: page - 1);
       }
@@ -190,11 +193,17 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
     }
 
     final page = live.round().clamp(1, 604);
-    if (page != _lastPage) {
-      _lastPage = page;
+    if (page != _pendingPage) {
+      _pendingPage = page;
       _lastManualPageChange = DateTime.now(); // Track manual scroll
-      widget.controller.setPage(page);
     }
+  }
+
+  void _commitPendingPage() {
+    if (_isSliderActive) return;
+    final page = _pendingPage.clamp(1, 604);
+    if (page == widget.controller.currentPage) return;
+    widget.controller.setPage(page);
   }
 
   @override
@@ -235,6 +244,7 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
   void _onControllerChanged() {
     if (widget.controller.currentPage != _lastPage) {
       _lastPage = widget.controller.currentPage;
+      _pendingPage = _lastPage;
       _sliderValue = null;
       _isSliderActive = false;
       _livePageNotifier.value = widget.controller.currentPage.toDouble();
@@ -287,10 +297,15 @@ class _VerticalMushafViewState extends State<VerticalMushafView> {
                         maxWidth: maxWidth,
                         maxHeight: contentHeight,
                       ),
-                      child: NotificationListener<UserScrollNotification>(
+                      child: NotificationListener<ScrollNotification>(
                         onNotification: (notification) {
-                          if (_isAutoScrolling) {
-                            _stopAutoScroll();
+                          if (notification is UserScrollNotification) {
+                            if (_isAutoScrolling) {
+                              _stopAutoScroll();
+                            }
+                          }
+                          if (notification is ScrollEndNotification) {
+                            _commitPendingPage();
                           }
                           return false;
                         },

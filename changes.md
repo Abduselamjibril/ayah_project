@@ -66,3 +66,29 @@ This file tracks client-facing improvements and notable technical changes, group
 - **After:** A compact 2-row selector with small previews, reduced row height, and a clear selected state (check icon + subtle background tint), without the large fade effect.
 - **How:** Replaced the old card UI with `_buildSurahHeaderStyleSelector(...)`, then tuned row/preview sizing to remove excess vertical padding while keeping the preview readable.
 - **Files:** `quran_app/lib/features/settings/theme_settings_page.dart`
+
+## 2026-02-15
+
+### UI/UX — Horizontal Mushaf Paging: Remove Midpoint “Flip Bump”
+
+- **Goal:** Eliminate the subtle stutter (“speed bump”) when slowly dragging between pages around the 50% midpoint.
+- **Before:** `PageView.onPageChanged` flips at the midpoint (`metrics.page.round()`), and we were immediately committing the new page (state + callbacks) right when crossing 50%.
+- **After:** Track the page as “pending” during the drag, and only commit the page change once scrolling settles (scroll end / idle), so midpoint crossings don’t trigger expensive state churn.
+- **How:** Replace the midpoint commit in `onPageChanged` with a lightweight `_pendingPage` update and commit via `NotificationListener<ScrollNotification>` when scrolling ends.
+- **Files:** `quran_app/lib/core/quran/widgets/quran_pageview.dart`
+
+### UI/UX — Vertical Mushaf Scrolling: Defer Page Commit Until Scroll End
+
+- **Goal:** Remove the same flip bump in vertical mode while keeping the live page indicator/slider responsive.
+- **Before:** Vertical scrolling updated the controller’s page during scroll using a rounded value, which flips at midpoints and can cause a perceptible bump.
+- **After:** Vertical scrolling updates a live (fractional) page notifier continuously, but only commits the controller page when scrolling ends.
+- **How:** Added `_pendingPage` tracking during scroll and call `controller.setPage(...)` only on `ScrollEndNotification`.
+- **Files:** `quran_app/lib/features/mushaf/widgets/vertical_mushaf_view.dart`
+
+### Performance — Reduce Vertical Page Rebuilds During Scroll
+
+- **Goal:** Avoid extra rebuilds while the user scrolls vertically through pages.
+- **Before:** Vertical page tracking in `PageviewQuran` used `setState` even though the UI didn’t depend on the tracked page field.
+- **After:** Updates the tracked page without `setState` and only fires the external callback when needed.
+- **How:** Removed `setState` around `_currentPage` updates in the vertical item-position listener.
+- **Files:** `quran_app/lib/core/quran/widgets/quran_pageview.dart`
