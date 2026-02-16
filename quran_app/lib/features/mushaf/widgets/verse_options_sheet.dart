@@ -119,8 +119,7 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
     String? text;
 
     if (selectedId == null) {
-      final allEditions =
-          await _translationService.getAllTranslationEditions();
+      final allEditions = await _translationService.getAllTranslationEditions();
       final downloaded = await _translationService.getDownloadedTranslations();
       final englishDownloaded = allEditions
           .where((e) =>
@@ -226,7 +225,7 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
     final bookmarkState = context.watch<BookmarkNotesNotifier>();
 
     final surahTitle =
-        '${getBilingualSurahName(context, widget.surah)}: ${widget.verse}';
+        '${getLocalizedSurahName(context, widget.surah)}: ${widget.verse}';
 
     final orderedSections = _buildOrderedSections(
       context,
@@ -439,8 +438,8 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
             ..add(_buildActionCard(
               context,
               width: double.infinity,
-                icon: Icons.local_library_outlined,
-                label: AppLocalizations.of(context)?.translate('tab_tafsir') ??
+              icon: Icons.local_library_outlined,
+              label: AppLocalizations.of(context)?.translate('tab_tafsir') ??
                   'Tafsir',
               trailing: Icons.chevron_right,
               onTap: () {
@@ -597,112 +596,111 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            if (!hasTranslation && isLoading)
-              Row(
-                children: [
-                  SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: accent,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      AppLocalizations.of(context)
-                              ?.translate('loading') ??
-                          'Loading translation...',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onSurface.withOpacity(0.7),
-                      ),
-                    ),
-                  ),
-                ],
-              )
-            else if (!hasTranslation)
-              Row(
-                children: [
-                  Icon(Icons.menu_book_outlined, color: accent),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      AppLocalizations.of(context)
-                              ?.translate('select_translation') ??
-                          'Select Translation...',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
+              if (!hasTranslation && isLoading)
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
                         color: accent,
                       ),
                     ),
-                  ),
-                ],
-              )
-            else
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final textStyle = theme.textTheme.bodyMedium?.copyWith(
-                    height: 1.5,
-                    color: theme.colorScheme.onSurface,
-                  );
-                  final isOverflowing = _isTextOverflowing(
-                    translationText,
-                    textStyle ?? const TextStyle(),
-                    constraints.maxWidth,
-                  );
-                  final maxLines = _translationExpanded ? null : 3;
-
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        translationText,
-                        maxLines: maxLines,
-                        overflow: _translationExpanded
-                            ? TextOverflow.visible
-                            : TextOverflow.ellipsis,
-                        style: textStyle,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        AppLocalizations.of(context)?.translate('loading') ??
+                            'Loading translation...',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        ),
                       ),
-                      if (isOverflowing || _translationExpanded)
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _translationExpanded = !_translationExpanded;
-                            });
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Text(
-                              _translationExpanded
-                                  ? (AppLocalizations.of(context)
-                                          ?.translate('show_less') ??
-                                      'Show less')
-                                  : (AppLocalizations.of(context)
-                                          ?.translate('continue_reading') ??
-                                      'Continue reading'),
-                              style: TextStyle(
-                                color: accent,
-                                fontWeight: FontWeight.w700,
+                    ),
+                  ],
+                )
+              else if (!hasTranslation)
+                Row(
+                  children: [
+                    Icon(Icons.menu_book_outlined, color: accent),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        AppLocalizations.of(context)
+                                ?.translate('select_translation') ??
+                            'Select Translation...',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: accent,
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              else
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final textStyle = theme.textTheme.bodyMedium?.copyWith(
+                      height: 1.5,
+                      color: theme.colorScheme.onSurface,
+                    );
+                    final isOverflowing = _isTextOverflowing(
+                      translationText,
+                      textStyle ?? const TextStyle(),
+                      constraints.maxWidth,
+                    );
+                    final maxLines = _translationExpanded ? null : 3;
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          translationText,
+                          maxLines: maxLines,
+                          overflow: _translationExpanded
+                              ? TextOverflow.visible
+                              : TextOverflow.ellipsis,
+                          style: textStyle,
+                        ),
+                        if (isOverflowing || _translationExpanded)
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _translationExpanded = !_translationExpanded;
+                              });
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                _translationExpanded
+                                    ? (AppLocalizations.of(context)
+                                            ?.translate('show_less') ??
+                                        'Show less')
+                                    : (AppLocalizations.of(context)
+                                            ?.translate('continue_reading') ??
+                                        'Continue reading'),
+                                style: TextStyle(
+                                  color: accent,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                    ],
-                  );
-                },
-              ),
-            if (translatorName != null && translatorName.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                translatorName,
-                style: TextStyle(
-                  color: accent,
-                  fontWeight: FontWeight.w700,
+                      ],
+                    );
+                  },
                 ),
-              ),
-            ],
+              if (translatorName != null && translatorName.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  translatorName,
+                  style: TextStyle(
+                    color: accent,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -888,8 +886,7 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
     });
     _translationSheetSetState?.call(() {});
     final prefsFuture = SharedPreferences.getInstance();
-    (await prefsFuture)
-        .setDouble('${_translationDownloadPrefix}$id', 0.0);
+    (await prefsFuture).setDouble('${_translationDownloadPrefix}$id', 0.0);
 
     _showSnack(
       (AppLocalizations.of(context)?.translate('downloading_item') ??
@@ -903,12 +900,11 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
         onProgress: (progress) {
           if (!mounted) return;
           prefsFuture.then((prefs) {
-            prefs.setDouble('${_translationDownloadPrefix}$id',
-                progress.clamp(0.0, 1.0));
+            prefs.setDouble(
+                '${_translationDownloadPrefix}$id', progress.clamp(0.0, 1.0));
           });
           setState(() {
-            _translationDownloadProgress[id] =
-                progress.clamp(0.0, 1.0);
+            _translationDownloadProgress[id] = progress.clamp(0.0, 1.0);
           });
           _translationSheetSetState?.call(() {});
         },
@@ -1019,9 +1015,10 @@ class _VerseOptionsSheetState extends State<VerseOptionsSheet> {
         : (isDownloading
             ? _buildDownloadProgressIndicator(progress)
             : IconButton(
-                icon: Icon(Icons.download_for_offline,
-                    color: BrandColors.accent),
-                onPressed: () => _downloadTranslationFromPicker(edition, context),
+                icon:
+                    Icon(Icons.download_for_offline, color: BrandColors.accent),
+                onPressed: () =>
+                    _downloadTranslationFromPicker(edition, context),
               ));
 
     return InkWell(

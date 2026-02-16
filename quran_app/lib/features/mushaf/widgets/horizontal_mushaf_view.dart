@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:quran_app/core/quran/widgets/quran_pageview.dart';
+import 'package:flutter/gestures.dart';
+import '../../../core/services/mushaf_settings_service.dart';
+import 'package:quran_app/core/i18n/app_localizations.dart';
 import '../../../core/quran/qcf_quran.dart';
 import '../../../core/services/audio_player_service.dart';
 import '../../audio_player/audio_player_screen.dart';
@@ -65,6 +68,23 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
 
   StreamSubscription<int>? _navSubscription;
 
+  // Double page helpers
+  bool _isDoublePage(BuildContext context) {
+    final settings = MushafSettingsService();
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    return isLandscape && settings.pageLayout == PageLayout.double;
+  }
+
+  int _pageToSpread(int page) => (page - 1) ~/ 2;
+  int _spreadToRightPage(int spread) => spread * 2 + 1;
+  int _spreadToLeftPage(int spread) {
+    final left = spread * 2 + 2;
+    return left <= 604 ? left : 0; // 0 means no page
+  }
+
+  static const int _totalSpreads = 302; // 604 / 2
+
   @override
   void initState() {
     super.initState();
@@ -116,7 +136,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
 
         _previousAudioPage = audioPage;
       } else {
-        widget.controller.clearHighlight();
+        widget.controller.clearHighlight(onlyAudio: true);
         _previousAudioPage = null;
       }
     };
@@ -125,7 +145,12 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
 
     _navSubscription = widget.controller.navigationStream.listen((page) {
       if (_pageController.hasClients) {
-        _pageController.jumpToPage(page - 1);
+        // If in double-page landscape mode, jump to spread index
+        if (mounted && _isDoublePage(context)) {
+          _pageController.jumpToPage(_pageToSpread(page));
+        } else {
+          _pageController.jumpToPage(page - 1);
+        }
       }
     });
 
@@ -145,7 +170,11 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
         final controllerPage = widget.controller.currentPage;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_pageController.hasClients && mounted) {
-            _pageController.jumpToPage(controllerPage - 1);
+            if (_isDoublePage(context)) {
+              _pageController.jumpToPage(_pageToSpread(controllerPage));
+            } else {
+              _pageController.jumpToPage(controllerPage - 1);
+            }
             _lastControllerPage = controllerPage;
           }
         });
@@ -198,7 +227,12 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
     if (_isSliderActive && dragValue != null) return dragValue;
     if (_pageController.hasClients &&
         _pageController.position.hasContentDimensions) {
-      return (_pageController.page ?? 0) + 1;
+      final rawPage = _pageController.page ?? 0;
+      if (_isDoublePage(context)) {
+        // Convert spread index to page number (right page of spread)
+        return _spreadToRightPage(rawPage.round()).toDouble();
+      }
+      return rawPage + 1;
     }
     return widget.controller.currentPage.toDouble();
   }
@@ -206,7 +240,11 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   double _getBasePage() {
     if (_pageController.hasClients &&
         _pageController.position.hasContentDimensions) {
-      return (_pageController.page ?? 0) + 1;
+      final rawPage = _pageController.page ?? 0;
+      if (_isDoublePage(context)) {
+        return _spreadToRightPage(rawPage.round()).toDouble();
+      }
+      return rawPage + 1;
     }
     return widget.controller.currentPage.toDouble();
   }
@@ -219,7 +257,7 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
       if (pd.isEmpty) return '';
       final first = pd[0];
       final surahNum = int.parse(first['surah'].toString());
-      final name = getBilingualSurahName(context, surahNum);
+      final name = getLocalizedSurahName(context, surahNum);
       _surahNameCache[page] = name;
       return name;
     } catch (_) {
@@ -231,6 +269,12 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
   Widget build(BuildContext context) {
     final bookmarkState = context.watch<BookmarkNotesNotifier>();
     final highlightState = context.watch<HighlightNotifier>();
+    final mushafSettings = MushafSettingsService();
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    final doublePage =
+        isLandscape && mushafSettings.pageLayout == PageLayout.double;
+
     return Stack(
       children: [
         AnimatedOpacity(
@@ -247,10 +291,13 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                     ResponsiveLayout.scaled(context, 6, min: 4, max: 12);
                 final availableWidth =
                     math.max(0.0, constraints.maxWidth - (sidePadding * 2));
-                final maxWidth = math.min(
-                  availableWidth,
-                  ResponsiveLayout.scaled(context, 900, min: 740, max: 1080),
-                );
+                final maxWidth = doublePage
+                    ? availableWidth // use full width for dual pages
+                    : math.min(
+                        availableWidth,
+                        ResponsiveLayout.scaled(context, 900,
+                            min: 740, max: 1080),
+                      );
                 final topMargin = MediaQuery.paddingOf(context).top +
                     ResponsiveLayout.scaled(context, 12, min: 8, max: 16);
                 final contentHeight =
@@ -270,9 +317,16 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                       child: Directionality(
                         textDirection: TextDirection.rtl,
                         child: ListenableBuilder(
-                          listenable: Listenable.merge(
-                              [widget.controller, ThemeService()]),
+                          listenable: Listenable.merge([
+                            widget.controller,
+                            ThemeService(),
+                            mushafSettings
+                          ]),
                           builder: (context, _) {
+                            if (doublePage) {
+                              return _buildDoublePageView(
+                                  context, bookmarkState);
+                            }
                             return PageviewQuran(
                               controller: _pageController,
                               initialPageNumber: widget.controller.currentPage,
@@ -288,8 +342,14 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                                       Theme.of(context).brightness),
                               verseBackgroundColor: (s, v) =>
                                   _getVerseBackgroundColor(bookmarkState, s, v),
-                              onLongPress: (surah, verse) {
-                                showModalBottomSheet(
+                              onLongPress: (surah, verse) async {
+                                _cancelHighlightClear();
+                                widget.controller
+                                    .setHighlightedVerse(surah, verse);
+                                await Future.delayed(
+                                    const Duration(milliseconds: 1500));
+                                if (!context.mounted) return;
+                                await showModalBottomSheet(
                                   context: context,
                                   isScrollControlled: true,
                                   backgroundColor: Colors.transparent,
@@ -297,7 +357,8 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
                                     surah: surah,
                                     verse: verse,
                                   ),
-                                ).whenComplete(_scheduleHighlightClear);
+                                );
+                                widget.controller.clearHighlight();
                               },
                               onLongPressStart: (surah, verse, details) {
                                 _cancelHighlightClear();
@@ -330,6 +391,380 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
         ),
         _buildPageOverlay(),
       ],
+    );
+  }
+
+  // ─── Double Page View ───────────────────────────────────────────────
+
+  Widget _buildDoublePageView(
+      BuildContext context, BookmarkNotesNotifier bookmarkState) {
+    final bgColor =
+        ThemeService().getMushafBackgroundColor(Theme.of(context).brightness);
+    final textColor = Theme.of(context).colorScheme.onSurface;
+    final primaryColor = Theme.of(context).primaryColor;
+
+    return Container(
+      color: bgColor,
+      child: Directionality(
+        textDirection: TextDirection.rtl,
+        child: PageView.builder(
+          controller: _pageController,
+          itemCount: _totalSpreads,
+          onPageChanged: (spreadIndex) {
+            _lastManualPageChange = DateTime.now();
+            final rightPage = _spreadToRightPage(spreadIndex);
+            widget.controller.setPage(rightPage);
+          },
+          dragStartBehavior: DragStartBehavior.down,
+          physics: const PageScrollPhysics(
+            parent: BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
+          ),
+          allowImplicitScrolling: true,
+          pageSnapping: true,
+          itemBuilder: (context, spreadIndex) {
+            final rightPage = _spreadToRightPage(spreadIndex);
+            final leftPage = _spreadToLeftPage(spreadIndex);
+
+            return RepaintBoundary(
+              child: _buildSpreadLayout(
+                context,
+                rightPage: rightPage,
+                leftPage: leftPage,
+                bgColor: bgColor,
+                textColor: textColor,
+                primaryColor: primaryColor,
+                bookmarkState: bookmarkState,
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Builds a full book-spread: [rightInfo | rightPage | divider | leftPage | leftInfo]
+  Widget _buildSpreadLayout(
+    BuildContext context, {
+    required int rightPage,
+    required int leftPage,
+    required Color bgColor,
+    required Color textColor,
+    required Color primaryColor,
+    required BookmarkNotesNotifier bookmarkState,
+  }) {
+    // Get page metadata
+    final rightMeta = _getPageMeta(context, rightPage);
+    final leftMeta = leftPage > 0 ? _getPageMeta(context, leftPage) : null;
+
+    final surahStyle = TextStyle(
+      color: primaryColor,
+      fontSize: 9,
+      fontWeight: FontWeight.bold,
+    );
+    final metaStyle = TextStyle(
+      color: primaryColor.withOpacity(0.8),
+      fontSize: 8,
+      fontWeight: FontWeight.w500,
+    );
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // ── Right outer margin (info for right page) ──
+        SizedBox(
+          width: 60,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // Top: surah name
+                if (rightMeta.surahLabel.isNotEmpty)
+                  Text(
+                    rightMeta.surahLabel,
+                    style: surahStyle,
+                    textAlign: TextAlign.right,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                // Juz label
+                if (rightMeta.juzLabel.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      rightMeta.juzLabel,
+                      style: metaStyle,
+                      textAlign: TextAlign.right,
+                    ),
+                  ),
+                const Spacer(),
+                // Bottom: page number and hizb
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Page number with background
+                    SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Image.asset(
+                            ThemeService().pageBackgroundImagePath,
+                            width: 40,
+                            height: 40,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const SizedBox.shrink(),
+                          ),
+                          Text(
+                            rightMeta.pageNumber,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: "arsura",
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (rightMeta.hizbLabel.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          rightMeta.hizbLabel,
+                          style: metaStyle.copyWith(fontSize: 7),
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        // ── Right page content ──
+        Expanded(
+          child: _buildFittedPage(
+            context,
+            rightPage,
+            bgColor,
+            textColor,
+            bookmarkState,
+          ),
+        ),
+        // ── Center divider ──
+        Container(
+          width: 0.5,
+          color: textColor.withOpacity(0.05),
+        ),
+        // ── Left page content ──
+        Expanded(
+          child: leftPage > 0
+              ? _buildFittedPage(
+                  context,
+                  leftPage,
+                  bgColor,
+                  textColor,
+                  bookmarkState,
+                )
+              : Container(color: bgColor),
+        ),
+        // ── Left outer margin (info for left page) ──
+        SizedBox(
+          width: 60,
+          child: leftMeta != null
+              ? Padding(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Top: surah name
+                      if (leftMeta.surahLabel.isNotEmpty)
+                        Text(
+                          leftMeta.surahLabel,
+                          style: surahStyle,
+                          textAlign: TextAlign.left,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      // Juz label
+                      if (leftMeta.juzLabel.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            leftMeta.juzLabel,
+                            style: metaStyle,
+                            textAlign: TextAlign.left,
+                          ),
+                        ),
+                      const Spacer(),
+                      // Bottom: page number and hizb
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Page number with background
+                          SizedBox(
+                            width: 40,
+                            height: 40,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Image.asset(
+                                  ThemeService().pageBackgroundImagePath,
+                                  width: 40,
+                                  height: 40,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      const SizedBox.shrink(),
+                                ),
+                                Text(
+                                  leftMeta.pageNumber,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: "arsura",
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (leftMeta.hizbLabel.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                leftMeta.hizbLabel,
+                                style: metaStyle.copyWith(fontSize: 7),
+                                textAlign: TextAlign.left,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
+      ],
+    );
+  }
+
+  /// Renders a single page fitted to the available space (no scrolling).
+  Widget _buildFittedPage(
+    BuildContext context,
+    int pageNumber,
+    Color bgColor,
+    Color textColor,
+    BookmarkNotesNotifier bookmarkState,
+  ) {
+    return Container(
+      color: bgColor,
+      child: FittedBox(
+        fit: BoxFit.contain,
+        child: SizedBox(
+          width: 430,
+          height: 932,
+          child: QuranPageContent(
+            pageNumber: pageNumber,
+            fontSize: null,
+            textColor: textColor,
+            verseBackgroundColor: (s, v) =>
+                _getVerseBackgroundColor(bookmarkState, s, v),
+            onLongPress: (surah, verse) async {
+              _cancelHighlightClear();
+              widget.controller.setHighlightedVerse(surah, verse);
+              await Future.delayed(const Duration(milliseconds: 1500));
+              if (!context.mounted) return;
+              await showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => VerseOptionsSheet(
+                  surah: surah,
+                  verse: verse,
+                ),
+              );
+              widget.controller.clearHighlight();
+            },
+            onLongPressStart: (surah, verse, details) {
+              _cancelHighlightClear();
+              widget.controller.setHighlightedVerse(surah, verse);
+            },
+            onLongPressUp: null,
+            onLongPressCancel: (surah, verse) =>
+                widget.controller.clearHighlight(),
+            onSurahHeaderLongPress: (surahNumber) {
+              showSurahInfoSheet(
+                context: context,
+                surahNumber: surahNumber,
+                onNavigateToVerse: (verseNumber) {
+                  Navigator.pop(context);
+                  _navigateToVerseWithTempHighlight(surahNumber, verseNumber);
+                },
+              );
+            },
+            sp: 1,
+            h: 1,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Helper to extract page metadata for the spread margins.
+  _SpreadPageMeta _getPageMeta(BuildContext context, int pageNumber) {
+    final pageData = getPageData(pageNumber);
+    String surahLabel = '';
+    String juzLabel = '';
+    String hizbLabel = '';
+    if (pageData.isNotEmpty) {
+      // Collect all surahs that start on this page
+      final starts = <int>[];
+      int firstSurah = 0;
+      int firstStart = 0;
+      for (final entry in pageData) {
+        final surah = int.tryParse(entry['surah'].toString()) ?? 1;
+        final start = int.tryParse(entry['start'].toString()) ?? 1;
+        if (firstSurah == 0) {
+          firstSurah = surah;
+          firstStart = start;
+        }
+        if (start == 1 && !starts.contains(surah)) {
+          starts.add(surah);
+        }
+      }
+      if (starts.isNotEmpty) {
+        surahLabel =
+            starts.map((s) => getLocalizedSurahName(context, s)).join(' • ');
+      } else {
+        surahLabel = getLocalizedSurahName(context, firstSurah);
+      }
+      final juz = getJuzNumber(firstSurah, firstStart);
+      if (juz > 0) {
+        juzLabel = AppLocalizations.of(context)!
+            .translate('part_label')
+            .replaceAll('{number}', juz.toString());
+      }
+      // Get hizb if one starts on this page
+      final hizb = getHizbNumberForPage(pageNumber);
+      if (hizb > 0) {
+        hizbLabel = 'Hizb $hizb';
+      }
+    }
+    return _SpreadPageMeta(
+      surahLabel: surahLabel,
+      juzLabel: juzLabel,
+      hizbLabel: hizbLabel,
+      pageNumber: pageNumber.toString(),
     );
   }
 
@@ -822,6 +1257,19 @@ class _HorizontalMushafViewState extends State<HorizontalMushafView> {
       _showOverlay();
     }
   }
+}
+
+class _SpreadPageMeta {
+  final String surahLabel;
+  final String juzLabel;
+  final String hizbLabel;
+  final String pageNumber;
+  const _SpreadPageMeta({
+    required this.surahLabel,
+    required this.juzLabel,
+    required this.hizbLabel,
+    required this.pageNumber,
+  });
 }
 
 class _NavPill extends StatelessWidget {

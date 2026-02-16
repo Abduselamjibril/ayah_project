@@ -72,7 +72,7 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
                       icon: const Icon(Icons.arrow_back_ios,
                           size: 18, color: BrandColors.accent),
                       label: Text(
-                        '${getBilingualSurahName(context, widget.startSurah)}: ${widget.startVerse}',
+                        '${getLocalizedSurahName(context, widget.startSurah)}: ${widget.startVerse}',
                         style: const TextStyle(
                           color: BrandColors.accent,
                           fontWeight: FontWeight.w700,
@@ -177,7 +177,7 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
           _buildQuickRow(
             label: AppLocalizations.of(context)?.translate('end_of_surah') ??
                 'End of Surah',
-            value: getBilingualSurahName(context, widget.startSurah),
+            value: getLocalizedSurahName(context, widget.startSurah),
             onTap: () => _playTo(widget.startSurah, _endOfSurah),
           ),
           Divider(
@@ -359,7 +359,7 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '${getBilingualSurahName(context, widget.startSurah)}: $verseNum',
+                      '${getLocalizedSurahName(context, widget.startSurah)}: $verseNum',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 16,
@@ -421,7 +421,7 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
         final first = pageData.isNotEmpty ? pageData.first : null;
         final trailingText = first == null
             ? ''
-            : '${getBilingualSurahName(context, int.parse(first['surah'].toString()))}: ${int.parse(first['start'].toString())}';
+            : '${getLocalizedSurahName(context, int.parse(first['surah'].toString()))}: ${int.parse(first['start'].toString())}';
         return InkWell(
           onTap: () {
             if (pageData.isNotEmpty) {
@@ -490,7 +490,7 @@ class _PlayRangeDialogState extends State<PlayRangeDialog> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  getBilingualSurahName(context, surahNum),
+                  getLocalizedSurahName(context, surahNum),
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 16,

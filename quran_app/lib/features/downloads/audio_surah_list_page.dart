@@ -287,7 +287,7 @@ class _AudioSurahListPageState extends State<AudioSurahListPage> {
                 final isDownloading = _downloadingSurahs.contains(surahNumber);
                 final progress = _progress[surahNumber];
                 final isDownloaded = _downloadedSurahs.contains(surahNumber);
-                final surahName = getBilingualSurahName(context, c.id);
+                final surahName = getLocalizedSurahName(context, c.id);
                 return Card(
                   color: cardBackground,
                   margin:

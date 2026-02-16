@@ -183,6 +183,54 @@ class ThemeSettingsPage extends StatelessWidget {
                 onSelect: () =>
                     mushafSettings.setScrollMode(ScrollMode.vertical),
               ),
+
+              // Page Layout (only for horizontal mode)
+              if (mushafSettings.scrollMode == ScrollMode.horizontal) ...[
+                SizedBox(height: headerGap),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                      0,
+                      ResponsiveLayout.scaled(context, 8, min: 6, max: 12),
+                      0,
+                      ResponsiveLayout.scaled(context, 8, min: 6, max: 12)),
+                  child: Text(
+                    AppLocalizations.of(context)?.translate('page_layout') ??
+                        'Page Layout',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: ResponsiveLayout.scaled(context, 18,
+                            min: 16, max: 20)),
+                  ),
+                ),
+                _buildPageLayoutOption(
+                  context,
+                  title:
+                      AppLocalizations.of(context)?.translate('single_page') ??
+                          'Single Page',
+                  subtitle: AppLocalizations.of(context)
+                          ?.translate('single_page_subtitle') ??
+                      'Show one page at a time',
+                  layout: PageLayout.single,
+                  isSelected: mushafSettings.pageLayout == PageLayout.single,
+                  icon: Icons.crop_portrait,
+                  onSelect: () =>
+                      mushafSettings.setPageLayout(PageLayout.single),
+                ),
+                _buildPageLayoutOption(
+                  context,
+                  title:
+                      AppLocalizations.of(context)?.translate('double_page') ??
+                          'Double Page',
+                  subtitle: AppLocalizations.of(context)
+                          ?.translate('double_page_subtitle') ??
+                      'Two pages side-by-side in landscape',
+                  layout: PageLayout.double,
+                  isSelected: mushafSettings.pageLayout == PageLayout.double,
+                  icon: Icons.auto_stories,
+                  onSelect: () =>
+                      mushafSettings.setPageLayout(PageLayout.double),
+                ),
+              ],
             ],
           );
         },
@@ -245,7 +293,8 @@ class ThemeSettingsPage extends StatelessWidget {
     final cardBg = isLight ? theme.scaffoldBackgroundColor : theme.cardColor;
     final divider = theme.dividerColor.withOpacity(isLight ? 0.22 : 0.28);
     final radius = BorderRadius.circular(20);
-    final selectedBg = theme.colorScheme.primary.withOpacity(isLight ? 0.06 : 0.12);
+    final selectedBg =
+        theme.colorScheme.primary.withOpacity(isLight ? 0.06 : 0.12);
 
     final rowHeight = ResponsiveLayout.scaled(context, 72, min: 62, max: 80);
     final previewHeight =
@@ -355,6 +404,61 @@ class ThemeSettingsPage extends StatelessWidget {
     required String title,
     required String subtitle,
     required ScrollMode mode,
+    required bool isSelected,
+    required IconData icon,
+    required VoidCallback onSelect,
+  }) {
+    final margin = ResponsiveLayout.scaled(context, 8, min: 6, max: 12);
+    final iconSize = ResponsiveLayout.scaled(context, 24, min: 20, max: 28);
+    final titleSize = ResponsiveLayout.scaled(context, 15, min: 14, max: 17);
+    final subtitleSize = ResponsiveLayout.scaled(context, 13, min: 12, max: 15);
+    final trailingSize = ResponsiveLayout.scaled(context, 24, min: 20, max: 28);
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+    final cardBg = isLight ? theme.scaffoldBackgroundColor : theme.cardColor;
+    return Card(
+      margin: EdgeInsets.symmetric(vertical: margin),
+      color: cardBg,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: isSelected
+            ? BorderSide(color: Theme.of(context).primaryColor, width: 2)
+            : BorderSide.none,
+      ),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: isSelected
+              ? Theme.of(context).primaryColor.withOpacity(0.1)
+              : Colors.grey.withOpacity(0.1),
+          child: Icon(
+            icon,
+            color: isSelected ? Theme.of(context).primaryColor : Colors.grey,
+            size: iconSize,
+          ),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? Theme.of(context).primaryColor : null,
+            fontSize: titleSize,
+          ),
+        ),
+        subtitle: Text(subtitle, style: TextStyle(fontSize: subtitleSize)),
+        trailing: isSelected
+            ? Icon(Icons.check_circle,
+                color: Theme.of(context).primaryColor, size: trailingSize)
+            : null,
+        onTap: onSelect,
+      ),
+    );
+  }
+
+  Widget _buildPageLayoutOption(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required PageLayout layout,
     required bool isSelected,
     required IconData icon,
     required VoidCallback onSelect,

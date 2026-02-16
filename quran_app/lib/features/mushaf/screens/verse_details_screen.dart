@@ -69,7 +69,6 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
   late Animation<double> _slideUpAnimation;
   late Animation<Color?> _backgroundColorAnimation;
 
-
   @override
   void initState() {
     super.initState();
@@ -235,20 +234,17 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
   }
 
   String _getSurahName() {
-    return getBilingualSurahName(context, _currentSurah);
+    return getLocalizedSurahName(context, _currentSurah);
   }
 
   String _formatLabel(String value, String fallback) {
     final raw = value.isEmpty ? fallback : value;
     final normalized = raw.replaceAll('_', ' ').trim();
     if (normalized.isEmpty) return fallback;
-    return normalized
-        .split(RegExp(r'\s+'))
-        .map((word) {
-          if (word.isEmpty) return word;
-          return word[0].toUpperCase() + word.substring(1);
-        })
-        .join(' ');
+    return normalized.split(RegExp(r'\s+')).map((word) {
+      if (word.isEmpty) return word;
+      return word[0].toUpperCase() + word.substring(1);
+    }).join(' ');
   }
 
   int _getAyahCount(int surahId) {
@@ -346,7 +342,8 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
       initialItem: (_currentSurah - 1).clamp(0, surah.length - 1),
     );
     final verseController = FixedExtentScrollController(
-      initialItem: (_currentVerse - 1).clamp(0, _getAyahCount(_currentSurah) - 1),
+      initialItem:
+          (_currentVerse - 1).clamp(0, _getAyahCount(_currentSurah) - 1),
     );
 
     await showModalBottomSheet<void>(
@@ -396,7 +393,8 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
                                 onSelectedItemChanged: (index) {
                                   setSheetState(() {
                                     tempSurah = index + 1;
-                                    final newMax = _getAyahCount(tempSurah).clamp(1, 300);
+                                    final newMax =
+                                        _getAyahCount(tempSurah).clamp(1, 300);
                                     if (tempVerse > newMax) {
                                       tempVerse = newMax;
                                       verseController.jumpToItem(newMax - 1);
@@ -405,7 +403,8 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
                                 },
                                 children: List.generate(surah.length, (index) {
                                   final surahId = index + 1;
-                                  final name = getBilingualSurahName(context, surahId);
+                                  final name =
+                                      getLocalizedSurahName(context, surahId);
                                   return Center(
                                     child: Text(
                                       name,
@@ -502,8 +501,8 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
     final accent = BrandColors.accent;
     final editionId = item['edition_identifier']?.toString();
     final cardKey = editionId == null
-      ? null
-      : _tafsirCardKeys.putIfAbsent(editionId, () => GlobalKey());
+        ? null
+        : _tafsirCardKeys.putIfAbsent(editionId, () => GlobalKey());
     final title = (item['scholar'] ?? item['translator'] ?? 'Unknown')
         .toString()
         .toUpperCase();
@@ -676,8 +675,8 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
                               child: Center(
                                 child: InkWell(
                                   onTap: () {
-                                    setState(
-                                        () => _textSizeIndex = _textSizeDefaultIndex);
+                                    setState(() =>
+                                        _textSizeIndex = _textSizeDefaultIndex);
                                     _saveTextSettings();
                                   },
                                   borderRadius: BorderRadius.circular(18),
@@ -918,7 +917,8 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
   Future<void> _showShareMenu(BuildContext iconContext) async {
     final renderBox = iconContext.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
-    final overlay = Overlay.of(iconContext).context.findRenderObject() as RenderBox?;
+    final overlay =
+        Overlay.of(iconContext).context.findRenderObject() as RenderBox?;
     if (overlay == null) return;
     final accent = BrandColors.accent;
 
@@ -1092,7 +1092,8 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
     }
     final renderBox = iconContext.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
-    final overlay = Overlay.of(iconContext).context.findRenderObject() as RenderBox?;
+    final overlay =
+        Overlay.of(iconContext).context.findRenderObject() as RenderBox?;
     if (overlay == null) return;
     final rect = Rect.fromPoints(
       renderBox.localToGlobal(Offset.zero, ancestor: overlay),
@@ -1118,7 +1119,8 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
   }
 
   void _openLibraryMenuFromTopRight() {
-    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox?;
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox?;
     if (overlay == null) return;
     final right = 16.0;
     final top = 56.0;
@@ -1260,12 +1262,14 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
                               switchInCurve: Curves.easeOut,
                               switchOutCurve: Curves.easeIn,
                               transitionBuilder: (child, animation) =>
-                                  SizeTransition(sizeFactor: animation, child: child),
+                                  SizeTransition(
+                                      sizeFactor: animation, child: child),
                               child: addedIds.isEmpty
                                   ? const SizedBox.shrink()
                                   : Column(
                                       key: const ValueKey('added_section'),
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         _buildLibrarySectionTitle(
                                           _formatLabel(
@@ -1294,12 +1298,14 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
                               switchInCurve: Curves.easeOut,
                               switchOutCurve: Curves.easeIn,
                               transitionBuilder: (child, animation) =>
-                                  SizeTransition(sizeFactor: animation, child: child),
+                                  SizeTransition(
+                                      sizeFactor: animation, child: child),
                               child: downloadedNotAdded.isEmpty
                                   ? const SizedBox.shrink()
                                   : Column(
                                       key: const ValueKey('downloaded_section'),
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         _buildLibrarySectionTitle(
                                           _formatLabel(
@@ -1310,12 +1316,14 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
                                           ),
                                         ),
                                         const SizedBox(height: 8),
-                                        for (final lang in sortedKeys(downloadedByLang)) ...[
+                                        for (final lang in sortedKeys(
+                                            downloadedByLang)) ...[
                                           Text(
                                             lang,
                                             style: TextStyle(
                                               fontWeight: FontWeight.w700,
-                                              color: theme.colorScheme.onSurface,
+                                              color:
+                                                  theme.colorScheme.onSurface,
                                             ),
                                           ),
                                           const SizedBox(height: 8),
@@ -1323,10 +1331,13 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
                                             cardBg: cardBg,
                                             dividerColor: dividerColor,
                                             children: downloadedByLang[lang]!
-                                                .map((edition) => _buildTafsirAddRow(
+                                                .map((edition) =>
+                                                    _buildTafsirAddRow(
                                                       edition: edition,
                                                       added: false,
-                                                      onTap: () => _addTafsir(edition.id.toString()),
+                                                      onTap: () => _addTafsir(
+                                                          edition.id
+                                                              .toString()),
                                                     ))
                                                 .toList(),
                                           ),
@@ -1344,12 +1355,14 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
                               switchInCurve: Curves.easeOut,
                               switchOutCurve: Curves.easeIn,
                               transitionBuilder: (child, animation) =>
-                                  SizeTransition(sizeFactor: animation, child: child),
+                                  SizeTransition(
+                                      sizeFactor: animation, child: child),
                               child: availableNotDownloaded.isEmpty
                                   ? const SizedBox.shrink()
                                   : Column(
                                       key: const ValueKey('available_section'),
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         _buildLibrarySectionTitle(
                                           _formatLabel(
@@ -1360,12 +1373,14 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
                                           ),
                                         ),
                                         const SizedBox(height: 8),
-                                        for (final lang in sortedKeys(availableByLang)) ...[
+                                        for (final lang
+                                            in sortedKeys(availableByLang)) ...[
                                           Text(
                                             lang,
                                             style: TextStyle(
                                               fontWeight: FontWeight.w700,
-                                              color: theme.colorScheme.onSurface,
+                                              color:
+                                                  theme.colorScheme.onSurface,
                                             ),
                                           ),
                                           const SizedBox(height: 8),
@@ -1373,7 +1388,8 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
                                             cardBg: cardBg,
                                             dividerColor: dividerColor,
                                             children: availableByLang[lang]!
-                                                .map((edition) => _buildTafsirDownloadRow(
+                                                .map((edition) =>
+                                                    _buildTafsirDownloadRow(
                                                       edition: edition,
                                                     ))
                                                 .toList(),
@@ -1532,7 +1548,8 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
     return Container(
       width: 28,
       height: 28,
-      decoration: BoxDecoration(color: color.withOpacity(0.15), shape: BoxShape.circle),
+      decoration:
+          BoxDecoration(color: color.withOpacity(0.15), shape: BoxShape.circle),
       child: Icon(icon, size: 16, color: color),
     );
   }
@@ -1609,20 +1626,22 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
                       children: [
                         Text(
                           _getEditionLabel(id),
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
                         ),
                         if (_getEditionSubtitle(id).isNotEmpty) ...[
                           const SizedBox(height: 4),
                           Text(
                             _getEditionSubtitle(id),
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withOpacity(0.6),
-                                ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withOpacity(0.6),
+                                    ),
                           ),
                         ],
                       ],
@@ -1752,7 +1771,8 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
                 title,
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 ),
               ),
             ),
@@ -1825,7 +1845,8 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
             ),
             Expanded(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.onSurface.withOpacity(0.04),
                   borderRadius: BorderRadius.circular(12),
@@ -1959,8 +1980,7 @@ class _VerseDetailsScreenState extends State<VerseDetailsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final screenTitle =
-        '${_getSurahName()} ${_currentSurah}:${_currentVerse}';
+    final screenTitle = '${_getSurahName()} ${_currentSurah}:${_currentVerse}';
 
     return SafeArea(
       top: false,

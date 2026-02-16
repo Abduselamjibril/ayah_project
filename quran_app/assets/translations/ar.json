@@ -20,6 +20,9 @@
   "night_blue_preset_vibe": "أزرق ليلي",
   "settings_title": "الإعدادات",
   "language_title": "اللغة",
+  "language_description": "يدعم تطبيق القرآن اللغتين الإنجليزية والعربية. اختر لغتك المفضلة أدناه.",
+  "search_gesture_title": "بحث بإصبعين",
+  "search_gesture_subtitle": "اسحب للأسفل للبحث",
   "app_theme_title": "سمة التطبيق",
   "downloads_title": "التنزيلات",
   "reminders_title": "التذكيرات",
@@ -282,5 +285,9 @@
   "hizb_label": "الحزب {number}",
   "hizb_quarter": "ربـع الحزب",
   "hizb_half": "نصـف الحزب",
-  "hizb_three_quarters": "ثلاثة أرباع الحزب"
+  "hizb_three_quarters": "ثلاثة أرباع الحزب",
+  "single_page": "صفحة واحدة",
+  "single_page_subtitle": "عرض صفحة واحدة في كل مرة",
+  "double_page": "صفحة مزدوجة",
+  "double_page_subtitle": "صفحتان جنبًا إلى جنب في الوضع الأفقي"
 }

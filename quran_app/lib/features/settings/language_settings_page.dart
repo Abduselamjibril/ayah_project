@@ -36,10 +36,12 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
 
     final selectedCode = _languageService.currentLocale.languageCode;
 
+    final languageTitle =
+        AppLocalizations.of(context)?.translate('language_title') ?? 'Language';
     return Scaffold(
       backgroundColor:
           isLight ? theme.colorScheme.surface : theme.scaffoldBackgroundColor,
-      appBar: const SettingsAppBar(title: 'Language'),
+      appBar: SettingsAppBar(title: languageTitle),
       body: ListView(
         padding: EdgeInsets.symmetric(horizontal: hPadding),
         children: [
@@ -52,7 +54,8 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
               bottom: descPadding,
             ),
             child: Text(
-              'Quran App supports English and Arabic. Select your preferred language below.',
+              AppLocalizations.of(context)?.translate('language_description') ??
+                  'Quran App supports English and Arabic. Select your preferred language below.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: theme.colorScheme.onSurface.withOpacity(0.8),

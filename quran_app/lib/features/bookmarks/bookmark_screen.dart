@@ -283,7 +283,7 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
       ),
       subtitle: hasData
           ? Text(
-              '${_formatTime(latest.updatedAt)}  ${getBilingualSurahName(context, latest.surahId)}: ${latest.ayahId}',
+              '${_formatTime(latest.updatedAt)}  ${getLocalizedSurahName(context, latest.surahId)}: ${latest.ayahId}',
               style: TextStyle(
                   color: isLight
                       ? theme.colorScheme.onSurface.withOpacity(0.6)
@@ -303,7 +303,7 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
   }
 
   Widget _buildBookmarkEntryTile(BuildContext context, Bookmark b) {
-    final name = getBilingualSurahName(context, b.surahId);
+    final name = getLocalizedSurahName(context, b.surahId);
     final color = Color(_parseColor(b.colorHex));
     final theme = Theme.of(context);
     final isLight = theme.brightness == Brightness.light;

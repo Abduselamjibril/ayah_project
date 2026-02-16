@@ -75,71 +75,44 @@ class PermanentAppBar extends StatelessWidget {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          // 80 (edit) + 38 (back) + 16*2 (padding) = 150, so available for toggle is constraints.maxWidth - 80 - 38
-          const double toggleWidth = 195;
-          final double leftSpace = constraints.maxWidth - 80 - 38 - toggleWidth;
-          // Move the toggle a bit to the left of center (e.g., 24px)
-          const double leftShift = 24;
-          double leftPad = leftSpace > 0 ? (leftSpace / 2) - leftShift : 0;
-          double rightPad = leftSpace > 0 ? (leftSpace / 2) + leftShift : 0;
-          if (leftPad < 0) leftPad = 0;
-          if (rightPad < 0) rightPad = 0;
           return Row(
             children: [
-              // Left: Edit button space
-              SizedBox(
+              // Left: Edit button space (fixed width)
+              const SizedBox(
                 width: 80,
-                child: const SizedBox.shrink(),
               ),
+
               // Center: Surah/Juz toggle or Highlights pills
-              if (selectedTabIndex == 0)
-                Padding(
-                  padding: EdgeInsets.only(left: leftPad, right: rightPad),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      if (constraints.maxWidth < toggleWidth + 24) {
-                        return SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(minWidth: toggleWidth),
-                            child: SizedBox(
-                              width: toggleWidth,
-                              child: _SurahJuzToggle(
-                                navigationMode: navigationMode,
-                                onChanged: onNavigationModeChanged,
+              Expanded(
+                child: Center(
+                  child: selectedTabIndex == 0
+                      ? LayoutBuilder(
+                          builder: (context, constraints) {
+                            // Adjust toggle width based on available space if needed,
+                            // but usually the toggle is fixed width ~195.
+                            // If it doesn't fit, we might need to scale or scroll,
+                            // but for 350px+ width it should fit if centered properly.
+                            return SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: ConstrainedBox(
+                                constraints:
+                                    const BoxConstraints(minWidth: 100),
+                                child: _SurahJuzToggle(
+                                  navigationMode: navigationMode,
+                                  onChanged: onNavigationModeChanged,
+                                ),
                               ),
-                            ),
-                          ),
-                        );
-                      } else {
-                        return SizedBox(
-                          width: toggleWidth,
-                          child: _SurahJuzToggle(
-                            navigationMode: navigationMode,
-                            onChanged: onNavigationModeChanged,
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                )
-              else if (selectedTabIndex == 3)
-                Padding(
-                  padding: EdgeInsets.only(left: leftPad, right: rightPad),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      // If not enough space, allow horizontal scroll
-                      if (constraints.maxWidth < toggleWidth + 24) {
-                        return SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(minWidth: toggleWidth),
-                            child: Container(
-                              width: toggleWidth,
+                            );
+                          },
+                        )
+                      : selectedTabIndex == 3
+                          ? Container(
                               height: 34,
+                              width: 195, // Consistent width with toggle
                               padding: const EdgeInsets.all(2),
                               decoration: BoxDecoration(
-                                color: Theme.of(context).brightness == Brightness.light
+                                color: Theme.of(context).brightness ==
+                                        Brightness.light
                                     ? const Color(0xFFE3E3E3)
                                     : const Color(0xFF2C2C2E),
                                 borderRadius: BorderRadius.circular(8),
@@ -153,7 +126,8 @@ class PermanentAppBar extends StatelessWidget {
                                               ?.translate('tab_contents') ??
                                           'Sūrahs',
                                       isSelected: highlightsMode == 0,
-                                      onTap: () => onHighlightsModeChanged?.call(0),
+                                      onTap: () =>
+                                          onHighlightsModeChanged?.call(0),
                                     ),
                                   ),
                                   Expanded(
@@ -162,63 +136,18 @@ class PermanentAppBar extends StatelessWidget {
                                               ?.translate('colors') ??
                                           'Colors',
                                       isSelected: highlightsMode == 1,
-                                      onTap: () => onHighlightsModeChanged?.call(1),
+                                      onTap: () =>
+                                          onHighlightsModeChanged?.call(1),
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
-                          ),
-                        );
-                      } else {
-                        return SizedBox(
-                          width: toggleWidth,
-                          child: Container(
-                            height: 34,
-                            padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).brightness == Brightness.light
-                                  ? const Color(0xFFE3E3E3)
-                                  : const Color(0xFF2C2C2E),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.max,
-                              children: [
-                                Expanded(
-                                  child: _ToggleButton(
-                                    label: AppLocalizations.of(context)
-                                            ?.translate('tab_contents') ??
-                                        'Sūrahs',
-                                    isSelected: highlightsMode == 0,
-                                    onTap: () => onHighlightsModeChanged?.call(0),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: _ToggleButton(
-                                    label: AppLocalizations.of(context)
-                                            ?.translate('colors') ??
-                                        'Colors',
-                                    isSelected: highlightsMode == 1,
-                                    onTap: () => onHighlightsModeChanged?.call(1),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                )
-              else
-                const SizedBox.shrink(),
-              // Fill remaining space (toggle or spacer)
-              if (selectedTabIndex == 0)
-                const SizedBox.shrink()
-              else
-                Expanded(child: Container()),
-              // Right: Back button
+                            )
+                          : const SizedBox.shrink(),
+                ),
+              ),
+
+              // Right: Back button (fixed width)
               Container(
                 width: 38,
                 height: 38,
@@ -466,7 +395,7 @@ class _SurahDrawerState extends State<SurahDrawer>
         : (AppLocalizations.of(context)?.translate('time_morning') ??
             'at morning');
     final timeStr = "$hour:$minute $timeLabel";
-    final surahName = getBilingualSurahName(context, b.surahId);
+    final surahName = getLocalizedSurahName(context, b.surahId);
     return "$timeStr $surahName: ${b.ayahId}";
   }
 
@@ -802,7 +731,7 @@ class _SurahDrawerState extends State<SurahDrawer>
 
   Widget _buildSurahItem(int surahNumber, Map<String, dynamic> surahInfo) {
     final theme = Theme.of(context);
-    String surahName = getBilingualSurahName(context, surahNumber);
+    String surahName = getLocalizedSurahName(context, surahNumber);
     int startPage = _surahStartPages[surahNumber] ?? (surahNumber * 10);
     final place = surahInfo['place'] == 'Makkah'
         ? (AppLocalizations.of(context)?.translate('place_meccan') ?? 'Meccan')
@@ -873,7 +802,7 @@ class _SurahDrawerState extends State<SurahDrawer>
             .replaceAll('{number}', '$juzNumber'),
         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
       ),
-      subtitle: Text(getBilingualSurahName(context, startingSurah),
+      subtitle: Text(getLocalizedSurahName(context, startingSurah),
           style: const TextStyle(fontSize: 12, color: Colors.grey)),
       onTap: () {
         widget.controller.navigateToSurah(startingSurah);
@@ -1121,7 +1050,7 @@ class _SurahDrawerState extends State<SurahDrawer>
       ),
       subtitle: hasData
           ? Text(
-              '${_formatTime(latest.updatedAt)}  ${getBilingualSurahName(context, latest.surahId)}: ${latest.ayahId}',
+              '${_formatTime(latest.updatedAt)}  ${getLocalizedSurahName(context, latest.surahId)}: ${latest.ayahId}',
               style: TextStyle(
                 color: isLight
                     ? theme.colorScheme.onSurface.withOpacity(0.6)
@@ -1150,7 +1079,7 @@ class _SurahDrawerState extends State<SurahDrawer>
     Bookmark b,
   ) {
     final theme = Theme.of(context);
-    final name = getBilingualSurahName(context, b.surahId);
+    final name = getLocalizedSurahName(context, b.surahId);
     final color = Color(_parseColor(b.colorHex));
 
     return Dismissible(
@@ -1237,7 +1166,7 @@ class _SurahDrawerState extends State<SurahDrawer>
         if (searchQuery.isNotEmpty) {
           filteredHighlights = highlights.where((h) {
             final verseText = _getVerseTextCached(h.surahId, h.ayahId);
-            final surahName = getBilingualSurahName(context, h.surahId);
+            final surahName = getLocalizedSurahName(context, h.surahId);
             return verseText
                     .toLowerCase()
                     .contains(searchQuery.toLowerCase()) ||
@@ -1370,7 +1299,7 @@ class _SurahDrawerState extends State<SurahDrawer>
                   children: [
                     Expanded(
                       child: Text(
-                        getBilingualSurahName(context, surahId),
+                        getLocalizedSurahName(context, surahId),
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
@@ -1467,7 +1396,7 @@ class _SurahDrawerState extends State<SurahDrawer>
 
   Widget _buildHighlightTile(Highlight h, bool isLight, ThemeData theme) {
     final color = Color(_parseColor(h.colorHex));
-    final surahName = getBilingualSurahName(context, h.surahId);
+    final surahName = getLocalizedSurahName(context, h.surahId);
     final verseText = _getVerseTextCached(h.surahId, h.ayahId);
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 7, horizontal: 0),

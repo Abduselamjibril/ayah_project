@@ -20,6 +20,9 @@
   "night_blue_preset_vibe": "Night Blue",
   "settings_title": "Settings",
   "language_title": "Language",
+  "language_description": "Quran App supports English and Arabic. Select your preferred language below.",
+  "search_gesture_title": "Two-finger Search",
+  "search_gesture_subtitle": "Drag down to search",
   "app_theme_title": "App Theme",
   "downloads_title": "Downloads",
   "reminders_title": "Reminders",
@@ -282,5 +285,9 @@
   "hizb_label": "Hizb {number}",
   "hizb_quarter": "1/4 Hizb",
   "hizb_half": "1/2 Hizb",
-  "hizb_three_quarters": "3/4 Hizb"
+  "hizb_three_quarters": "3/4 Hizb",
+  "single_page": "Single Page",
+  "single_page_subtitle": "Show one page at a time",
+  "double_page": "Double Page",
+  "double_page_subtitle": "Two pages side-by-side in landscape"
 }

@@ -80,7 +80,7 @@ class BilingualVerseView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            getBilingualSurahName(context, surahNumber),
+            getLocalizedSurahName(context, surahNumber),
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,

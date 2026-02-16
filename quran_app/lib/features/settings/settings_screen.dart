@@ -429,7 +429,9 @@ class _GestureSettingsTileState extends State<_GestureSettingsTile> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Two-finger Search',
+                    AppLocalizations.of(context)
+                            ?.translate('search_gesture_title') ??
+                        'Two-finger Search',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       fontSize: 16.5,
@@ -437,7 +439,9 @@ class _GestureSettingsTileState extends State<_GestureSettingsTile> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Drag down to search',
+                    AppLocalizations.of(context)
+                            ?.translate('search_gesture_subtitle') ??
+                        'Drag down to search',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurface.withOpacity(0.6),
                     ),

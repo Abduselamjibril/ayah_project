@@ -200,17 +200,31 @@ class _PageviewQuranState extends State<PageviewQuran> {
     try {
       final pageData = getPageData(pageNumber);
       if (pageData.isEmpty) {
-        return const _PageHeader(surahNumber: 0, juzNumber: 0);
+        return const _PageHeader(surahStarts: [], juzNumber: 0);
       }
       final first = pageData.first;
-      final surah = int.tryParse(first['surah'].toString()) ?? 1;
-      final start = int.tryParse(first['start'].toString()) ?? 1;
-      final juz = getJuzNumber(surah, start);
-      final header = _PageHeader(surahNumber: surah, juzNumber: juz);
+      final firstSurah = int.tryParse(first['surah'].toString()) ?? 1;
+      final firstStart = int.tryParse(first['start'].toString()) ?? 1;
+      final juz = getJuzNumber(firstSurah, firstStart);
+
+      final starts = <int>[];
+      for (final entry in pageData) {
+        final surah = int.tryParse(entry['surah'].toString()) ?? 1;
+        final start = int.tryParse(entry['start'].toString()) ?? 1;
+        if (start == 1 && !starts.contains(surah)) {
+          starts.add(surah);
+        }
+      }
+
+      if (starts.isEmpty) {
+        starts.add(firstSurah);
+      }
+
+      final header = _PageHeader(surahStarts: starts, juzNumber: juz);
       _headerCache[pageNumber] = header;
       return header;
     } catch (_) {
-      return const _PageHeader(surahNumber: 0, juzNumber: 0);
+      return const _PageHeader(surahStarts: [], juzNumber: 0);
     }
   }
 
@@ -251,13 +265,15 @@ class _PageviewQuranState extends State<PageviewQuran> {
               final header = _headerForPage(pageNumber);
 
               return RepaintBoundary(
-                child: _PageWithNumber(
+                child: PageWithNumber(
                   backgroundColor: widget.pageBackgroundColor,
                   pageNumber: pageNumber,
                   pageNumberTextStyle: widget.pageNumberTextStyle,
                   textColorFallback: widget.textColor,
-                  leftLabel: header.surahNumber > 0
-                      ? getLocalizedSurahName(context, header.surahNumber)
+                  leftLabel: header.surahStarts.isNotEmpty
+                      ? header.surahStarts
+                          .map((s) => getLocalizedSurahName(context, s))
+                          .join(' • ')
                       : '',
                   rightLabel: header.juzNumber > 0
                       ? AppLocalizations.of(context)!
@@ -311,14 +327,16 @@ class _PageviewQuranState extends State<PageviewQuran> {
             final header = _headerForPage(pageNumber);
 
             return RepaintBoundary(
-              child: _PageWithNumber(
+              child: PageWithNumber(
                 isVertical: true,
                 backgroundColor: widget.pageBackgroundColor,
                 pageNumber: pageNumber,
                 pageNumberTextStyle: widget.pageNumberTextStyle,
                 textColorFallback: widget.textColor,
-                leftLabel: header.surahNumber > 0
-                    ? getLocalizedSurahName(context, header.surahNumber)
+                leftLabel: header.surahStarts.isNotEmpty
+                    ? header.surahStarts
+                        .map((s) => getLocalizedSurahName(context, s))
+                        .join(' • ')
                     : '',
                 rightLabel: header.juzNumber > 0
                     ? AppLocalizations.of(context)!
@@ -350,13 +368,13 @@ class _PageviewQuranState extends State<PageviewQuran> {
 }
 
 class _PageHeader {
-  final int surahNumber;
+  final List<int> surahStarts;
   final int juzNumber;
 
-  const _PageHeader({required this.surahNumber, required this.juzNumber});
+  const _PageHeader({required this.surahStarts, required this.juzNumber});
 }
 
-class _PageWithNumber extends StatelessWidget {
+class PageWithNumber extends StatelessWidget {
   final Widget child;
   final int pageNumber;
   final TextStyle? pageNumberTextStyle;
@@ -369,7 +387,7 @@ class _PageWithNumber extends StatelessWidget {
   static const double _footerPaddingTop = 0.0;
   static const double _footerPaddingBottom = 0.0;
 
-  const _PageWithNumber({
+  const PageWithNumber({
     required this.child,
     required this.pageNumber,
     required this.textColorFallback,
@@ -740,8 +758,8 @@ class _QuranPageContentState extends State<QuranPageContent>
             widget.onLongPressStart?.call(surah, v, d);
         spanRecognizer.onLongPressUp =
             () => widget.onLongPressUp?.call(surah, v);
-        spanRecognizer.onLongPressEnd =
-            (LongPressEndDetails d) => widget.onLongPressCancel?.call(surah, v);
+        spanRecognizer.onLongPressCancel =
+            () => widget.onLongPressCancel?.call(surah, v);
 
         final verseBgColor = widget.verseBackgroundColor?.call(surah, v);
         final verseText = getVerseQCF(surah, v, verseEndSymbol: false);
