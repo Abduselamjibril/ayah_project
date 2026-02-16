@@ -111,6 +111,7 @@ class _PageviewQuranState extends State<PageviewQuran> {
   ItemPositionsListener? _internalItemPositionsListener;
 
   int _currentPage = 1;
+  int _pendingPage = 1;
 
   PageController get _controller => widget.controller ?? _internalController!;
 
@@ -128,6 +129,7 @@ class _PageviewQuranState extends State<PageviewQuran> {
   void initState() {
     super.initState();
     _currentPage = widget.initialPageNumber;
+    _pendingPage = widget.initialPageNumber;
 
     if (_ownsController && !_isVertical) {
       _internalController = PageController(
@@ -166,9 +168,7 @@ class _PageviewQuranState extends State<PageviewQuran> {
     final newPage = firstVisible.index + 1;
 
     if (newPage >= 1 && newPage <= totalPagesCount && newPage != _currentPage) {
-      setState(() {
-        _currentPage = newPage;
-      });
+      _currentPage = newPage;
       widget.onPageChanged?.call(_currentPage);
     }
   }
@@ -219,61 +219,79 @@ class _PageviewQuranState extends State<PageviewQuran> {
       color: widget.pageBackgroundColor,
       child: Directionality(
         textDirection: TextDirection.rtl,
-        child: PageView.builder(
-          controller: _controller,
-          itemCount: totalPagesCount,
-          onPageChanged: (index) {
-            setState(() {
-              _currentPage = index + 1;
-            });
-            widget.onPageChanged?.call(_currentPage);
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            if (notification.depth != 0) return false;
+            if (notification is ScrollEndNotification ||
+                (notification is UserScrollNotification &&
+                    notification.direction == ScrollDirection.idle)) {
+              _commitPendingPage();
+            }
+            return false;
           },
-          dragStartBehavior: DragStartBehavior.down,
-          physics: const PageScrollPhysics(
-            parent: BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
-            ),
-          ),
-          allowImplicitScrolling: true,
-          pageSnapping: true,
-          itemBuilder: (context, index) {
-            final pageNumber = index + 1;
-            final header = _headerForPage(pageNumber);
-
-            return RepaintBoundary(
-              child: _PageWithNumber(
-                backgroundColor: widget.pageBackgroundColor,
-                pageNumber: pageNumber,
-                pageNumberTextStyle: widget.pageNumberTextStyle,
-                textColorFallback: widget.textColor,
-                leftLabel: header.surahNumber > 0
-                    ? getLocalizedSurahName(context, header.surahNumber)
-                    : '',
-                rightLabel: header.juzNumber > 0
-                    ? AppLocalizations.of(context)!
-                        .translate("part_label")
-                        .replaceAll("{number}", header.juzNumber.toString())
-                    : '',
-                child: QuranPageContent(
-                  pageNumber: pageNumber,
-                  fontSize: widget.fontSize,
-                  textColor: widget.textColor,
-                  verseBackgroundColor: widget.verseBackgroundColor,
-                  verseTrailingBuilder: widget.verseTrailingBuilder,
-                  onLongPress: widget.onLongPress,
-                  onLongPressUp: widget.onLongPressUp,
-                  onLongPressCancel: widget.onLongPressCancel,
-                  onLongPressStart: widget.onLongPressStart,
-                  onSurahHeaderLongPress: widget.onSurahHeaderLongPress,
-                  sp: widget.sp,
-                  h: widget.h,
-                ),
+          child: PageView.builder(
+            controller: _controller,
+            itemCount: totalPagesCount,
+            // `PageView.onPageChanged` flips at the midpoint (rounding).
+            // Keep this handler cheap and only commit page changes after the
+            // scroll settles to avoid a perceptible "speed bump" at 50%.
+            onPageChanged: (index) {
+              _pendingPage = index + 1;
+            },
+            dragStartBehavior: DragStartBehavior.down,
+            physics: const PageScrollPhysics(
+              parent: BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
               ),
-            );
-          },
+            ),
+            allowImplicitScrolling: true,
+            pageSnapping: true,
+            itemBuilder: (context, index) {
+              final pageNumber = index + 1;
+              final header = _headerForPage(pageNumber);
+
+              return RepaintBoundary(
+                child: _PageWithNumber(
+                  backgroundColor: widget.pageBackgroundColor,
+                  pageNumber: pageNumber,
+                  pageNumberTextStyle: widget.pageNumberTextStyle,
+                  textColorFallback: widget.textColor,
+                  leftLabel: header.surahNumber > 0
+                      ? getLocalizedSurahName(context, header.surahNumber)
+                      : '',
+                  rightLabel: header.juzNumber > 0
+                      ? AppLocalizations.of(context)!
+                          .translate("part_label")
+                          .replaceAll("{number}", header.juzNumber.toString())
+                      : '',
+                  child: QuranPageContent(
+                    pageNumber: pageNumber,
+                    fontSize: widget.fontSize,
+                    textColor: widget.textColor,
+                    verseBackgroundColor: widget.verseBackgroundColor,
+                    verseTrailingBuilder: widget.verseTrailingBuilder,
+                    onLongPress: widget.onLongPress,
+                    onLongPressUp: widget.onLongPressUp,
+                    onLongPressCancel: widget.onLongPressCancel,
+                    onLongPressStart: widget.onLongPressStart,
+                    onSurahHeaderLongPress: widget.onSurahHeaderLongPress,
+                    sp: widget.sp,
+                    h: widget.h,
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
+  }
+
+  void _commitPendingPage() {
+    final page = _pendingPage.clamp(1, totalPagesCount);
+    if (page == _currentPage) return;
+    _currentPage = page;
+    widget.onPageChanged?.call(_currentPage);
   }
 
   Widget _buildVerticalList(BuildContext context) {
