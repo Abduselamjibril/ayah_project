@@ -1,0 +1,15 @@
+# Exclude platform-specific build outputs and tool caches
+**/build/
+**/.dart_tool/
+**/.packages
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+
+# Exclude local editor and system files
+**/.DS_Store
+**/.idea/
+**/.vscode/
+**/*.log
+
+# Do NOT exclude .git/ - needed by Silver task commit checkouts
+!.git/
